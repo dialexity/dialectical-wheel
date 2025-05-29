@@ -3,197 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turntable UI</title>
+    <title>Win-Win Wheel</title>
     <style>
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
-            background-color: #1a1a1a;
-            font-family: Arial, sans-serif;
+            padding: 0;
+            background: #f7f7f7;
+            font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
-
-        .turntable-container {
-            position: relative;
-            width: 500px;
-            height: 500px;
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 0.5em 1em;
+            height: 48px;
+        }
+        .header .icon {
+            font-size: 1.5em;
+            color: #222;
+            background: none;
+            border: none;
+            padding: 0 0.3em;
+            cursor: pointer;
+        }
+        .header-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #222;
+        }
+        .main-content {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            padding: 0.5em 0.5em 2em 0.5em;
         }
-
-        .record {
-            width: 400px;
-            height: 400px;
-            cursor: grab;
+        .wheel-container {
+            width: 100vw;
+            max-width: 100vw;
         }
-
-        .controls {
-            margin-top: 20px;
+        .wheel-svg {
+            width: 100vw;
+            height: 100vw;
+            max-width: 100vw;
+            max-height: 100vw;
+            display: block;
+        }
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid #ddd;
             display: flex;
-            gap: 10px;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0.5em 0;
+            z-index: 10;
         }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #333;
-            color: white;
+        .bottom-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 1.1em;
+            color: #0074d9;
+            background: none;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            padding: 0.5em 1em;
         }
-
-        button:hover {
-            background-color: #444;
+        .bottom-btn svg {
+            margin-bottom: 0.2em;
         }
-
-        .speed-display {
-            color: white;
-            margin-top: 10px;
-            font-size: 18px;
+        @media (max-width: 500px) {
+            .wheel-container {
+                width: 100vw;
+                max-width: 100vw;
+            }
+            .wheel-svg {
+                width: 100vw;
+                height: 100vw;
+                max-width: 100vw;
+                max-height: 100vw;
+            }
+        }
+        .record {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;
         }
     </style>
 </head>
 <body>
-    <div class="turntable-container">
-        <svg class="record" viewBox="0 0 400 400">
-            <defs>
-                <path id="arc0" d="M 260.0,200.0 A 60.0,60.0 0 0,1 200.0,260.0" fill="none"/>
-                <path id="arc1" d="M 295.0,200.0 A 94.99999999999999,94.99999999999999 0 0,1 200.0,295.0" fill="none"/>
-                <path id="arc2" d="M 320.0,200.0 A 119.99999999999997,119.99999999999997 0 0,1 200.0,320.0" fill="none"/>
-                <path id="arc3" d="M 340.0,200.0 A 139.99999999999997,139.99999999999997 0 0,1 200.0,340.0" fill="none"/>
-                <path id="arc4" d="M 200.0,260.0 A 60.0,60.0 0 0,1 140.0,200.0" fill="none"/>
-                <path id="arc5" d="M 200.0,288.0 A 87.99999999999999,87.99999999999999 0 0,1 112.00000000000001,200.0" fill="none"/>
-                <path id="arc6" d="M 200.0,302.0 A 101.99999999999999,101.99999999999999 0 0,1 98.00000000000001,200.0" fill="none"/>
-                <path id="arc7" d="M 200.0,320.0 A 119.99999999999997,119.99999999999997 0 0,1 80.00000000000003,200.00000000000003" fill="none"/>
-                <path id="arc8" d="M 200.0,340.0 A 139.99999999999997,139.99999999999997 0 0,1 60.00000000000003,200.00000000000003" fill="none"/>
-                <path id="arc9" d="M 140.0,200.0 A 60.0,60.0 0 0,1 200.0,140.0" fill="none"/>
-                <path id="arc10" d="M 105.00000000000001,200.0 A 94.99999999999999,94.99999999999999 0 0,1 199.99999999999997,105.00000000000001" fill="none"/>
-                <path id="arc11" d="M 70.00000000000003,200.00000000000003 A 129.99999999999997,129.99999999999997 0 0,1 199.99999999999997,70.00000000000003" fill="none"/>
-                <path id="arc12" d="M 200.0,140.0 A 60.0,60.0 0 0,1 260.0,199.99999999999997" fill="none"/>
-                <path id="arc13" d="M 199.99999999999997,112.00000000000001 A 87.99999999999999,87.99999999999999 0 0,1 288.0,199.99999999999997" fill="none"/>
-                <path id="arc14" d="M 199.99999999999997,98.00000000000001 A 101.99999999999999,101.99999999999999 0 0,1 302.0,199.99999999999997" fill="none"/>
-                <path id="arc15" d="M 199.99999999999997,80.00000000000003 A 119.99999999999997,119.99999999999997 0 0,1 320.0,199.99999999999997" fill="none"/>
-                <path id="arc16" d="M 199.99999999999997,60.00000000000003 A 139.99999999999997,139.99999999999997 0 0,1 340.0,199.99999999999997" fill="none"/>
-                </defs>
-                <circle cx="200" cy="200" r="149.99999999999997" fill="#F9C6CC"/>
-                <circle cx="200" cy="200" r="114.99999999999999" fill="#FFFFFF"/>
-                <circle cx="200" cy="200" r="80.0" fill="#C6E5B3"/>
-                <circle cx="200" cy="200" r="30.0" fill="#FFFF99"/>
-                <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Core</text>
-                <text font-size="6.0" fill="green"><textPath href="#arc0" startOffset="50%" text-anchor="middle">Strategic power projection</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc1" startOffset="50%" text-anchor="middle">Putin initiates war</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc2" startOffset="50%" text-anchor="middle">aggression</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc3" startOffset="50%" text-anchor="middle">Destructive</textPath></text>
-                <path d="M 200,200 L 350.0,200.0 A 150,150 0 0,1 200.0,350.0 Z" fill="none" stroke="#888" stroke-width="1"/>
-                <text font-size="6.0" fill="green"><textPath href="#arc4" startOffset="50%" text-anchor="middle">Liberation and sovereignty protected</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc5" startOffset="50%" text-anchor="middle">invasion</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc6" startOffset="50%" text-anchor="middle">Ukraine resists</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc7" startOffset="50%" text-anchor="middle">and destruction</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc8" startOffset="50%" text-anchor="middle">Endless conflict</textPath></text>
-                <path d="M 200,200 L 200.0,350.0 A 150,150 0 0,1 50.0,200.00000000000003 Z" fill="none" stroke="#888" stroke-width="1"/>
-                <text font-size="6.0" fill="green"><textPath href="#arc9" startOffset="50%" text-anchor="middle">Mutual understanding</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc10" startOffset="50%" text-anchor="middle">Peace negotiations</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc11" startOffset="50%" text-anchor="middle">Passive submission</textPath></text>
-                <path d="M 200,200 L 50.0,200.00000000000003 A 150,150 0 0,1 199.99999999999997,50.0 Z" fill="none" stroke="#888" stroke-width="1"/>
-                <text font-size="6.0" fill="green"><textPath href="#arc12" startOffset="50%" text-anchor="middle">Immediate peace achieved</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc13" startOffset="50%" text-anchor="middle">to invasion</textPath></text>
-                <text font-size="12.0" fill="black"><textPath href="#arc14" startOffset="50%" text-anchor="middle">Ukraine surrenders</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc15" startOffset="50%" text-anchor="middle">independence lost</textPath></text>
-                <text font-size="18" fill="red"><textPath href="#arc16" startOffset="50%" text-anchor="middle">Freedom and</textPath></text>
-                <path d="M 200,200 L 199.99999999999997,50.0 A 150,150 0 0,1 350.0,199.99999999999997 Z" fill="none" stroke="#888" stroke-width="1"/>
-        </svg>
-        <div class="controls">
-            <button id="playBtn">Play</button>
-            <button id="stopBtn">Stop</button>
+    <div class="header">
+        <button class="icon" aria-label="Menu">&#9776;</button>
+        <span class="header-title">Win-Win</span>
+        <div>
+            <button class="icon" aria-label="Help">&#x2753;</button>
+            <button class="icon" aria-label="Zoom">&#128269;</button>
+            <button class="icon" aria-label="Close">&#10006;</button>
         </div>
-        <div class="speed-display">Speed: <span id="speedValue">0</span> RPM</div>
     </div>
-
+    <div class="main-content">
+        <div class="wheel-container">
+            <svg class="wheel-svg" viewBox="0 0 400 400">
+                <g class="record">
+                    <defs>
+                        <path id="arc0" d="M 260.0,200.0 A 60.0,60.0 0 0,1 200.0,260.0" fill="none"/>
+                        <path id="arc1" d="M 295.0,200.0 A 94.99999999999999,94.99999999999999 0 0,1 200.0,295.0" fill="none"/>
+                        <path id="arc2" d="M 320.0,200.0 A 119.99999999999997,119.99999999999997 0 0,1 200.0,320.0" fill="none"/>
+                        <path id="arc3" d="M 340.0,200.0 A 139.99999999999997,139.99999999999997 0 0,1 200.0,340.0" fill="none"/>
+                        <path id="arc4" d="M 200.0,260.0 A 60.0,60.0 0 0,1 140.0,200.0" fill="none"/>
+                        <path id="arc5" d="M 200.0,288.0 A 87.99999999999999,87.99999999999999 0 0,1 112.00000000000001,200.0" fill="none"/>
+                        <path id="arc6" d="M 200.0,302.0 A 101.99999999999999,101.99999999999999 0 0,1 98.00000000000001,200.0" fill="none"/>
+                        <path id="arc7" d="M 200.0,320.0 A 119.99999999999997,119.99999999999997 0 0,1 80.00000000000003,200.00000000000003" fill="none"/>
+                        <path id="arc8" d="M 200.0,340.0 A 139.99999999999997,139.99999999999997 0 0,1 60.00000000000003,200.00000000000003" fill="none"/>
+                        <path id="arc9" d="M 140.0,200.0 A 60.0,60.0 0 0,1 200.0,140.0" fill="none"/>
+                        <path id="arc10" d="M 105.00000000000001,200.0 A 94.99999999999999,94.99999999999999 0 0,1 199.99999999999997,105.00000000000001" fill="none"/>
+                        <path id="arc11" d="M 70.00000000000003,200.00000000000003 A 129.99999999999997,129.99999999999997 0 0,1 199.99999999999997,70.00000000000003" fill="none"/>
+                        <path id="arc12" d="M 200.0,140.0 A 60.0,60.0 0 0,1 260.0,199.99999999999997" fill="none"/>
+                        <path id="arc13" d="M 199.99999999999997,112.00000000000001 A 87.99999999999999,87.99999999999999 0 0,1 288.0,199.99999999999997" fill="none"/>
+                        <path id="arc14" d="M 199.99999999999997,98.00000000000001 A 101.99999999999999,101.99999999999999 0 0,1 302.0,199.99999999999997" fill="none"/>
+                        <path id="arc15" d="M 199.99999999999997,80.00000000000003 A 119.99999999999997,119.99999999999997 0 0,1 320.0,199.99999999999997" fill="none"/>
+                        <path id="arc16" d="M 199.99999999999997,60.00000000000003 A 139.99999999999997,139.99999999999997 0 0,1 340.0,199.99999999999997" fill="none"/>
+                    </defs>
+                    <circle cx="200" cy="200" r="149.99999999999997" fill="#F9C6CC"/>
+                    <circle cx="200" cy="200" r="114.99999999999999" fill="#FFFFFF"/>
+                    <circle cx="200" cy="200" r="80.0" fill="#C6E5B3"/>
+                    <circle cx="200" cy="200" r="30.0" fill="#FFFF99"/>
+                    <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Core</text>
+                    <text font-size="6.0" fill="green"><textPath href="#arc0" startOffset="50%" text-anchor="middle">Strategic power projection</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc1" startOffset="50%" text-anchor="middle">Putin initiates war</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc2" startOffset="50%" text-anchor="middle">aggression</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc3" startOffset="50%" text-anchor="middle">Destructive</textPath></text>
+                    <path d="M 200,200 L 350.0,200.0 A 150,150 0 0,1 200.0,350.0 Z" fill="none" stroke="#888" stroke-width="1"/>
+                    <text font-size="6.0" fill="green"><textPath href="#arc4" startOffset="50%" text-anchor="middle">Liberation and sovereignty protected</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc5" startOffset="50%" text-anchor="middle">invasion</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc6" startOffset="50%" text-anchor="middle">Ukraine resists</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc7" startOffset="50%" text-anchor="middle">and destruction</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc8" startOffset="50%" text-anchor="middle">Endless conflict</textPath></text>
+                    <path d="M 200,200 L 200.0,350.0 A 150,150 0 0,1 50.0,200.00000000000003 Z" fill="none" stroke="#888" stroke-width="1"/>
+                    <text font-size="6.0" fill="green"><textPath href="#arc9" startOffset="50%" text-anchor="middle">Mutual understanding</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc10" startOffset="50%" text-anchor="middle">Peace negotiations</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc11" startOffset="50%" text-anchor="middle">Passive submission</textPath></text>
+                    <path d="M 200,200 L 50.0,200.00000000000003 A 150,150 0 0,1 199.99999999999997,50.0 Z" fill="none" stroke="#888" stroke-width="1"/>
+                    <text font-size="6.0" fill="green"><textPath href="#arc12" startOffset="50%" text-anchor="middle">Immediate peace achieved</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc13" startOffset="50%" text-anchor="middle">to invasion</textPath></text>
+                    <text font-size="12.0" fill="black"><textPath href="#arc14" startOffset="50%" text-anchor="middle">Ukraine surrenders</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc15" startOffset="50%" text-anchor="middle">independence lost</textPath></text>
+                    <text font-size="18" fill="red"><textPath href="#arc16" startOffset="50%" text-anchor="middle">Freedom and</textPath></text>
+                    <path d="M 200,200 L 199.99999999999997,50.0 A 150,150 0 0,1 350.0,199.99999999999997 Z" fill="none" stroke="#888" stroke-width="1"/>
+                </g>
+            </svg>
+        </div>
+    </div>
+    <div class="bottom-bar">
+        <button class="bottom-btn">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Enrich
+        </button>
+        <button class="bottom-btn">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Explore
+        </button>
+    </div>
     <script>
+        // Restore mouse-based rotation for the .record group
         const record = document.querySelector('.record');
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const speedDisplay = document.getElementById('speedValue');
-        
         let rotation = 0;
-        let isPlaying = false;
-        let animationFrame;
-        let speed = 0;
-        const maxSpeed = 33.33; // Standard vinyl record speed
-        const acceleration = 0.5;
-        const deceleration = 0.3;
-
-        function rotate() {
-            if (isPlaying) {
-                rotation += speed;
-                record.style.transform = `rotate(${rotation}deg)`;
-                animationFrame = requestAnimationFrame(rotate);
-            }
-        }
-
-        function updateSpeed() {
-            if (isPlaying && speed < maxSpeed) {
-                speed += acceleration;
-            } else if (!isPlaying && speed > 0) {
-                speed -= deceleration;
-                if (speed < 0) speed = 0;
-            }
-            speedDisplay.textContent = Math.round(speed);
-        }
-
-        setInterval(updateSpeed, 100);
-
-        playBtn.addEventListener('click', () => {
-            isPlaying = true;
-            rotate();
-        });
-
-        stopBtn.addEventListener('click', () => {
-            isPlaying = false;
-            cancelAnimationFrame(animationFrame);
-        });
-
-        // Simple manual rotation
         let isDragging = false;
         let startAngle = 0;
         let startRotation = 0;
+        let scale = 1;
+        let startScale = 1;
+        let isPinching = false;
+        let pinchStartDist = 0;
+
+        function getCenter(el) {
+            const rect = el.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
+
+        function setTransform() {
+            record.setAttribute('transform', `translate(200 200) scale(${scale}) rotate(${rotation}) translate(-200 -200)`);
+        }
 
         record.addEventListener('mousedown', (e) => {
+            if (e.touches && e.touches.length > 1) return;
             isDragging = true;
-            const rect = record.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            const center = getCenter(record.closest('svg'));
+            startAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
             startRotation = rotation;
+            document.body.style.userSelect = 'none';
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const rect = record.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-            
-            // Calculate the angle difference and convert to degrees
+            if (!isDragging || isPinching) return;
+            const center = getCenter(record.closest('svg'));
+            const currentAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
             let angleDiff = currentAngle - startAngle;
-            // Normalize the angle to prevent sudden jumps
             if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
             if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-            
-            // Update rotation directly based on mouse movement
             rotation = startRotation + (angleDiff * (180 / Math.PI));
-            record.style.transform = `rotate(${rotation}deg)`;
+            setTransform();
         });
 
         document.addEventListener('mouseup', () => {
             isDragging = false;
+            document.body.style.userSelect = '';
         });
+
+        // Touch support for mobile (rotation and pinch-to-zoom)
+        record.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            if (e.touches.length === 2) {
+                isPinching = true;
+                isDragging = false;
+                pinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                startScale = scale;
+            } else if (e.touches.length === 1) {
+                isDragging = true;
+                isPinching = false;
+                const touch = e.touches[0];
+                const center = getCenter(record.closest('svg'));
+                startAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
+                startRotation = rotation;
+            }
+            document.body.style.userSelect = 'none';
+        });
+
+        record.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            if (isPinching && e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                let newScale = startScale * (dist / pinchStartDist);
+                newScale = Math.max(1, Math.min(newScale, 3)); // Clamp scale between 1x and 3x
+                scale = newScale;
+                setTransform();
+            } else if (isDragging && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const center = getCenter(record.closest('svg'));
+                const currentAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
+                let angleDiff = currentAngle - startAngle;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                rotation = startRotation + (angleDiff * (180 / Math.PI));
+                setTransform();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                isDragging = false;
+                isPinching = false;
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // Initial transform
+        setTransform();
     </script>
 </body>
 </html>
