@@ -26,10 +26,10 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
     for i in range(max_labels, 0, -1):
         r = radius * (0.3 + 0.7 * i / max_labels)
         color = circle_colors[i-1] if i-1 < len(circle_colors) else "#EEE"
-        svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}" stroke="black" stroke-width="1"/>')
+        svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
 
     # Draw center circle and label
-    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{radius*0.2}" fill="#FFFF99" stroke="black" stroke-width="2"/>')
+    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{radius*0.2}" fill="#FFFF99"/>')
     svg.append(
         f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>'
     )
