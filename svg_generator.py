@@ -1,14 +1,58 @@
 import math
 
-def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400):
+def get_label_position(cx, cy, radius, slice_index, n_slices, layer_index, n_layers, angle_offset=0, r_offset=0):
+    """Calculate the position of a label given its slice and layer indices, with optional radial offset."""
+    angle_per = 2 * math.pi / n_slices
+    angle = slice_index * angle_per + angle_per/2 + angle_offset
+    r = radius * (0.3 + 0.7 * (layer_index + 1) / n_layers) + r_offset
+    x = cx + r * math.cos(angle)
+    y = cy + r * math.sin(angle)
+    return x, y
+
+def draw_arrow(svg, start_x, start_y, end_x, end_y, cx, cy, color="black", stroke_width=2, curve_strength=0.3):
+    """Draw a curved arrow between two points, curving outward from the center (cx, cy)."""
+    # Midpoint
+    mid_x = (start_x + end_x) / 2
+    mid_y = (start_y + end_y) / 2
+
+    # Vector from center to midpoint
+    vec_x = mid_x - cx
+    vec_y = mid_y - cy
+    vec_len = math.sqrt(vec_x**2 + vec_y**2)
+    if vec_len == 0:
+        vec_len = 1  # avoid division by zero
+
+    # Offset control point outward from center
+    offset = math.sqrt((end_x - start_x)**2 + (end_y - start_y)**2) * curve_strength
+    control_x = mid_x + (vec_x / vec_len) * offset
+    control_y = mid_y + (vec_y / vec_len) * offset
+
+    # Arrowhead
+    angle = math.atan2(end_y - control_y, end_x - control_x)
+    arrow_length = 10
+    arrow_angle = math.pi/6
+    arrow_x1 = end_x - arrow_length * math.cos(angle - arrow_angle)
+    arrow_y1 = end_y - arrow_length * math.sin(angle - arrow_angle)
+    arrow_x2 = end_x - arrow_length * math.cos(angle + arrow_angle)
+    arrow_y2 = end_y - arrow_length * math.sin(angle + arrow_angle)
+
+    # Draw the curved line
+    svg.append(f'<path d="M {start_x},{start_y} Q {control_x},{control_y} {end_x},{end_y}" '
+               f'stroke="{color}" stroke-width="{stroke_width}" fill="none"/>')
+    # Draw the arrow head
+    svg.append(f'<path d="M {end_x},{end_y} L {arrow_x1},{arrow_y1} L {arrow_x2},{arrow_y2} Z" '
+               f'fill="{color}"/>')
+
+def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400, arrows=None):
     """
     slices: list of dicts, each with keys:
         - labels: list of (label, color) from center outward along the slice
-    Example:
-        slices = [
-            {"labels": [("Clarity, relief", "yellow"), ("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
-            {"labels": [("Clarity, relief", "yellow"), ("Don't buy", "black"), ("Separation", "red")]},
-        ]
+    arrows: list of dicts, each with keys:
+        - from_slice: index of source slice
+        - from_layer: index of source layer
+        - to_slice: index of target slice
+        - to_layer: index of target layer
+        - color: (optional) arrow color
     """
     cx, cy = width // 2, height // 2
     n = len(slices)
@@ -47,7 +91,7 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
             if j == 0:
                 max_font = 14
             else:
-                max_font = 18
+                max_font = 14
             max_lines = min(2, len(label.split()))
             if n_labels > 1:
                 font_size_layer = min_font + (max_font - min_font) * (j / (n_labels - 1))
@@ -106,26 +150,36 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
                 svg.append(
                     f'<text font-size="{font_size}" fill="{color}"><textPath href="#{arc_id}" startOffset="50%" text-anchor="middle">{line}</textPath></text>'
                 )
-        # Draw the slice sector (optional, for visual separation)
+
+        # Draw the slice sector (boundary line)
         x1 = cx + radius * math.cos(start_angle)
         y1 = cy + radius * math.sin(start_angle)
-        x2 = cx + radius * math.cos(end_angle)
-        y2 = cy + radius * math.sin(end_angle)
-        large_arc = 1 if angle_per > math.pi else 0
-        path = (
-            f'M {cx},{cy} '
-            f'L {x1},{y1} '
-            f'A {radius},{radius} 0 {large_arc},1 {x2},{y2} '
-            f'Z'
-        )
-        svg.append(f'<path d="{path}" fill="none" stroke="#888" stroke-width="1"/>')
+        svg.append(f'<line x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
+
+    # Draw arrows if specified
+    if arrows:
+        for arrow in arrows:
+            from_x, from_y = get_label_position(
+                cx, cy, radius,
+                arrow['from_slice'], n,
+                arrow['from_layer'], max_labels,
+                r_offset=-15  # Move arrow tip closer to text
+            )
+            to_x, to_y = get_label_position(
+                cx, cy, radius,
+                arrow['to_slice'], n,
+                arrow['to_layer'], max_labels,
+                r_offset=-15  # Move arrow tip closer to text
+            )
+            color = arrow.get('color', 'black')
+            draw_arrow(svg, from_x, from_y, to_x, to_y, cx, cy, color=color)
 
     defs.append("</defs>")
     svg.insert(1, "\n".join(defs))
     svg.append('</svg>')
     return "\n".join(svg)
 
-def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400):
+def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400, arrows=None):
     """
     wisdom_units: list of WisdomUnit objects
     Each WisdomUnit produces two slices: thesis (T-, T, T+) and antithesis (A+, A, A-), which are opposite each other.
@@ -152,14 +206,21 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
         if antithesis_labels:
             antithesis_slices.append({"labels": antithesis_labels})
     slices = thesis_slices + antithesis_slices
-    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height)
+    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, arrows=arrows)
 
 # Example usage:
 slices = [
     {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
     {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
-    {"labels": [("Gheyness", "green"), ("Be homeless", "black"), ("Liberation", "red")]},
+    {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
 ]
-svg_code = svg_dialectical_wheel(slices, center_label="bruh")
+
+# Example arrows connecting labels
+arrows = [
+    {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},  # "Separation" -> "Family unity"
+    {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},  # "Clarity, relief" -> "Burden"
+]
+
+svg_code = svg_dialectical_wheel(slices, center_label="bruh", arrows=arrows)
 with open("dialectical_wheel.svg", "w") as f:
     f.write(svg_code)
