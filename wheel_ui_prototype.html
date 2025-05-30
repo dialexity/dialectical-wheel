@@ -101,6 +101,35 @@
             cursor: grab;
             touch-action: none;
         }
+        
+        /* New styles for clickable slices */
+        .clickable-slice {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            fill: transparent;
+            stroke: transparent;
+            stroke-width: 2;
+        }
+        .clickable-slice:hover {
+            stroke: rgba(0, 116, 217, 0.3);
+            fill: rgba(0, 116, 217, 0.1);
+        }
+        
+        .slice-boundary {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .controls-overlay {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: #333;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -114,86 +143,121 @@
         </div>
     </div>
     <div class="main-content">
+        <div class="controls-overlay">
+            Drag to rotate • Pinch to zoom • Click slices to enlarge
+        </div>
         <div class="wheel-container">
             <svg class="wheel-svg" viewBox="0 0 400 400">
                 <g class="record">
                     <defs>
-                        <path id="arc0" d="M 260.0,200.0 A 60.0,60.0 0 0,1 230.0,251.96152422706632" fill="none"/>
-                        <path id="arc1" d="M 289.0,200.0 A 88.99999999999999,88.99999999999999 0 0,1 244.5,277.076260936815" fill="none"/>
-                        <path id="arc2" d="M 301.0,200.0 A 100.99999999999999,100.99999999999999 0 0,1 250.5,287.46856578222827" fill="none"/>
-                        <path id="arc3" d="M 322.0,200.0 A 121.99999999999997,121.99999999999997 0 0,1 261.0,305.6550992617015" fill="none"/>
-                        <path id="arc4" d="M 338.0,200.0 A 137.99999999999997,137.99999999999997 0 0,1 269.0,319.51150572225254" fill="none"/>
-                        <path id="arc5" d="M 230.0,251.96152422706632 A 60.0,60.0 0 0,1 170.0,251.96152422706632" fill="none"/>
-                        <path id="arc6" d="M 244.5,277.076260936815 A 88.99999999999999,88.99999999999999 0 0,1 155.50000000000003,277.07626093681506" fill="none"/>
-                        <path id="arc7" d="M 250.5,287.46856578222827 A 100.99999999999999,100.99999999999999 0 0,1 149.50000000000003,287.4685657822283" fill="none"/>
-                        <path id="arc8" d="M 261.0,305.6550992617015 A 121.99999999999997,121.99999999999997 0 0,1 139.00000000000003,305.6550992617015" fill="none"/>
-                        <path id="arc9" d="M 269.0,319.51150572225254 A 137.99999999999997,137.99999999999997 0 0,1 131.00000000000006,319.51150572225254" fill="none"/>
-                        <path id="arc10" d="M 170.0,251.96152422706632 A 60.0,60.0 0 0,1 140.0,200.0" fill="none"/>
-                        <path id="arc11" d="M 155.50000000000003,277.07626093681506 A 88.99999999999999,88.99999999999999 0 0,1 111.00000000000001,200.0" fill="none"/>
-                        <path id="arc12" d="M 149.50000000000003,287.4685657822283 A 100.99999999999999,100.99999999999999 0 0,1 99.00000000000001,200.0" fill="none"/>
-                        <path id="arc13" d="M 139.00000000000003,305.6550992617015 A 121.99999999999997,121.99999999999997 0 0,1 78.00000000000003,200.00000000000003" fill="none"/>
-                        <path id="arc14" d="M 131.00000000000006,319.51150572225254 A 137.99999999999997,137.99999999999997 0 0,1 62.00000000000003,200.00000000000003" fill="none"/>
-                        <path id="arc15" d="M 140.0,200.0 A 60.0,60.0 0 0,1 169.99999999999997,148.03847577293368" fill="none"/>
-                        <path id="arc16" d="M 111.00000000000001,200.0 A 88.99999999999999,88.99999999999999 0 0,1 155.49999999999997,122.923739063185" fill="none"/>
-                        <path id="arc17" d="M 99.00000000000001,200.0 A 100.99999999999999,100.99999999999999 0 0,1 149.49999999999997,112.53143421777173" fill="none"/>
-                        <path id="arc18" d="M 78.00000000000003,200.00000000000003 A 121.99999999999997,121.99999999999997 0 0,1 138.99999999999994,94.34490073829855" fill="none"/>
-                        <path id="arc19" d="M 62.00000000000003,200.00000000000003 A 137.99999999999997,137.99999999999997 0 0,1 130.99999999999994,80.48849427774753" fill="none"/>
-                        <path id="arc20" d="M 169.99999999999997,148.03847577293368 A 60.0,60.0 0 0,1 229.99999999999997,148.03847577293365" fill="none"/>
-                        <path id="arc21" d="M 155.49999999999997,122.923739063185 A 88.99999999999999,88.99999999999999 0 0,1 244.49999999999994,122.92373906318494" fill="none"/>
-                        <path id="arc22" d="M 149.49999999999997,112.53143421777173 A 100.99999999999999,100.99999999999999 0 0,1 250.49999999999994,112.53143421777168" fill="none"/>
-                        <path id="arc23" d="M 138.99999999999994,94.34490073829855 A 121.99999999999997,121.99999999999997 0 0,1 260.9999999999999,94.34490073829846" fill="none"/>
-                        <path id="arc24" d="M 130.99999999999994,80.48849427774753 A 137.99999999999997,137.99999999999997 0 0,1 268.9999999999999,80.48849427774744" fill="none"/>
-                        <path id="arc25" d="M 229.99999999999997,148.03847577293365 A 60.0,60.0 0 0,1 260.0,199.99999999999997" fill="none"/>
-                        <path id="arc26" d="M 244.49999999999994,122.92373906318494 A 88.99999999999999,88.99999999999999 0 0,1 289.0,199.99999999999997" fill="none"/>
-                        <path id="arc27" d="M 250.49999999999994,112.53143421777168 A 100.99999999999999,100.99999999999999 0 0,1 301.0,199.99999999999997" fill="none"/>
-                        <path id="arc28" d="M 260.9999999999999,94.34490073829846 A 121.99999999999997,121.99999999999997 0 0,1 322.0,199.99999999999997" fill="none"/>
-                        <path id="arc29" d="M 268.9999999999999,80.48849427774744 A 137.99999999999997,137.99999999999997 0 0,1 338.0,199.99999999999997" fill="none"/>
+                        <path id="arc0" d="M 260.0,200.0 A 60.0,60.0 0 0,1 242.42640687119285,242.42640687119285" fill="none"/>
+                        <path id="arc1" d="M 289.0,200.0 A 88.99999999999999,88.99999999999999 0 0,1 262.9325035256027,262.9325035256027" fill="none"/>
+                        <path id="arc2" d="M 301.0,200.0 A 100.99999999999999,100.99999999999999 0 0,1 271.4177848998413,271.4177848998413" fill="none"/>
+                        <path id="arc3" d="M 322.0,200.0 A 121.99999999999997,121.99999999999997 0 0,1 286.2670273047588,286.26702730475876" fill="none"/>
+                        <path id="arc4" d="M 338.0,200.0 A 137.99999999999997,137.99999999999997 0 0,1 297.58073580374355,297.58073580374355" fill="none"/>
+                        <path id="arc5" d="M 242.42640687119285,242.42640687119285 A 60.0,60.0 0 0,1 200.0,260.0" fill="none"/>
+                        <path id="arc6" d="M 262.9325035256027,262.9325035256027 A 88.99999999999999,88.99999999999999 0 0,1 200.0,289.0" fill="none"/>
+                        <path id="arc7" d="M 271.4177848998413,271.4177848998413 A 100.99999999999999,100.99999999999999 0 0,1 200.0,301.0" fill="none"/>
+                        <path id="arc8" d="M 286.2670273047588,286.26702730475876 A 121.99999999999997,121.99999999999997 0 0,1 200.0,322.0" fill="none"/>
+                        <path id="arc9" d="M 297.58073580374355,297.58073580374355 A 137.99999999999997,137.99999999999997 0 0,1 200.0,338.0" fill="none"/>
+                        <path id="arc10" d="M 200.0,260.0 A 60.0,60.0 0 0,1 157.57359312880715,242.42640687119285" fill="none"/>
+                        <path id="arc11" d="M 200.0,289.0 A 88.99999999999999,88.99999999999999 0 0,1 137.06749647439727,262.9325035256027" fill="none"/>
+                        <path id="arc12" d="M 200.0,301.0 A 100.99999999999999,100.99999999999999 0 0,1 128.58221510015872,271.4177848998413" fill="none"/>
+                        <path id="arc13" d="M 200.0,322.0 A 121.99999999999997,121.99999999999997 0 0,1 113.73297269524123,286.2670273047588" fill="none"/>
+                        <path id="arc14" d="M 200.0,338.0 A 137.99999999999997,137.99999999999997 0 0,1 102.41926419625646,297.58073580374355" fill="none"/>
+                        <path id="arc15" d="M 157.57359312880715,242.42640687119285 A 60.0,60.0 0 0,1 140.0,200.0" fill="none"/>
+                        <path id="arc16" d="M 137.06749647439727,262.9325035256027 A 88.99999999999999,88.99999999999999 0 0,1 111.00000000000001,200.0" fill="none"/>
+                        <path id="arc17" d="M 128.58221510015872,271.4177848998413 A 100.99999999999999,100.99999999999999 0 0,1 99.00000000000001,200.0" fill="none"/>
+                        <path id="arc18" d="M 113.73297269524123,286.2670273047588 A 121.99999999999997,121.99999999999997 0 0,1 78.00000000000003,200.00000000000003" fill="none"/>
+                        <path id="arc19" d="M 102.41926419625646,297.58073580374355 A 137.99999999999997,137.99999999999997 0 0,1 62.00000000000003,200.00000000000003" fill="none"/>
+                        <path id="arc20" d="M 140.0,200.0 A 60.0,60.0 0 0,1 157.57359312880715,157.57359312880715" fill="none"/>
+                        <path id="arc21" d="M 111.00000000000001,200.0 A 88.99999999999999,88.99999999999999 0 0,1 137.06749647439727,137.06749647439727" fill="none"/>
+                        <path id="arc22" d="M 99.00000000000001,200.0 A 100.99999999999999,100.99999999999999 0 0,1 128.5822151001587,128.58221510015872" fill="none"/>
+                        <path id="arc23" d="M 78.00000000000003,200.00000000000003 A 121.99999999999997,121.99999999999997 0 0,1 113.7329726952412,113.73297269524123" fill="none"/>
+                        <path id="arc24" d="M 62.00000000000003,200.00000000000003 A 137.99999999999997,137.99999999999997 0 0,1 102.41926419625644,102.41926419625646" fill="none"/>
+                        <path id="arc25" d="M 157.57359312880715,157.57359312880715 A 60.0,60.0 0 0,1 200.0,140.0" fill="none"/>
+                        <path id="arc26" d="M 137.06749647439727,137.06749647439727 A 88.99999999999999,88.99999999999999 0 0,1 199.99999999999997,111.00000000000001" fill="none"/>
+                        <path id="arc27" d="M 128.5822151001587,128.58221510015872 A 100.99999999999999,100.99999999999999 0 0,1 199.99999999999997,99.00000000000001" fill="none"/>
+                        <path id="arc28" d="M 113.7329726952412,113.73297269524123 A 121.99999999999997,121.99999999999997 0 0,1 199.99999999999997,78.00000000000003" fill="none"/>
+                        <path id="arc29" d="M 102.41926419625644,102.41926419625646 A 137.99999999999997,137.99999999999997 0 0,1 199.99999999999997,62.00000000000003" fill="none"/>
+                        <path id="arc30" d="M 200.0,140.0 A 60.0,60.0 0 0,1 242.42640687119285,157.57359312880715" fill="none"/>
+                        <path id="arc31" d="M 199.99999999999997,111.00000000000001 A 88.99999999999999,88.99999999999999 0 0,1 262.9325035256027,137.06749647439727" fill="none"/>
+                        <path id="arc32" d="M 199.99999999999997,99.00000000000001 A 100.99999999999999,100.99999999999999 0 0,1 271.41778489984125,128.5822151001587" fill="none"/>
+                        <path id="arc33" d="M 199.99999999999997,78.00000000000003 A 121.99999999999997,121.99999999999997 0 0,1 286.26702730475876,113.7329726952412" fill="none"/>
+                        <path id="arc34" d="M 199.99999999999997,62.00000000000003 A 137.99999999999997,137.99999999999997 0 0,1 297.5807358037435,102.41926419625644" fill="none"/>
+                        <path id="arc35" d="M 242.42640687119285,157.57359312880715 A 60.0,60.0 0 0,1 260.0,199.99999999999997" fill="none"/>
+                        <path id="arc36" d="M 262.9325035256027,137.06749647439727 A 88.99999999999999,88.99999999999999 0 0,1 289.0,199.99999999999997" fill="none"/>
+                        <path id="arc37" d="M 271.41778489984125,128.5822151001587 A 100.99999999999999,100.99999999999999 0 0,1 301.0,199.99999999999997" fill="none"/>
+                        <path id="arc38" d="M 286.26702730475876,113.7329726952412 A 121.99999999999997,121.99999999999997 0 0,1 322.0,199.99999999999997" fill="none"/>
+                        <path id="arc39" d="M 297.5807358037435,102.41926419625644 A 137.99999999999997,137.99999999999997 0 0,1 338.0,199.99999999999997" fill="none"/>
                         </defs>
+                        <g class="record">
                         <circle cx="200" cy="200" r="149.99999999999997" fill="#F9C6CC"/>
                         <circle cx="200" cy="200" r="114.99999999999999" fill="#FFFFFF"/>
                         <circle cx="200" cy="200" r="80.0" fill="#C6E5B3"/>
+                        <g id="clickable-slices">
+                        <path class="clickable-slice" data-slice="0" d="M 200,200 L 350.0,200.0 A 150,150 0 0,1 306.06601717798213,306.06601717798213 Z"/>
+                        <path class="clickable-slice" data-slice="1" d="M 200,200 L 306.06601717798213,306.06601717798213 A 150,150 0 0,1 200.0,350.0 Z"/>
+                        <path class="clickable-slice" data-slice="2" d="M 200,200 L 200.0,350.0 A 150,150 0 0,1 93.93398282201788,306.06601717798213 Z"/>
+                        <path class="clickable-slice" data-slice="3" d="M 200,200 L 93.93398282201788,306.06601717798213 A 150,150 0 0,1 50.0,200.00000000000003 Z"/>
+                        <path class="clickable-slice" data-slice="4" d="M 200,200 L 50.0,200.00000000000003 A 150,150 0 0,1 93.93398282201785,93.93398282201788 Z"/>
+                        <path class="clickable-slice" data-slice="5" d="M 200,200 L 93.93398282201785,93.93398282201788 A 150,150 0 0,1 199.99999999999997,50.0 Z"/>
+                        <path class="clickable-slice" data-slice="6" d="M 200,200 L 199.99999999999997,50.0 A 150,150 0 0,1 306.0660171779821,93.93398282201785 Z"/>
+                        <path class="clickable-slice" data-slice="7" d="M 200,200 L 306.0660171779821,93.93398282201785 A 150,150 0 0,1 350.0,199.99999999999997 Z"/>
+                        </g>
                         <circle cx="200" cy="200" r="30.0" fill="#FFFF99"/>
                         <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Core</text>
                         <text font-size="6.0" fill="green"><textPath href="#arc0" startOffset="50%" text-anchor="middle">Strategic power projection</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc1" startOffset="50%" text-anchor="middle">war</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc2" startOffset="50%" text-anchor="middle">Putin initiates</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc1" startOffset="50%" text-anchor="middle">initiates</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc2" startOffset="50%" text-anchor="middle">Putin</textPath></text>
                         <text font-size="14" fill="red"><textPath href="#arc3" startOffset="50%" text-anchor="middle">aggression</textPath></text>
                         <text font-size="14" fill="red"><textPath href="#arc4" startOffset="50%" text-anchor="middle">Destructive</textPath></text>
-                        <line x1="200" y1="200" x2="350.0" y2="200.0" stroke="#888" stroke-width="1"/>
                         <text font-size="6.0" fill="green"><textPath href="#arc5" startOffset="50%" text-anchor="middle">Liberation and sovereignty protected</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc6" startOffset="50%" text-anchor="middle">invasion</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc7" startOffset="50%" text-anchor="middle">Ukraine resists</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc8" startOffset="50%" text-anchor="middle">and destruction</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc9" startOffset="50%" text-anchor="middle">Endless conflict</textPath></text>
-                        <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                        <text font-size="10.0" fill="black"><textPath href="#arc6" startOffset="50%" text-anchor="middle">resists</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc7" startOffset="50%" text-anchor="middle">Ukraine</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc8" startOffset="50%" text-anchor="middle">conflict and</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc9" startOffset="50%" text-anchor="middle">Endless</textPath></text>
                         <text font-size="6.0" fill="green"><textPath href="#arc10" startOffset="50%" text-anchor="middle">Ukrainian victory approaches</textPath></text>
                         <text font-size="10.0" fill="black"><textPath href="#arc11" startOffset="50%" text-anchor="middle">offensive</textPath></text>
                         <text font-size="10.0" fill="black"><textPath href="#arc12" startOffset="50%" text-anchor="middle">Russian</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc13" startOffset="50%" text-anchor="middle">resources drain</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc13" startOffset="50%" text-anchor="middle">resources</textPath></text>
                         <text font-size="14" fill="red"><textPath href="#arc14" startOffset="50%" text-anchor="middle">Military</textPath></text>
-                        <line x1="200" y1="200" x2="125.00000000000003" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
-                        <text font-size="6.0" fill="green"><textPath href="#arc15" startOffset="50%" text-anchor="middle">Mutual understanding</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc16" startOffset="50%" text-anchor="middle">negotiations</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc17" startOffset="50%" text-anchor="middle">Peace</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc18" startOffset="50%" text-anchor="middle">submission</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc19" startOffset="50%" text-anchor="middle">Passive</textPath></text>
-                        <line x1="200" y1="200" x2="50.0" y2="200.00000000000003" stroke="#888" stroke-width="1"/>
-                        <text font-size="6.0" fill="green"><textPath href="#arc20" startOffset="50%" text-anchor="middle">Immediate peace achieved</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc21" startOffset="50%" text-anchor="middle">surrenders to</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc22" startOffset="50%" text-anchor="middle">Ukraine</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc23" startOffset="50%" text-anchor="middle">independence</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc24" startOffset="50%" text-anchor="middle">Freedom and</textPath></text>
-                        <line x1="200" y1="200" x2="124.99999999999993" y2="70.09618943233426" stroke="#888" stroke-width="1"/>
-                        <text font-size="6.0" fill="green"><textPath href="#arc25" startOffset="50%" text-anchor="middle">Strategic military strength maintained</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc26" startOffset="50%" text-anchor="middle">dominance</textPath></text>
-                        <text font-size="10.0" fill="black"><textPath href="#arc27" startOffset="50%" text-anchor="middle">Russian military</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc28" startOffset="50%" text-anchor="middle">inevitable</textPath></text>
-                        <text font-size="14" fill="red"><textPath href="#arc29" startOffset="50%" text-anchor="middle">Total defeat</textPath></text>
-                        <line x1="200" y1="200" x2="274.9999999999999" y2="70.09618943233414" stroke="#888" stroke-width="1"/>
-                        <path d="M 200.0,335.0 Q 239.3216015859733,317.00435357401045 256.29165124598853,232.5" stroke="blue" stroke-width="2" fill="none"/>
-                        <path d="M 256.29165124598853,232.5 L 259.4886827847866,241.9751775360639 L 249.6844225637886,240.00629929733117 Z" fill="blue"/>
-                        <path d="M 200.0,265.0 Q 281.667941755483,292.55568267794854 316.9134295108992,267.5" stroke="purple" stroke-width="2" fill="none"/>
-                        <path d="M 316.9134295108992,267.5 L 312.75199586531164,276.59299015799377 L 306.95795221492097,268.44258782575474 Z" fill="purple"/>
+                        <text font-size="6.0" fill="green"><textPath href="#arc15" startOffset="50%" text-anchor="middle">Freedom restored</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc16" startOffset="50%" text-anchor="middle">victory</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc17" startOffset="50%" text-anchor="middle">Ukrainian</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc18" startOffset="50%" text-anchor="middle">intensifies</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc19" startOffset="50%" text-anchor="middle">Vengeance</textPath></text>
+                        <text font-size="6.0" fill="green"><textPath href="#arc20" startOffset="50%" text-anchor="middle">Mutual understanding</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc21" startOffset="50%" text-anchor="middle">negotiations</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc22" startOffset="50%" text-anchor="middle">Peace</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc23" startOffset="50%" text-anchor="middle">submission</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc24" startOffset="50%" text-anchor="middle">Passive</textPath></text>
+                        <text font-size="6.0" fill="green"><textPath href="#arc25" startOffset="50%" text-anchor="middle">Immediate peace achieved</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc26" startOffset="50%" text-anchor="middle">surrenders</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc27" startOffset="50%" text-anchor="middle">Ukraine</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc28" startOffset="50%" text-anchor="middle">independence</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc29" startOffset="50%" text-anchor="middle">Freedom and</textPath></text>
+                        <text font-size="6.0" fill="green"><textPath href="#arc30" startOffset="50%" text-anchor="middle">Strategic military strength maintained</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc31" startOffset="50%" text-anchor="middle">military</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc32" startOffset="50%" text-anchor="middle">Russian</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc33" startOffset="50%" text-anchor="middle">inevitable</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc34" startOffset="50%" text-anchor="middle">Total defeat</textPath></text>
+                        <text font-size="6.0" fill="green"><textPath href="#arc35" startOffset="50%" text-anchor="middle">Stability maintained</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc36" startOffset="50%" text-anchor="middle">dominance</textPath></text>
+                        <text font-size="10.0" fill="black"><textPath href="#arc37" startOffset="50%" text-anchor="middle">Russian</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc38" startOffset="50%" text-anchor="middle">deepens</textPath></text>
+                        <text font-size="14" fill="red"><textPath href="#arc39" startOffset="50%" text-anchor="middle">Oppression</textPath></text>
+                        <g id="slice-boundaries">
+                        <line class="slice-boundary" x1="200" y1="200" x2="350.0" y2="200.0" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="306.06601717798213" y2="306.06601717798213" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="200.0" y2="350.0" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="93.93398282201788" y2="306.06601717798213" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="50.0" y2="200.00000000000003" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="93.93398282201785" y2="93.93398282201788" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="199.99999999999997" y2="50.0" stroke="#888" stroke-width="1"/>
+                        <line class="slice-boundary" x1="200" y1="200" x2="306.0660171779821" y2="93.93398282201785" stroke="#888" stroke-width="1"/>
+                        </g>
+                        </g>
                 </g>
             </svg>
         </div>
@@ -203,13 +267,211 @@
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             Enrich
         </button>
-        <button class="bottom-btn">
+        <button class="bottom-btn" onclick="resetSlices()">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            Explore
+            Reset
         </button>
     </div>
+    
     <script>
-        // Restore mouse-based rotation for the .record group
+        // Slice enlargement functionality
+        class DialecticalWheel {
+            constructor() {
+                // Automatically detect slice count from SVG
+                const clickableSlices = document.querySelectorAll('.clickable-slice');
+                this.sliceCount = clickableSlices.length;
+                this.centerX = 200;
+                this.centerY = 200;
+                this.radius = 150;
+                
+                // Initialize with equal angles based on detected slice count
+                const equalAngle = 360 / this.sliceCount;
+                this.sliceAngles = Array(this.sliceCount).fill(equalAngle);
+                
+                this.setupSliceInteraction();
+            }
+            
+            setupSliceInteraction() {
+                const clickableSlices = document.querySelectorAll('.clickable-slice');
+                clickableSlices.forEach((slice, index) => {
+                    // Desktop click
+                    slice.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.enlargeSlice(index);
+                    });
+                    
+                    // Mobile touch handling for more responsive taps
+                    let touchStartTime = 0;
+                    let touchStartPos = null;
+                    
+                    slice.addEventListener('touchstart', (e) => {
+                        e.stopPropagation();
+                        touchStartTime = Date.now();
+                        const touch = e.touches[0];
+                        touchStartPos = { x: touch.clientX, y: touch.clientY };
+                    });
+                    
+                    slice.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const touchDuration = Date.now() - touchStartTime;
+                        const touch = e.changedTouches[0];
+                        const touchEndPos = { x: touch.clientX, y: touch.clientY };
+                        
+                        // Check if it was a quick tap (not a drag) and didn't move much
+                        const distance = Math.sqrt(
+                            Math.pow(touchEndPos.x - touchStartPos.x, 2) + 
+                            Math.pow(touchEndPos.y - touchStartPos.y, 2)
+                        );
+                        
+                        // Quick tap with minimal movement = enlarge slice
+                        if (touchDuration < 300 && distance < 20) {
+                            this.enlargeSlice(index);
+                        }
+                    });
+                });
+            }
+            
+            enlargeSlice(targetIndex) {
+                const enlargeAmount = 45; // degrees to add
+                const totalReduction = enlargeAmount;
+                const reductionPerNeighbor = totalReduction / (this.sliceCount - 1);
+                
+                // Enlarge target slice
+                this.sliceAngles[targetIndex] = Math.min(
+                    this.sliceAngles[targetIndex] + enlargeAmount,
+                    150 // Max size
+                );
+                
+                // Reduce other slices proportionally
+                for (let i = 0; i < this.sliceCount; i++) {
+                    if (i !== targetIndex) {
+                        this.sliceAngles[i] = Math.max(
+                            this.sliceAngles[i] - reductionPerNeighbor,
+                            15 // Minimum size
+                        );
+                    }
+                }
+                
+                // Normalize to ensure total is 360 degrees
+                this.normalizeAngles();
+                
+                // Update slice paths and boundaries
+                this.updateAllSlices();
+            }
+            
+            normalizeAngles() {
+                const total = this.sliceAngles.reduce((sum, angle) => sum + angle, 0);
+                const factor = 360 / total;
+                this.sliceAngles = this.sliceAngles.map(angle => angle * factor);
+            }
+            
+            updateAllSlices() {
+                this.updateClickableSlices();
+                this.updateSliceBoundaries();
+                this.updateArcPaths();
+            }
+            
+            updateClickableSlices() {
+                const clickableSlices = document.querySelectorAll('.clickable-slice');
+                let currentAngle = 0;
+                
+                clickableSlices.forEach((slice, index) => {
+                    const startAngle = currentAngle;
+                    const endAngle = currentAngle + this.sliceAngles[index];
+                    
+                    const pathData = this.createSlicePath(startAngle, endAngle);
+                    slice.setAttribute('d', pathData);
+                    
+                    currentAngle += this.sliceAngles[index];
+                });
+            }
+            
+            updateSliceBoundaries() {
+                const boundaries = document.querySelectorAll('.slice-boundary');
+                let currentAngle = 0;
+                
+                boundaries.forEach((line, index) => {
+                    const angleRad = (currentAngle * Math.PI) / 180;
+                    const x2 = this.centerX + this.radius * Math.cos(angleRad);
+                    const y2 = this.centerY + this.radius * Math.sin(angleRad);
+                    
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    
+                    currentAngle += this.sliceAngles[index];
+                });
+            }
+            
+            updateArcPaths() {
+                // Update arc paths for text positioning
+                const arcPaths = document.querySelectorAll('path[id^="arc"]');
+                let currentAngle = 0;
+                let arcIndex = 0;
+                
+                for (let sliceIndex = 0; sliceIndex < this.sliceCount; sliceIndex++) {
+                    const sliceAngle = this.sliceAngles[sliceIndex];
+                    const startAngle = currentAngle;
+                    const endAngle = currentAngle + sliceAngle;
+                    
+                    // Update 5 arcs per slice (different radii)
+                    for (let layerIndex = 0; layerIndex < 5; layerIndex++) {
+                        if (arcIndex < arcPaths.length) {
+                            const radius = 60 + layerIndex * 19.5; // Match original radii
+                            const pathData = this.createArcPath(startAngle, endAngle, radius);
+                            arcPaths[arcIndex].setAttribute('d', pathData);
+                            arcIndex++;
+                        }
+                    }
+                    
+                    currentAngle += sliceAngle;
+                }
+            }
+            
+            createSlicePath(startAngle, endAngle) {
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                
+                const x1 = this.centerX + this.radius * Math.cos(startRad);
+                const y1 = this.centerY + this.radius * Math.sin(startRad);
+                const x2 = this.centerX + this.radius * Math.cos(endRad);
+                const y2 = this.centerY + this.radius * Math.sin(endRad);
+                
+                const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+                
+                return `M ${this.centerX},${this.centerY} L ${x1},${y1} A ${this.radius},${this.radius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
+            }
+            
+            createArcPath(startAngle, endAngle, radius) {
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                
+                const x1 = this.centerX + radius * Math.cos(startRad);
+                const y1 = this.centerY + radius * Math.sin(startRad);
+                const x2 = this.centerX + radius * Math.cos(endRad);
+                const y2 = this.centerY + radius * Math.sin(endRad);
+                
+                const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+                
+                return `M ${x1},${y1} A ${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2}`;
+            }
+            
+            reset() {
+                this.sliceAngles = Array(this.sliceCount).fill(360 / this.sliceCount);
+                this.updateAllSlices();
+            }
+        }
+        
+        // Initialize wheel
+        const dialecticalWheel = new DialecticalWheel();
+        
+        // Global reset function
+        function resetSlices() {
+            dialecticalWheel.reset();
+        }
+
+        // Existing rotation and zoom functionality
         const record = document.querySelector('.record');
         let rotation = 0;
         let isDragging = false;
@@ -233,7 +495,6 @@
             };
         }
 
-        // Convert client (screen) coordinates to SVG coordinates
         function clientToSvg(svg, clientX, clientY) {
             const pt = svg.createSVGPoint();
             pt.x = clientX;
@@ -247,6 +508,9 @@
 
         record.addEventListener('mousedown', (e) => {
             if (e.touches && e.touches.length > 1) return;
+            // Check if click is on a slice - if so, don't start rotation
+            if (e.target.classList.contains('clickable-slice')) return;
+            
             isDragging = true;
             const center = getCenter(record.closest('svg'));
             startAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
@@ -270,9 +534,9 @@
             document.body.style.userSelect = '';
         });
 
-        // Touch support for mobile (rotation and gesture-centered pinch-to-zoom)
+        // Touch support for mobile
         record.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent scrolling
+            e.preventDefault();
             if (e.touches.length === 2) {
                 isPinching = true;
                 isDragging = false;
@@ -281,7 +545,6 @@
                     e.touches[0].clientY - e.touches[1].clientY
                 );
                 startScale = scale;
-                // Gesture-centered zoom: get midpoint in SVG coordinates
                 const svg = record.closest('svg');
                 const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -289,9 +552,13 @@
                 startOffsetX = offsetX;
                 startOffsetY = offsetY;
             } else if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                // Check if touch is on a slice
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target && target.classList.contains('clickable-slice')) return;
+                
                 isDragging = true;
                 isPinching = false;
-                const touch = e.touches[0];
                 const center = getCenter(record.closest('svg'));
                 startAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
                 startRotation = rotation;
@@ -300,16 +567,14 @@
         });
 
         record.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Prevent scrolling
+            e.preventDefault();
             if (isPinching && e.touches.length === 2) {
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
                 );
                 let newScale = startScale * (dist / pinchStartDist);
-                newScale = Math.max(1, Math.min(newScale, 3)); // Clamp scale between 1x and 3x
-                // Correct formula:
-                // offset = startOffset + (pinchMidStart - center) * (1 - newScale/startScale)
+                newScale = Math.max(1, Math.min(newScale, 3));
                 const center = {x: 200, y: 200};
                 offsetX = startOffsetX + (pinchMidStart.x - center.x) * (1 - newScale / startScale);
                 offsetY = startOffsetY + (pinchMidStart.y - center.y) * (1 - newScale / startScale);

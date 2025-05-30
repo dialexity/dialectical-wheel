@@ -43,8 +43,24 @@ def draw_arrow(svg, start_x, start_y, end_x, end_y, cx, cy, color="black", strok
     svg.append(f'<path d="M {end_x},{end_y} L {arrow_x1},{arrow_y1} L {arrow_x2},{arrow_y2} Z" '
                f'fill="{color}"/>')
 
-def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400, arrows=None):
+def create_clickable_slice_path(cx, cy, radius, start_angle_deg, end_angle_deg):
+    """Create SVG path for a clickable slice area."""
+    start_rad = math.radians(start_angle_deg)
+    end_rad = math.radians(end_angle_deg)
+    
+    x1 = cx + radius * math.cos(start_rad)
+    y1 = cy + radius * math.sin(start_rad)
+    x2 = cx + radius * math.cos(end_rad)
+    y2 = cy + radius * math.sin(end_rad)
+    
+    large_arc = 1 if end_angle_deg - start_angle_deg > 180 else 0
+    
+    return f"M {cx},{cy} L {x1},{y1} A {radius},{radius} 0 {large_arc},1 {x2},{y2} Z"
+
+def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400, arrows=None, interactive=False):
     """
+    Generate SVG for dialectical wheel, optionally with interactive elements.
+    
     slices: list of dicts, each with keys:
         - labels: list of (label, color) from center outward along the slice
     arrows: list of dicts, each with keys:
@@ -53,12 +69,19 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
         - to_slice: index of target slice
         - to_layer: index of target layer
         - color: (optional) arrow color
+    interactive: if True, adds clickable slice paths and CSS classes for interactivity
     """
     cx, cy = width // 2, height // 2
     n = len(slices)
     angle_per = 2 * math.pi / n
     font_size = max(10, min(18, int(36 / n)))
-    svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    
+    # Start SVG with optional record group for rotation
+    if interactive:
+        svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+        svg.append('<g class="record">')
+    else:
+        svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
 
     # Prepare defs for arc paths
     defs = ["<defs>"]
@@ -71,6 +94,16 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
         r = radius * (0.3 + 0.7 * i / max_labels)
         color = circle_colors[i-1] if i-1 < len(circle_colors) else "#EEE"
         svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
+
+    # Add clickable slice areas if interactive
+    if interactive:
+        svg.append('<g id="clickable-slices">')
+        for i in range(n):
+            start_angle = i * (360 / n)
+            end_angle = (i + 1) * (360 / n)
+            path_data = create_clickable_slice_path(cx, cy, radius, start_angle, end_angle)
+            svg.append(f'<path class="clickable-slice" data-slice="{i}" d="{path_data}"/>')
+        svg.append('</g>')
 
     # Draw center circle and label
     svg.append(f'<circle cx="{cx}" cy="{cy}" r="{radius*0.2}" fill="#FFFF99"/>')
@@ -151,10 +184,22 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
                     f'<text font-size="{font_size}" fill="{color}"><textPath href="#{arc_id}" startOffset="50%" text-anchor="middle">{line}</textPath></text>'
                 )
 
-        # Draw the slice sector (boundary line)
+    # Draw slice boundary lines with optional CSS class for interactivity
+    if interactive:
+        svg.append('<g id="slice-boundaries">')
+    
+    for i in range(n):
+        start_angle = i * angle_per
         x1 = cx + radius * math.cos(start_angle)
         y1 = cy + radius * math.sin(start_angle)
-        svg.append(f'<line x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
+        
+        if interactive:
+            svg.append(f'<line class="slice-boundary" x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
+        else:
+            svg.append(f'<line x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
+    
+    if interactive:
+        svg.append('</g>')
 
     # Draw arrows if specified
     if arrows:
@@ -175,15 +220,21 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
             draw_arrow(svg, from_x, from_y, to_x, to_y, cx, cy, color=color)
 
     defs.append("</defs>")
-    svg.insert(1, "\n".join(defs))
+    svg.insert(-len(svg)+1, "\n".join(defs))
+    
+    # Close record group if interactive
+    if interactive:
+        svg.append('</g>')
+    
     svg.append('</svg>')
     return "\n".join(svg)
 
-def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400, arrows=None):
+def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400, arrows=None, interactive=True):
     """
     wisdom_units: list of WisdomUnit objects
     Each WisdomUnit produces two slices: thesis (T-, T, T+) and antithesis (A+, A, A-), which are opposite each other.
     Slices are ordered so that thesis and antithesis are opposite.
+    interactive: if True, generates SVG with interactive elements
     """
     thesis_slices = []
     antithesis_slices = []
@@ -206,21 +257,28 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
         if antithesis_labels:
             antithesis_slices.append({"labels": antithesis_labels})
     slices = thesis_slices + antithesis_slices
-    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, arrows=arrows)
+    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, arrows=arrows, interactive=interactive)
 
-# Example usage:
-slices = [
-    {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
-    {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
-    {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
-]
+# Example usage showing both static and interactive SVG generation
+if __name__ == "__main__":
+    slices = [
+        {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
+        {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
+        {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
+    ]
 
-# Example arrows connecting labels
-arrows = [
-    {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},  # "Separation" -> "Family unity"
-    {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},  # "Clarity, relief" -> "Burden"
-]
+    # Example arrows connecting labels
+    arrows = [
+        {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},
+        {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},
+    ]
 
-svg_code = svg_dialectical_wheel(slices, center_label="bruh", arrows=arrows)
-with open("dialectical_wheel.svg", "w") as f:
-    f.write(svg_code)
+    # Generate static SVG
+    svg_code = svg_dialectical_wheel(slices, center_label="Core", arrows=arrows)
+    with open("dialectical_wheel_static.svg", "w") as f:
+        f.write(svg_code)
+
+    # Generate interactive SVG (with clickable elements and CSS classes)
+    interactive_svg = svg_dialectical_wheel(slices, center_label="Core", arrows=arrows, interactive=True)
+    with open("dialectical_wheel_interactive.svg", "w") as f:
+        f.write(interactive_svg)
