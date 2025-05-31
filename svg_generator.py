@@ -205,7 +205,7 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
     
     # Draw center circle and label
     center_radius = radius * 0.2
-    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{center_radius}" fill="#FFFF99"/>')
+    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{center_radius}" fill="#FFC107"/>')
     svg.append(f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>')
     
     # Draw arrows if specified
@@ -277,6 +277,217 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
                                 arrows=arrows, interactive=interactive, slice_angle=slice_angle,
                                 layer_colors=layer_colors, font_sizes=font_sizes)
 
+def create_thesis_antithesis_wheel(thesis_antithesis_pairs, center_label="Core", radius=150, width=400, height=400, 
+                                  slice_angle=120, interactive=True, layer_colors=None, font_sizes=None):
+    """
+    Create a dialectical wheel with thesis-antithesis pairs positioned opposite each other.
+    
+    Args:
+        thesis_antithesis_pairs: list of dicts, each containing:
+            - 'thesis': dict with 'labels' key (list of (label, color) tuples)
+            - 'antithesis': dict with 'labels' key (list of (label, color) tuples)
+        center_label: text for center circle
+        radius: outer radius of wheel
+        width, height: SVG dimensions
+        slice_angle: angle of each slice in degrees
+        interactive: if True, adds clickable slice functionality
+        layer_colors: list of background colors for layers
+        font_sizes: list of font sizes for layers
+    
+    Returns:
+        SVG string with thesis-antithesis paired wheel
+    """
+    n_pairs = len(thesis_antithesis_pairs)
+    total_slices = n_pairs * 2
+    
+    # Create slices list with proper positioning
+    slices = []
+    slice_positioning = []  # Track which slice is thesis/antithesis and its pair
+    
+    for i, pair in enumerate(thesis_antithesis_pairs):
+        # Thesis angle
+        thesis_angle = i * (360 / n_pairs)
+        # Antithesis angle (opposite side)
+        antithesis_angle = (thesis_angle + 180) % 360
+        
+        # Add to positioning tracking
+        slice_positioning.append({
+            'type': 'thesis',
+            'pair_index': i,
+            'angle': thesis_angle,
+            'partner_angle': antithesis_angle
+        })
+        slice_positioning.append({
+            'type': 'antithesis', 
+            'pair_index': i,
+            'angle': antithesis_angle,
+            'partner_angle': thesis_angle
+        })
+    
+    # Sort by angle to get proper slice order
+    slice_positioning.sort(key=lambda x: x['angle'])
+    
+    # Build slices list in angle order
+    for pos_info in slice_positioning:
+        pair = thesis_antithesis_pairs[pos_info['pair_index']]
+        if pos_info['type'] == 'thesis':
+            slices.append(pair['thesis'])
+        else:
+            slices.append(pair['antithesis'])
+    
+    # Generate the wheel with custom slice positioning
+    cx, cy = width // 2, height // 2
+    
+    # Start SVG
+    svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    
+    if interactive:
+        svg.append('<g class="record">')
+    
+    # Add defs section
+    svg.append('<defs>')
+    svg.append('</defs>')
+    
+    # Create each slice with custom positioning
+    svg.append('<g id="slice-container">')
+    for i, slice_data in enumerate(slices):
+        pos_info = slice_positioning[i]
+        
+        # Create slice with explicit angle positioning
+        slice_component = create_slice_at_angle(
+            slice_data, i, cx, cy, radius,
+            angle=pos_info['angle'],
+            slice_angle=slice_angle,
+            layer_colors=layer_colors,
+            font_sizes=font_sizes,
+            clickable=interactive,
+            slice_type=pos_info['type'],
+            pair_index=pos_info['pair_index']
+        )
+        svg.extend(slice_component)
+    svg.append('</g>')
+    
+    # Draw center circle and label
+    center_radius = radius * 0.2
+    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{center_radius}" fill="#FFC107"/>')
+    svg.append(f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>')
+    
+    if interactive:
+        svg.append('</g>')
+    
+    svg.append('</svg>')
+    return "\n".join(svg)
+
+def create_slice_at_angle(slice_data, slice_index, cx, cy, radius, angle, slice_angle=120,
+                         layer_colors=None, font_sizes=None, show_boundaries=True, 
+                         clickable=True, slice_type="thesis", pair_index=0):
+    """
+    Create a slice positioned at a specific angle.
+    
+    Args:
+        slice_data: dict with 'labels' key containing list of (label, color) tuples
+        slice_index: index of this slice
+        cx, cy: center coordinates
+        radius: outer radius of the slice
+        angle: specific angle to position this slice at
+        slice_angle: angle width of the slice in degrees
+        layer_colors: list of background colors for each layer
+        font_sizes: list of font sizes for each layer
+        show_boundaries: whether to draw slice boundary lines
+        clickable: whether to add clickable area
+        slice_type: "thesis" or "antithesis"
+        pair_index: index of the thesis-antithesis pair
+    
+    Returns:
+        List of SVG elements forming the slice
+    """
+    # Default values
+    if layer_colors is None:
+        layer_colors = ["#C6E5B3", "#FFFFFF", "#F9C6CC", "#FFFF99"]  # green, white, pink, yellow
+    if font_sizes is None:
+        font_sizes = [8, 10, 14]
+    
+    half_angle = slice_angle / 2
+    labels = slice_data["labels"]
+    n_labels = len(labels)
+    
+    slice_group = []
+    slice_group.append(f'<g class="slice-component {slice_type}-slice" data-slice="{slice_index}" data-pair="{pair_index}" data-type="{slice_type}" transform="rotate({angle} {cx} {cy})">')
+    
+    # Create background sectors for each layer within the slice
+    for layer in range(n_labels):
+        inner_radius = radius * (0.3 + 0.7 * layer / n_labels)
+        outer_radius = radius * (0.3 + 0.7 * (layer + 1) / n_labels)
+        
+        # Create sector path for this layer
+        inner_x1 = cx + inner_radius * math.cos(math.radians(-half_angle))
+        inner_y1 = cy + inner_radius * math.sin(math.radians(-half_angle))
+        inner_x2 = cx + inner_radius * math.cos(math.radians(half_angle))
+        inner_y2 = cy + inner_radius * math.sin(math.radians(half_angle))
+        
+        outer_x1 = cx + outer_radius * math.cos(math.radians(-half_angle))
+        outer_y1 = cy + outer_radius * math.sin(math.radians(-half_angle))
+        outer_x2 = cx + outer_radius * math.cos(math.radians(half_angle))
+        outer_y2 = cy + outer_radius * math.sin(math.radians(half_angle))
+        
+        color = layer_colors[layer % len(layer_colors)]
+        
+        # Determine if we need a large arc flag (for slices > 180 degrees)
+        large_arc = 1 if slice_angle > 180 else 0
+        
+        # Create sector path: outer arc, lines to inner arc, inner arc back
+        path_d = f"M {outer_x1},{outer_y1} "
+        path_d += f"A {outer_radius},{outer_radius} 0 {large_arc},1 {outer_x2},{outer_y2} "
+        path_d += f"L {inner_x2},{inner_y2} "
+        path_d += f"A {inner_radius},{inner_radius} 0 {large_arc},0 {inner_x1},{inner_y1} Z"
+        
+        slice_group.append(f'<path d="{path_d}" fill="{color}" stroke="#888" stroke-width="0.5"/>')
+    
+    # Add text labels along arcs within the slice
+    for j, (label, color) in enumerate(labels):
+        # Calculate radius for this layer
+        text_radius = radius * (0.3 + 0.7 * (j + 1) / n_labels) - 10
+        
+        # Font size for this layer
+        font_size = font_sizes[j % len(font_sizes)]
+        
+        # Create arc path for text
+        arc_start_x = cx + text_radius * math.cos(math.radians(-half_angle))
+        arc_start_y = cy + text_radius * math.sin(math.radians(-half_angle))
+        arc_end_x = cx + text_radius * math.cos(math.radians(half_angle))
+        arc_end_y = cy + text_radius * math.sin(math.radians(half_angle))
+        
+        arc_id = f"slice-{slice_index}-arc-{j}"
+        large_arc = 1 if slice_angle > 180 else 0
+        arc_path = f"M {arc_start_x},{arc_start_y} A {text_radius},{text_radius} 0 {large_arc},1 {arc_end_x},{arc_end_y}"
+        
+        slice_group.append(f'<path id="{arc_id}" d="{arc_path}" fill="none"/>')
+        slice_group.append(f'<text font-size="{font_size}" fill="{color}"><textPath href="#{arc_id}" startOffset="50%" text-anchor="middle">{label}</textPath></text>')
+    
+    # Add slice boundaries if requested
+    if show_boundaries:
+        boundary_x1 = cx + radius * math.cos(math.radians(-half_angle))
+        boundary_y1 = cy + radius * math.sin(math.radians(-half_angle))
+        boundary_x2 = cx + radius * math.cos(math.radians(half_angle))
+        boundary_y2 = cy + radius * math.sin(math.radians(half_angle))
+        
+        slice_group.append(f'<line x1="{cx}" y1="{cy}" x2="{boundary_x1}" y2="{boundary_y1}" stroke="#888" stroke-width="1"/>')
+        slice_group.append(f'<line x1="{cx}" y1="{cy}" x2="{boundary_x2}" y2="{boundary_y2}" stroke="#888" stroke-width="1"/>')
+    
+    # Add clickable area if requested
+    if clickable:
+        boundary_x1 = cx + radius * math.cos(math.radians(-half_angle))
+        boundary_y1 = cy + radius * math.sin(math.radians(-half_angle))
+        boundary_x2 = cx + radius * math.cos(math.radians(half_angle))
+        boundary_y2 = cy + radius * math.sin(math.radians(half_angle))
+        
+        large_arc = 1 if slice_angle > 180 else 0
+        slice_path = f"M {cx},{cy} L {boundary_x1},{boundary_y1} A {radius},{radius} 0 {large_arc},1 {boundary_x2},{boundary_y2} Z"
+        slice_group.append(f'<path class="clickable-slice" data-slice="{slice_index}" data-pair="{pair_index}" data-type="{slice_type}" d="{slice_path}" fill="transparent" stroke="transparent"/>')
+    
+    slice_group.append('</g>')
+    return slice_group
+
 # Example usage
 if __name__ == "__main__":
     # Example with default 120-degree slices
@@ -325,3 +536,29 @@ if __name__ == "__main__":
                                                  interactive=True)
     with open("dialectical_wheel_custom.svg", "w") as f:
         f.write(interactive_svg_custom)
+    
+    # Example with thesis-antithesis pairs
+    thesis_antithesis_pairs = [
+        {
+            'thesis': {"labels": [("Strategic power", "green"), ("Putin initiates war", "black"), ("Destructive aggression", "red")]},
+            'antithesis': {"labels": [("Mutual understanding", "green"), ("Peace negotiations", "black"), ("Passive submission", "red")]}
+        },
+        {
+            'thesis': {"labels": [("Liberation", "green"), ("Ukraine resists", "black"), ("Endless conflict", "red")]},
+            'antithesis': {"labels": [("Immediate peace", "green"), ("Ukraine surrenders", "black"), ("Freedom lost", "red")]}
+        },
+        {
+            'thesis': {"labels": [("Victory approaches", "green"), ("Offensive weakens", "black"), ("Resources drain", "red")]},
+            'antithesis': {"labels": [("Military strength", "green"), ("Dominance persists", "black"), ("Total defeat", "red")]}
+        }
+    ]
+    
+    # Generate thesis-antithesis wheel
+    thesis_antithesis_svg = create_thesis_antithesis_wheel(
+        thesis_antithesis_pairs, 
+        center_label="Ukraine Conflict", 
+        slice_angle=120, 
+        interactive=True
+    )
+    with open("dialectical_wheel_thesis_antithesis.svg", "w") as f:
+        f.write(thesis_antithesis_svg)

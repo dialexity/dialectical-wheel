@@ -1,68 +1,56 @@
 <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
 <g class="record">
 <defs>
-<path id="arc-0-0" d="M 220.0,165.4 A 40,40 0 0,1 220.0,234.6" fill="none"/>
-<path id="arc-0-1" d="M 230.0,148.0 A 60,60 0 0,1 230.0,252.0" fill="none"/>
-<path id="arc-0-2" d="M 240.0,130.7 A 80,80 0 0,1 240.0,269.3" fill="none"/>
-<path id="arc-1-0" d="M 220.0,165.4 A 40,40 0 0,1 220.0,234.6" fill="none"/>
-<path id="arc-1-1" d="M 230.0,148.0 A 60,60 0 0,1 230.0,252.0" fill="none"/>
-<path id="arc-1-2" d="M 240.0,130.7 A 80,80 0 0,1 240.0,269.3" fill="none"/>
-<path id="arc-2-0" d="M 220.0,165.4 A 40,40 0 0,1 220.0,234.6" fill="none"/>
-<path id="arc-2-1" d="M 230.0,148.0 A 60,60 0 0,1 230.0,252.0" fill="none"/>
-<path id="arc-2-2" d="M 240.0,130.7 A 80,80 0 0,1 240.0,269.3" fill="none"/>
 </defs>
-<g class="slice-component" data-slice="0" transform="rotate(0 200 200)">
-<path d="M 200,200 L 225.0,156.7 A 50,50 0 0,1 225.0,243.3 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
-<path d="M 225.0,156.7 A 50,50 0 0,1 225.0,243.3 L 235.0,260.6 A 70,70 0 0,0 235.0,139.4 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
-<path d="M 235.0,139.4 A 70,70 0 0,1 235.0,260.6 L 245.0,277.9 A 90,90 0 0,0 245.0,122.1 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
-<text font-size="8" fill="green">
-    <textPath href="#arc-0-0" startOffset="50%" text-anchor="middle">Family unity</textPath>
-</text>
-<text font-size="10" fill="black">
-    <textPath href="#arc-0-1" startOffset="50%" text-anchor="middle">Buy a house</textPath>
-</text>
-<text font-size="14" fill="red">
-    <textPath href="#arc-0-2" startOffset="50%" text-anchor="middle">Burden</textPath>
-</text>
-<line x1="200" y1="200" x2="245.0" y2="122.1" stroke="#888" stroke-width="2"/>
-<line x1="200" y1="200" x2="245.0" y2="277.9" stroke="#888" stroke-width="2"/>
-<path class="clickable-slice" data-slice="0" d="M 200,200 L 245.0,122.1 A 90,90 0 0,1 245.0,277.9 Z" fill="transparent" stroke="transparent"/>
+<g id="slice-container">
+<g class="slice-component" data-slice="0" transform="rotate(0.0 200 200)">
+<path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#4CAF50" stroke="#888" stroke-width="0.5"/>
+<path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#E3F2FD" stroke="#888" stroke-width="0.5"/>
+<path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#E91E63" stroke="#888" stroke-width="0.5"/>
+<path id="slice-0-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+<text font-size="8" fill="green"><textPath href="#slice-0-arc-0" startOffset="50%" text-anchor="middle">Family unity</textPath></text>
+<path id="slice-0-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+<text font-size="10" fill="black"><textPath href="#slice-0-arc-1" startOffset="50%" text-anchor="middle">Buy a house</textPath></text>
+<path id="slice-0-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+<text font-size="14" fill="red"><textPath href="#slice-0-arc-2" startOffset="50%" text-anchor="middle">Burden</textPath></text>
+<line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+<line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+<path class="clickable-slice" data-slice="0" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
 </g>
-<g class="slice-component" data-slice="1" transform="rotate(120 200 200)">
-<path d="M 200,200 L 225.0,156.7 A 50,50 0 0,1 225.0,243.3 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
-<path d="M 225.0,156.7 A 50,50 0 0,1 225.0,243.3 L 235.0,260.6 A 70,70 0 0,0 235.0,139.4 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
-<path d="M 235.0,139.4 A 70,70 0 0,1 235.0,260.6 L 245.0,277.9 A 90,90 0 0,0 245.0,122.1 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
-<text font-size="8" fill="green">
-    <textPath href="#arc-1-0" startOffset="50%" text-anchor="middle">Clarity, relief</textPath>
-</text>
-<text font-size="10" fill="black">
-    <textPath href="#arc-1-1" startOffset="50%" text-anchor="middle">Don't buy</textPath>
-</text>
-<text font-size="14" fill="red">
-    <textPath href="#arc-1-2" startOffset="50%" text-anchor="middle">Separation</textPath>
-</text>
-<line x1="200" y1="200" x2="245.0" y2="122.1" stroke="#888" stroke-width="2"/>
-<line x1="200" y1="200" x2="245.0" y2="277.9" stroke="#888" stroke-width="2"/>
-<path class="clickable-slice" data-slice="1" d="M 200,200 L 245.0,122.1 A 90,90 0 0,1 245.0,277.9 Z" fill="transparent" stroke="transparent"/>
+<g class="slice-component" data-slice="1" transform="rotate(120.0 200 200)">
+<path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#4CAF50" stroke="#888" stroke-width="0.5"/>
+<path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#E3F2FD" stroke="#888" stroke-width="0.5"/>
+<path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#E91E63" stroke="#888" stroke-width="0.5"/>
+<path id="slice-1-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+<text font-size="8" fill="green"><textPath href="#slice-1-arc-0" startOffset="50%" text-anchor="middle">Clarity, relief</textPath></text>
+<path id="slice-1-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+<text font-size="10" fill="black"><textPath href="#slice-1-arc-1" startOffset="50%" text-anchor="middle">Don't buy</textPath></text>
+<path id="slice-1-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+<text font-size="14" fill="red"><textPath href="#slice-1-arc-2" startOffset="50%" text-anchor="middle">Separation</textPath></text>
+<line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+<line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+<path class="clickable-slice" data-slice="1" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
 </g>
-<g class="slice-component" data-slice="2" transform="rotate(240 200 200)">
-<path d="M 200,200 L 225.0,156.7 A 50,50 0 0,1 225.0,243.3 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
-<path d="M 225.0,156.7 A 50,50 0 0,1 225.0,243.3 L 235.0,260.6 A 70,70 0 0,0 235.0,139.4 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
-<path d="M 235.0,139.4 A 70,70 0 0,1 235.0,260.6 L 245.0,277.9 A 90,90 0 0,0 245.0,122.1 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
-<text font-size="8" fill="green">
-    <textPath href="#arc-2-0" startOffset="50%" text-anchor="middle">Liberation</textPath>
-</text>
-<text font-size="10" fill="black">
-    <textPath href="#arc-2-1" startOffset="50%" text-anchor="middle">Be homeless</textPath>
-</text>
-<text font-size="14" fill="red">
-    <textPath href="#arc-2-2" startOffset="50%" text-anchor="middle">Discomfort</textPath>
-</text>
-<line x1="200" y1="200" x2="245.0" y2="122.1" stroke="#888" stroke-width="2"/>
-<line x1="200" y1="200" x2="245.0" y2="277.9" stroke="#888" stroke-width="2"/>
-<path class="clickable-slice" data-slice="2" d="M 200,200 L 245.0,122.1 A 90,90 0 0,1 245.0,277.9 Z" fill="transparent" stroke="transparent"/>
+<g class="slice-component" data-slice="2" transform="rotate(240.0 200 200)">
+<path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#4CAF50" stroke="#888" stroke-width="0.5"/>
+<path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#E3F2FD" stroke="#888" stroke-width="0.5"/>
+<path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#E91E63" stroke="#888" stroke-width="0.5"/>
+<path id="slice-2-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+<text font-size="8" fill="green"><textPath href="#slice-2-arc-0" startOffset="50%" text-anchor="middle">Liberation</textPath></text>
+<path id="slice-2-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+<text font-size="10" fill="black"><textPath href="#slice-2-arc-1" startOffset="50%" text-anchor="middle">Be homeless</textPath></text>
+<path id="slice-2-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+<text font-size="14" fill="red"><textPath href="#slice-2-arc-2" startOffset="50%" text-anchor="middle">Discomfort</textPath></text>
+<line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+<line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+<path class="clickable-slice" data-slice="2" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
 </g>
-<circle cx="200" cy="200" r="25" fill="#FFFF99"/>
+</g>
+<circle cx="200" cy="200" r="30.0" fill="#FFC107"/>
 <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Core</text>
+<path d="M 65.00000000000003,200.00000000000003 Q 102.28427945724303,253.66418792237417 232.5,256.29165124598853" stroke="blue" stroke-width="2" fill="none"/>
+<path d="M 232.5,256.29165124598853 L 223.74064006692424,261.1159246174743 L 223.94237673895464,251.11795970879626 Z" fill="blue"/>
+<path d="M 135.0,200.0 Q 202.3833102571404,311.4563903003155 267.5,316.91342951089916" stroke="purple" stroke-width="2" fill="none"/>
+<path d="M 267.5,316.91342951089916 L 258.4524413666645,321.17273494445953 L 259.2875539753919,311.20766660898164 Z" fill="purple"/>
 </g>
 </svg>
