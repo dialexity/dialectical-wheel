@@ -43,198 +43,214 @@ def draw_arrow(svg, start_x, start_y, end_x, end_y, cx, cy, color="black", strok
     svg.append(f'<path d="M {end_x},{end_y} L {arrow_x1},{arrow_y1} L {arrow_x2},{arrow_y2} Z" '
                f'fill="{color}"/>')
 
-def create_clickable_slice_path(cx, cy, radius, start_angle_deg, end_angle_deg):
-    """Create SVG path for a clickable slice area."""
-    start_rad = math.radians(start_angle_deg)
-    end_rad = math.radians(end_angle_deg)
-    
-    x1 = cx + radius * math.cos(start_rad)
-    y1 = cy + radius * math.sin(start_rad)
-    x2 = cx + radius * math.cos(end_rad)
-    y2 = cy + radius * math.sin(end_rad)
-    
-    large_arc = 1 if end_angle_deg - start_angle_deg > 180 else 0
-    
-    return f"M {cx},{cy} L {x1},{y1} A {radius},{radius} 0 {large_arc},1 {x2},{y2} Z"
-
-def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400, arrows=None, interactive=False):
+def create_slice(slice_data, slice_index, cx, cy, radius, slice_angle=120, total_slices=8, 
+                 layer_colors=None, font_sizes=None, show_boundaries=True, clickable=True):
     """
-    Generate SVG for dialectical wheel, optionally with interactive elements.
+    Create a configurable slice as an independent SVG group.
     
-    slices: list of dicts, each with keys:
-        - labels: list of (label, color) from center outward along the slice
-    arrows: list of dicts, each with keys:
-        - from_slice: index of source slice
-        - from_layer: index of source layer
-        - to_slice: index of target slice
-        - to_layer: index of target layer
-        - color: (optional) arrow color
-    interactive: if True, adds clickable slice paths and CSS classes for interactivity
+    Args:
+        slice_data: dict with 'labels' key containing list of (label, color) tuples
+        slice_index: index of this slice
+        cx, cy: center coordinates
+        radius: outer radius of the slice
+        slice_angle: angle of the slice in degrees (default 120)
+        total_slices: total number of slices in the wheel (for positioning)
+        layer_colors: list of background colors for each layer (default: green, white, pink, yellow)
+        font_sizes: list of font sizes for each layer (default: [8, 10, 14])
+        show_boundaries: whether to draw slice boundary lines
+        clickable: whether to add clickable area
+    
+    Returns:
+        List of SVG elements forming the slice
+    """
+    # Default values
+    if layer_colors is None:
+        layer_colors = ["#C6E5B3", "#FFFFFF", "#F9C6CC", "#FFFF99"]  # green, white, pink, yellow
+    if font_sizes is None:
+        font_sizes = [8, 10, 14]
+    
+    # Calculate slice positioning
+    slice_center_angle = slice_index * (360 / total_slices)
+    half_angle = slice_angle / 2
+    start_angle = slice_center_angle - half_angle
+    end_angle = slice_center_angle + half_angle
+    
+    labels = slice_data["labels"]
+    n_labels = len(labels)
+    
+    slice_group = []
+    slice_group.append(f'<g class="slice-component" data-slice="{slice_index}" transform="rotate({slice_center_angle} {cx} {cy})">')
+    
+    # Create background sectors for each layer within the slice
+    for layer in range(n_labels):
+        inner_radius = radius * (0.3 + 0.7 * layer / n_labels)
+        outer_radius = radius * (0.3 + 0.7 * (layer + 1) / n_labels)
+        
+        # Create sector path for this layer
+        inner_x1 = cx + inner_radius * math.cos(math.radians(-half_angle))
+        inner_y1 = cy + inner_radius * math.sin(math.radians(-half_angle))
+        inner_x2 = cx + inner_radius * math.cos(math.radians(half_angle))
+        inner_y2 = cy + inner_radius * math.sin(math.radians(half_angle))
+        
+        outer_x1 = cx + outer_radius * math.cos(math.radians(-half_angle))
+        outer_y1 = cy + outer_radius * math.sin(math.radians(-half_angle))
+        outer_x2 = cx + outer_radius * math.cos(math.radians(half_angle))
+        outer_y2 = cy + outer_radius * math.sin(math.radians(half_angle))
+        
+        color = layer_colors[layer % len(layer_colors)]
+        
+        # Determine if we need a large arc flag (for slices > 180 degrees)
+        large_arc = 1 if slice_angle > 180 else 0
+        
+        # Create sector path: outer arc, lines to inner arc, inner arc back
+        path_d = f"M {outer_x1},{outer_y1} "
+        path_d += f"A {outer_radius},{outer_radius} 0 {large_arc},1 {outer_x2},{outer_y2} "
+        path_d += f"L {inner_x2},{inner_y2} "
+        path_d += f"A {inner_radius},{inner_radius} 0 {large_arc},0 {inner_x1},{inner_y1} Z"
+        
+        slice_group.append(f'<path d="{path_d}" fill="{color}" stroke="#888" stroke-width="0.5"/>')
+    
+    # Add text labels along arcs within the slice
+    for j, (label, color) in enumerate(labels):
+        # Calculate radius for this layer
+        text_radius = radius * (0.3 + 0.7 * (j + 1) / n_labels) - 10
+        
+        # Font size for this layer
+        font_size = font_sizes[j % len(font_sizes)]
+        
+        # Create arc path for text
+        arc_start_x = cx + text_radius * math.cos(math.radians(-half_angle))
+        arc_start_y = cy + text_radius * math.sin(math.radians(-half_angle))
+        arc_end_x = cx + text_radius * math.cos(math.radians(half_angle))
+        arc_end_y = cy + text_radius * math.sin(math.radians(half_angle))
+        
+        arc_id = f"slice-{slice_index}-arc-{j}"
+        large_arc = 1 if slice_angle > 180 else 0
+        arc_path = f"M {arc_start_x},{arc_start_y} A {text_radius},{text_radius} 0 {large_arc},1 {arc_end_x},{arc_end_y}"
+        
+        slice_group.append(f'<path id="{arc_id}" d="{arc_path}" fill="none"/>')
+        slice_group.append(f'<text font-size="{font_size}" fill="{color}"><textPath href="#{arc_id}" startOffset="50%" text-anchor="middle">{label}</textPath></text>')
+    
+    # Add slice boundaries if requested
+    if show_boundaries:
+        boundary_x1 = cx + radius * math.cos(math.radians(-half_angle))
+        boundary_y1 = cy + radius * math.sin(math.radians(-half_angle))
+        boundary_x2 = cx + radius * math.cos(math.radians(half_angle))
+        boundary_y2 = cy + radius * math.sin(math.radians(half_angle))
+        
+        slice_group.append(f'<line x1="{cx}" y1="{cy}" x2="{boundary_x1}" y2="{boundary_y1}" stroke="#888" stroke-width="1"/>')
+        slice_group.append(f'<line x1="{cx}" y1="{cy}" x2="{boundary_x2}" y2="{boundary_y2}" stroke="#888" stroke-width="1"/>')
+    
+    # Add clickable area if requested
+    if clickable:
+        boundary_x1 = cx + radius * math.cos(math.radians(-half_angle))
+        boundary_y1 = cy + radius * math.sin(math.radians(-half_angle))
+        boundary_x2 = cx + radius * math.cos(math.radians(half_angle))
+        boundary_y2 = cy + radius * math.sin(math.radians(half_angle))
+        
+        large_arc = 1 if slice_angle > 180 else 0
+        slice_path = f"M {cx},{cy} L {boundary_x1},{boundary_y1} A {radius},{radius} 0 {large_arc},1 {boundary_x2},{boundary_y2} Z"
+        slice_group.append(f'<path class="clickable-slice" data-slice="{slice_index}" d="{slice_path}" fill="transparent" stroke="transparent"/>')
+    
+    slice_group.append('</g>')
+    return slice_group
+
+def create_120_degree_slice(slice_data, slice_index, cx, cy, radius):
+    """Legacy function for backward compatibility - creates a 120-degree slice."""
+    return create_slice(slice_data, slice_index, cx, cy, radius, slice_angle=120, total_slices=8)
+
+def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, height=400, 
+                         arrows=None, interactive=False, slice_angle=120, 
+                         layer_colors=None, font_sizes=None):
+    """
+    Generate SVG for dialectical wheel using configurable slice components.
+    
+    Args:
+        slices: list of dicts, each with 'labels' key containing list of (label, color) tuples
+        center_label: text for center circle
+        radius: outer radius of wheel
+        width, height: SVG dimensions
+        arrows: list of arrow specifications
+        interactive: if True, adds clickable slice functionality
+        slice_angle: angle of each slice in degrees (default 120)
+        layer_colors: list of background colors for layers
+        font_sizes: list of font sizes for layers
     """
     cx, cy = width // 2, height // 2
-    n = len(slices)
-    angle_per = 2 * math.pi / n
-    font_size = max(10, min(18, int(36 / n)))
+    n_slices = len(slices)
     
-    # Start SVG with optional record group for rotation
+    # Start SVG
+    svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    
     if interactive:
-        svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
         svg.append('<g class="record">')
-    else:
-        svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
-
-    # Prepare defs for arc paths
-    defs = ["<defs>"]
-    arc_id_counter = 0
-
-    # Draw concentric circles for each layer
-    max_labels = max(len(sl["labels"]) for sl in slices)
-    circle_colors = ["#C6E5B3", "#FFFFFF", "#F9C6CC", "#FFFF99"]  # yellow, green, white, pink/red
-    for i in range(max_labels, 0, -1):
-        r = radius * (0.3 + 0.7 * i / max_labels)
-        color = circle_colors[i-1] if i-1 < len(circle_colors) else "#EEE"
-        svg.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
-
-    # Add clickable slice areas if interactive
-    if interactive:
-        svg.append('<g id="clickable-slices">')
-        for i in range(n):
-            start_angle = i * (360 / n)
-            end_angle = (i + 1) * (360 / n)
-            path_data = create_clickable_slice_path(cx, cy, radius, start_angle, end_angle)
-            svg.append(f'<path class="clickable-slice" data-slice="{i}" d="{path_data}"/>')
-        svg.append('</g>')
-
+    
+    # Add defs section for arc paths
+    svg.append('<defs>')
+    svg.append('</defs>')
+    
+    # Create each slice component
+    svg.append('<g id="slice-container">')
+    for i, slice_data in enumerate(slices):
+        slice_component = create_slice(
+            slice_data, i, cx, cy, radius, 
+            slice_angle=slice_angle, 
+            total_slices=n_slices,
+            layer_colors=layer_colors,
+            font_sizes=font_sizes,
+            clickable=interactive
+        )
+        svg.extend(slice_component)
+    svg.append('</g>')
+    
     # Draw center circle and label
-    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{radius*0.2}" fill="#FFFF99"/>')
-    svg.append(
-        f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>'
-    )
-
-    # Draw each slice
-    for i, sl in enumerate(slices):
-        start_angle = i * angle_per
-        end_angle = (i + 1) * angle_per
-        angle_mid = (start_angle + end_angle) / 2
-        n_labels = len(sl["labels"])
-        for j, (label, color) in enumerate(sl["labels"]):
-            r = radius * (0.3 + 0.7 * (j+1) / n_labels) - 20
-            # Allow up to 4 lines and min font size 6 for all layers
-            min_font = 6
-            if j == 0:
-                max_font = 14
-            else:
-                max_font = 14
-            max_lines = min(2, len(label.split()))
-            if n_labels > 1:
-                font_size_layer = min_font + (max_font - min_font) * (j / (n_labels - 1))
-            else:
-                font_size_layer = min_font
-            arc_length = abs(r * (end_angle - start_angle))
-            font_size = min(max_font, font_size_layer)
-
-            def estimate_text_width(text, font_size):
-                return font_size * 0.6 * len(text)
-
-            def wrap_text(label, max_width, font_size, max_lines=6):
-                words = label.split()
-                lines = []
-                current_line = []
-                for word in words:
-                    test_line = current_line + [word]
-                    test_line_str = ' '.join(test_line)
-                    if estimate_text_width(test_line_str, font_size) <= max_width:
-                        current_line.append(word)
-                    else:
-                        if current_line:
-                            lines.append(' '.join(current_line))
-                        current_line = [word]
-                        if len(lines) >= max_lines:
-                            break
-                if current_line and len(lines) < max_lines:
-                    lines.append(' '.join(current_line))
-                return lines
-
-            # Try to fit label, wrap if needed, reduce font if still too long
-            lines = [label]
-            while font_size > min_font:
-                wrapped = wrap_text(label, arc_length, font_size, max_lines=max_lines)
-                fits = all(estimate_text_width(line, font_size) < arc_length for line in wrapped)
-                if fits:
-                    lines = wrapped
-                    break
-                font_size -= 1
-
-            # Draw each line as a separate arc, offsetting radius for each line
-            for k, line in enumerate(lines[::-1]):  # first line is furthest from center
-                line_r = r + (k - (len(lines)-1)/2) * (font_size + 2)
-                arc_id = f"arc{arc_id_counter}"
-                arc_id_counter += 1
-                x1 = cx + line_r * math.cos(start_angle)
-                y1 = cy + line_r * math.sin(start_angle)
-                x2 = cx + line_r * math.cos(end_angle)
-                y2 = cy + line_r * math.sin(end_angle)
-                large_arc = 1 if (end_angle - start_angle) > math.pi else 0
-                path_d = (
-                    f"M {x1},{y1} "
-                    f"A {line_r},{line_r} 0 {large_arc},1 {x2},{y2}"
-                )
-                defs.append(f'<path id="{arc_id}" d="{path_d}" fill="none"/>')
-                svg.append(
-                    f'<text font-size="{font_size}" fill="{color}"><textPath href="#{arc_id}" startOffset="50%" text-anchor="middle">{line}</textPath></text>'
-                )
-
-    # Draw slice boundary lines with optional CSS class for interactivity
-    if interactive:
-        svg.append('<g id="slice-boundaries">')
+    center_radius = radius * 0.2
+    svg.append(f'<circle cx="{cx}" cy="{cy}" r="{center_radius}" fill="#FFFF99"/>')
+    svg.append(f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>')
     
-    for i in range(n):
-        start_angle = i * angle_per
-        x1 = cx + radius * math.cos(start_angle)
-        y1 = cy + radius * math.sin(start_angle)
-        
-        if interactive:
-            svg.append(f'<line class="slice-boundary" x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
-        else:
-            svg.append(f'<line x1="{cx}" y1="{cy}" x2="{x1}" y2="{y1}" stroke="#888" stroke-width="1"/>')
-    
-    if interactive:
-        svg.append('</g>')
-
     # Draw arrows if specified
     if arrows:
         for arrow in arrows:
             from_x, from_y = get_label_position(
                 cx, cy, radius,
-                arrow['from_slice'], n,
-                arrow['from_layer'], max_labels,
-                r_offset=-15  # Move arrow tip closer to text
+                arrow['from_slice'], n_slices,
+                arrow['from_layer'], max(len(sl["labels"]) for sl in slices),
+                r_offset=-15
             )
             to_x, to_y = get_label_position(
                 cx, cy, radius,
-                arrow['to_slice'], n,
-                arrow['to_layer'], max_labels,
-                r_offset=-15  # Move arrow tip closer to text
+                arrow['to_slice'], n_slices,
+                arrow['to_layer'], max(len(sl["labels"]) for sl in slices),
+                r_offset=-15
             )
             color = arrow.get('color', 'black')
             draw_arrow(svg, from_x, from_y, to_x, to_y, cx, cy, color=color)
-
-    defs.append("</defs>")
-    svg.insert(-len(svg)+1, "\n".join(defs))
     
-    # Close record group if interactive
     if interactive:
         svg.append('</g>')
     
     svg.append('</svg>')
     return "\n".join(svg)
 
-def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400, arrows=None, interactive=True):
+def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, width=400, height=400, 
+                                arrows=None, interactive=True, slice_angle=120, 
+                                layer_colors=None, font_sizes=None):
     """
-    wisdom_units: list of WisdomUnit objects
+    Generate dialectical wheel from WisdomUnit objects with configurable slice properties.
+    
+    Args:
+        wisdom_units: list of WisdomUnit objects
+        center_label: text for center circle
+        radius: outer radius of wheel
+        width, height: SVG dimensions
+        arrows: list of arrow specifications
+        interactive: if True, generates SVG with interactive elements
+        slice_angle: angle of each slice in degrees (default 120)
+        layer_colors: list of background colors for layers
+        font_sizes: list of font sizes for layers
+    
     Each WisdomUnit produces two slices: thesis (T-, T, T+) and antithesis (A+, A, A-), which are opposite each other.
     Slices are ordered so that thesis and antithesis are opposite.
-    interactive: if True, generates SVG with interactive elements
     """
     thesis_slices = []
     antithesis_slices = []
@@ -257,11 +273,14 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
         if antithesis_labels:
             antithesis_slices.append({"labels": antithesis_labels})
     slices = thesis_slices + antithesis_slices
-    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, arrows=arrows, interactive=interactive)
+    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, 
+                                arrows=arrows, interactive=interactive, slice_angle=slice_angle,
+                                layer_colors=layer_colors, font_sizes=font_sizes)
 
-# Example usage showing both static and interactive SVG generation
+# Example usage
 if __name__ == "__main__":
-    slices = [
+    # Example with default 120-degree slices
+    slices_120 = [
         {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
         {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
         {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
@@ -273,12 +292,36 @@ if __name__ == "__main__":
         {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},
     ]
 
-    # Generate static SVG
-    svg_code = svg_dialectical_wheel(slices, center_label="Core", arrows=arrows)
-    with open("dialectical_wheel_static.svg", "w") as f:
-        f.write(svg_code)
-
-    # Generate interactive SVG (with clickable elements and CSS classes)
-    interactive_svg = svg_dialectical_wheel(slices, center_label="Core", arrows=arrows, interactive=True)
-    with open("dialectical_wheel_interactive.svg", "w") as f:
-        f.write(interactive_svg)
+    # Generate interactive SVG with 120-degree slice components
+    interactive_svg_120 = svg_dialectical_wheel(slices_120, center_label="Core", arrows=arrows, interactive=True)
+    with open("dialectical_wheel_120deg.svg", "w") as f:
+        f.write(interactive_svg_120)
+    
+    # Example with 45-degree slices (8 slices total)
+    slices_45 = [
+        {"labels": [("Option A+", "green"), ("Option A", "black"), ("Option A-", "red")]},
+        {"labels": [("Option B+", "green"), ("Option B", "black"), ("Option B-", "red")]},
+        {"labels": [("Option C+", "green"), ("Option C", "black"), ("Option C-", "red")]},
+        {"labels": [("Option D+", "green"), ("Option D", "black"), ("Option D-", "red")]},
+        {"labels": [("Option E+", "green"), ("Option E", "black"), ("Option E-", "red")]},
+        {"labels": [("Option F+", "green"), ("Option F", "black"), ("Option F-", "red")]},
+        {"labels": [("Option G+", "green"), ("Option G", "black"), ("Option G-", "red")]},
+        {"labels": [("Option H+", "green"), ("Option H", "black"), ("Option H-", "red")]},
+    ]
+    
+    # Generate wheel with 45-degree slices
+    interactive_svg_45 = svg_dialectical_wheel(slices_45, center_label="Core", 
+                                             slice_angle=45, interactive=True)
+    with open("dialectical_wheel_45deg.svg", "w") as f:
+        f.write(interactive_svg_45)
+    
+    # Example with custom colors and fonts
+    custom_colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A"]
+    custom_fonts = [12, 14, 16]
+    
+    interactive_svg_custom = svg_dialectical_wheel(slices_120, center_label="Custom", 
+                                                 layer_colors=custom_colors,
+                                                 font_sizes=custom_fonts,
+                                                 interactive=True)
+    with open("dialectical_wheel_custom.svg", "w") as f:
+        f.write(interactive_svg_custom)
