@@ -181,7 +181,7 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
     
     # Start SVG
     svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
-    
+
     if interactive:
         svg.append('<g class="record">')
     
@@ -202,12 +202,12 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
         )
         svg.extend(slice_component)
     svg.append('</g>')
-    
+
     # Draw center circle and label
     center_radius = radius * 0.2
     svg.append(f'<circle cx="{cx}" cy="{cy}" r="{center_radius}" fill="#FFC107"/>')
     svg.append(f'<text x="{cx}" y="{cy}" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">{center_label}</text>')
-    
+
     # Draw arrows if specified
     if arrows:
         for arrow in arrows:
@@ -225,7 +225,7 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
             )
             color = arrow.get('color', 'black')
             draw_arrow(svg, from_x, from_y, to_x, to_y, cx, cy, color=color)
-    
+
     if interactive:
         svg.append('</g>')
     
@@ -239,7 +239,7 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
     Generate dialectical wheel from WisdomUnit objects with configurable slice properties.
     
     Args:
-        wisdom_units: list of WisdomUnit objects
+    wisdom_units: list of WisdomUnit objects
         center_label: text for center circle
         radius: outer radius of wheel
         width, height: SVG dimensions
@@ -492,13 +492,13 @@ def create_slice_at_angle(slice_data, slice_index, cx, cy, radius, angle, slice_
 if __name__ == "__main__":
     # Example with default 120-degree slices
     slices_120 = [
-        {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
-        {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
-        {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
-    ]
+    {"labels": [("Family unity", "green"), ("Buy a house", "black"), ("Burden", "red")]},
+    {"labels": [("Clarity, relief", "green"), ("Don't buy", "black"), ("Separation", "red")]},
+    {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
+]
 
-    # Example arrows connecting labels
-    arrows = [
+# Example arrows connecting labels
+arrows = [
         {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},
         {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},
     ]

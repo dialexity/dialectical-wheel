@@ -190,7 +190,7 @@
             <svg class="wheel-svg" viewBox="0 0 400 400">
                 <g class="record">
                     <defs>
-                    </defs>
+                        </defs>
                     <g id="slice-container">
                         <!-- Thesis-Antithesis Pair 0: Strategic Power vs Peace Negotiations -->
                         <!-- Thesis at 0° -->
@@ -291,7 +291,7 @@
                             <path class="clickable-slice" data-slice="5" data-pair="2" data-type="antithesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
                         </g>
                     </g>
-                    <circle cx="200" cy="200" r="30.0" fill="#FFFF99"/>
+                        <circle cx="200" cy="200" r="30.0" fill="#FFFF99"/>
                     <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Ukraine Conflict</text>
                 </g>
             </svg>
@@ -309,406 +309,363 @@
     </div>
     
     <script>
-        // Thesis-Antithesis paired wheel management
+        // Generalized N-pair dialectical wheel
         class DialecticalWheel {
-            constructor() {
+            constructor(numPairs = 3) {
                 this.centerX = 200;
                 this.centerY = 200;
-                this.sliceCount = 6; // 3 thesis-antithesis pairs
-                this.pairCount = 3;
-                this.enlargedPair = null;
-                this.currentState = 'normal'; // 'normal', 'pair-focused', 'all-thesis', 'all-antithesis'
+                this.numPairs = numPairs;
+                this.focusedPair = null;
                 
-                // Map slice indices to their pairs and positions
-                this.sliceMapping = {
-                    0: { pair: 0, type: 'thesis', partner: 3, baseAngle: 0 },
-                    1: { pair: 1, type: 'thesis', partner: 4, baseAngle: 120 },
-                    2: { pair: 2, type: 'thesis', partner: 5, baseAngle: 240 },
-                    3: { pair: 0, type: 'antithesis', partner: 0, baseAngle: 180 },
-                    4: { pair: 1, type: 'antithesis', partner: 1, baseAngle: 300 },
-                    5: { pair: 2, type: 'antithesis', partner: 2, baseAngle: 60 }
-                };
-                
-                this.setupSliceInteraction();
-                this.reset(); // Initialize proper positioning
-            }
-            
-            setupSliceInteraction() {
-                const slices = document.querySelectorAll('.clickable-slice');
-                slices.forEach((slice, index) => {
-                    slice.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.handleSliceClick(index);
-                    });
-                    
-                    // Hover effects for pairs
-                    slice.addEventListener('mouseenter', (e) => {
-                        if (this.currentState === 'normal') {
-                            this.highlightPair(this.sliceMapping[index].pair);
-                        }
-                    });
-                    
-                    slice.addEventListener('mouseleave', (e) => {
-                        if (this.currentState === 'normal') {
-                            this.clearHighlights();
-                        }
-                    });
-                    
-                    // Mobile touch handling
-                    let touchStartTime = 0;
-                    let touchStartPos = null;
-                    
-                    slice.addEventListener('touchstart', (e) => {
-                        e.stopPropagation();
-                        touchStartTime = Date.now();
-                        const touch = e.touches[0];
-                        touchStartPos = { x: touch.clientX, y: touch.clientY };
-                    });
-                    
-                    slice.addEventListener('touchend', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        const touchDuration = Date.now() - touchStartTime;
-                        const touch = e.changedTouches[0];
-                        const touchEndPos = { x: touch.clientX, y: touch.clientY };
-                        
-                        const distance = Math.sqrt(
-                            Math.pow(touchEndPos.x - touchStartPos.x, 2) + 
-                            Math.pow(touchEndPos.y - touchStartPos.y, 2)
-                        );
-                        
-                        if (touchDuration < 300 && distance < 20) {
-                            this.handleSliceClick(index);
-                        }
-                    });
-                });
-            }
-            
-            handleSliceClick(sliceIndex) {
-                const mapping = this.sliceMapping[sliceIndex];
-                
-                if (this.currentState === 'normal') {
-                    // From normal state: focus on the pair
-                    this.enlargedPair = mapping.pair;
-                    this.currentState = 'pair-focused';
-                    this.createPairFocus(mapping.pair);
-                } else if (this.currentState === 'pair-focused') {
-                    // From pair-focused state: show all of the same type
-                    if (mapping.type === 'thesis') {
-                        this.currentState = 'all-thesis';
-                        this.showAllThesis();
-                    } else {
-                        this.currentState = 'all-antithesis';
-                        this.showAllAntithesis();
-                    }
-                } else if (this.currentState === 'all-thesis') {
-                    // From all-thesis state: 
-                    if (mapping.type === 'thesis') {
-                        // Clicking a thesis slice - focus on its pair
-                        this.enlargedPair = mapping.pair;
-                        this.currentState = 'pair-focused';
-                        this.createPairFocus(mapping.pair);
-                    } else {
-                        // Clicking an antithesis slice - show all antithesis
-                        this.currentState = 'all-antithesis';
-                        this.showAllAntithesis();
-                    }
-                } else if (this.currentState === 'all-antithesis') {
-                    // From all-antithesis state:
-                    if (mapping.type === 'antithesis') {
-                        // Clicking an antithesis slice - focus on its pair
-                        this.enlargedPair = mapping.pair;
-                        this.currentState = 'pair-focused';
-                        this.createPairFocus(mapping.pair);
-                    } else {
-                        // Clicking a thesis slice - show all thesis
-                        this.currentState = 'all-thesis';
-                        this.showAllThesis();
-                    }
+                // Helper function for converting degrees to radians
+                if (!Math.radians) {
+                    Math.radians = function(degrees) {
+                        return degrees * Math.PI / 180;
+                    };
                 }
+                
+                // Calculate angles dynamically based on N
+                this.normalSliceAngle = 360 / (2 * this.numPairs);  // Each slice in normal mode
+                this.focusedSliceAngle = 120;                       // Always 120° for focused slices
+                this.unfocusedSliceAngle = (360 - 2 * this.focusedSliceAngle) / (2 * this.numPairs - 2);
+                
+                this.createEqualSlices();
             }
             
-            showAllThesis() {
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                
-                // Remove any existing animations and reset transition
-                this.clearAnimations();
-                
-                // Find all thesis and antithesis slices
-                let thesisSlices = [];
-                let antithesisSlices = [];
-                
-                sliceComponents.forEach((slice, index) => {
-                    const mapping = this.sliceMapping[index];
-                    if (mapping.type === 'thesis') {
-                        thesisSlices.push({ element: slice, index, mapping });
-                    } else {
-                        antithesisSlices.push({ element: slice, index, mapping });
-                    }
-                });
-                
-                // Position thesis slices prominently with slight delay for smoothness
-                thesisSlices.forEach(({ element, mapping }, i) => {
-                    const angle = i * 120; // Distribute thesis slices at 0°, 120°, 240°
-                    element.style.transformOrigin = '200px 200px';
-                    element.style.transform = `rotate(${angle}deg) scale(1)`;
-                    element.style.opacity = '1';
-                    element.style.zIndex = '10';
-                    element.classList.add('focused-pair');
-                });
-                
-                // Smoothly transition antithesis slices out
-                antithesisSlices.forEach(({ element }, i) => {
-                    element.style.transformOrigin = '200px 200px';
-                    element.style.transform = `rotate(${30 + i * 60}deg) scale(0.15)`;
-                    element.style.opacity = '0.05';
-                    element.style.zIndex = '1';
-                    element.classList.remove('focused-pair');
-                });
-                
-                this.removePairConnectionLine();
-                this.updateControlsText('all-thesis');
-                this.setTransitions();
-            }
-            
-            showAllAntithesis() {
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                
-                // Remove any existing animations and reset transition
-                this.clearAnimations();
-                
-                // Find all thesis and antithesis slices
-                let thesisSlices = [];
-                let antithesisSlices = [];
-                
-                sliceComponents.forEach((slice, index) => {
-                    const mapping = this.sliceMapping[index];
-                    if (mapping.type === 'thesis') {
-                        thesisSlices.push({ element: slice, index, mapping });
-                    } else {
-                        antithesisSlices.push({ element: slice, index, mapping });
-                    }
-                });
-                
-                // Position antithesis slices prominently  
-                antithesisSlices.forEach(({ element, mapping }, i) => {
-                    const angle = i * 120; // Distribute antithesis slices at 0°, 120°, 240°
-                    element.style.transformOrigin = '200px 200px';
-                    element.style.transform = `rotate(${angle}deg) scale(1)`;
-                    element.style.opacity = '1';
-                    element.style.zIndex = '10';
-                    element.classList.add('focused-pair');
-                });
-                
-                // Smoothly transition thesis slices out
-                thesisSlices.forEach(({ element }, i) => {
-                    element.style.transformOrigin = '200px 200px';
-                    element.style.transform = `rotate(${30 + i * 60}deg) scale(0.15)`;
-                    element.style.opacity = '0.05';
-                    element.style.zIndex = '1';
-                    element.classList.remove('focused-pair');
-                });
-                
-                this.removePairConnectionLine();
-                this.updateControlsText('all-antithesis');
-                this.setTransitions();
-            }
-            
-            updateControlsText(state) {
-                const controlsOverlay = document.querySelector('.controls-overlay');
-                switch(state) {
-                    case 'pair-focused':
-                        controlsOverlay.textContent = 'Viewing thesis-antithesis pair • Click THESIS (top) for all thesis • Click ANTITHESIS (bottom) for all antithesis';
-                        break;
-                    case 'all-thesis':
-                        controlsOverlay.textContent = 'Viewing all THESIS slices • Click any thesis to focus on its pair • Click tiny antithesis to see all antithesis';
-                        break;
-                    case 'all-antithesis':
-                        controlsOverlay.textContent = 'Viewing all ANTITHESIS slices • Click any antithesis to focus on its pair • Click tiny thesis to see all thesis';
-                        break;
-                    default:
-                        controlsOverlay.textContent = 'Drag to rotate • Pinch to zoom • Click any slice to focus on thesis-antithesis pair';
+            generateSequence() {
+                const sequence = [];
+                // Add all thesis slices: T1, T2, ..., TN
+                for (let i = 0; i < this.numPairs; i++) {
+                    sequence.push({ 
+                        label: `T${i+1}`, 
+                        pair: i, 
+                        type: 'thesis'
+                    });
                 }
+                // Add all antithesis slices: A1, A2, ..., AN  
+                for (let i = 0; i < this.numPairs; i++) {
+                    sequence.push({ 
+                        label: `A${i+1}`, 
+                        pair: i, 
+                        type: 'antithesis'
+                    });
+                }
+                return sequence;
             }
             
-            highlightPair(pairIndex) {
-                if (this.enlargedPair !== null) return; // Don't highlight during spiral mode
-                
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                sliceComponents.forEach((slice, index) => {
-                    if (this.sliceMapping[index].pair === pairIndex) {
-                        slice.classList.add('paired-highlight');
+            createEqualSlices() {
+                // Remove any existing slices
+                const existingSlices = document.querySelectorAll('.equal-slice');
+                existingSlices.forEach(slice => {
+                    if (slice.parentNode) {
+                        slice.parentNode.removeChild(slice);
                     }
                 });
-            }
-            
-            clearHighlights() {
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                sliceComponents.forEach(slice => {
-                    slice.classList.remove('paired-highlight');
+                
+                // Hide the original 120-degree slice components completely
+                const originalSlices = document.querySelectorAll('.slice-component');
+                originalSlices.forEach(slice => {
+                    slice.style.display = 'none';
+                });
+                
+                const record = document.querySelector('.record');
+                if (!record) return;
+                
+                const sequence = this.generateSequence();
+                
+                // Place slices at equal intervals
+                sequence.forEach((slice, index) => {
+                    const angle = index * this.normalSliceAngle;
+                    const sliceElement = this.createClickableSlice(
+                        angle, this.normalSliceAngle, slice.label, slice.pair, slice.type
+                    );
+                    if (sliceElement) record.appendChild(sliceElement);
                 });
             }
             
-            createPairFocus(pairIndex) {
-                const sliceComponents = document.querySelectorAll('.slice-component');
+            calculateGapPositions() {
+                // Calculate where to place unfocused slices
+                // Focused slices occupy: [0° ± focusedSliceAngle/2] and [180° ± focusedSliceAngle/2]
                 
-                // Remove any existing animations first
-                this.clearAnimations();
+                const halfFocused = this.focusedSliceAngle / 2;
                 
-                // Find thesis and antithesis slices for this pair
-                let thesisSlice = null;
-                let antithesisSlice = null;
-                let otherSlices = [];
+                // Gap 1: from end of first focused slice to start of second focused slice
+                const gap1Start = halfFocused;
+                const gap1End = 180 - halfFocused;
+                const gap1Size = gap1End - gap1Start;
                 
-                sliceComponents.forEach((slice, index) => {
-                    const mapping = this.sliceMapping[index];
-                    if (mapping.pair === pairIndex) {
-                        if (mapping.type === 'thesis') {
-                            thesisSlice = { element: slice, index, mapping };
+                // Gap 2: from end of second focused slice to start of first focused slice (next cycle)
+                const gap2Start = 180 + halfFocused;
+                const gap2End = 360 - halfFocused;
+                const gap2Size = gap2End - gap2Start;
+                
+                const numUnfocused = 2 * this.numPairs - 2;
+                const slicesPerGap = Math.floor(numUnfocused / 2);
+                const extraSlices = numUnfocused % 2;
+                
+                const positions = [];
+                
+                // Distribute slices in gap 1
+                for (let i = 0; i < slicesPerGap + extraSlices; i++) {
+                    const position = gap1Start + (gap1Size / (slicesPerGap + extraSlices)) * (i + 0.5);
+                    positions.push(position);
+                }
+                
+                // Distribute slices in gap 2
+                for (let i = 0; i < slicesPerGap; i++) {
+                    const position = gap2Start + (gap2Size / slicesPerGap) * (i + 0.5);
+                    positions.push(position);
+                }
+                
+                return positions;
+            }
+            
+            focusOnPair(pairIndex) {
+                // Clear existing equal slices
+                const existingSlices = document.querySelectorAll('.equal-slice');
+                existingSlices.forEach(slice => {
+                    if (slice.parentNode) {
+                        slice.parentNode.removeChild(slice);
+                    }
+                });
+                
+                const record = document.querySelector('.record');
+                if (!record) return;
+                
+                const originalSequence = this.generateSequence();
+                
+                // Show and position the original detailed slices for the focused pair
+                const originalSliceComponents = document.querySelectorAll('.slice-component');
+                originalSliceComponents.forEach((slice, index) => {
+                    const sliceData = slice.dataset;
+                    const slicePair = parseInt(sliceData.pair);
+                    const sliceType = sliceData.type;
+                    
+                    if (slicePair === pairIndex) {
+                        // Show and position the focused detailed slices
+                        slice.style.display = 'block';
+                        slice.style.transformOrigin = '200px 200px';
+                        
+                        if (sliceType === 'thesis') {
+                            slice.style.transform = 'rotate(0deg) scale(1)';
+                        } else if (sliceType === 'antithesis') {
+                            slice.style.transform = 'rotate(180deg) scale(1)';
+                        }
+                        
+                        slice.style.opacity = '1';
+                        slice.style.zIndex = '10';
+                        
+                        // Add click handler to detailed slices for resetting
+                        const clickHandler = (e) => {
+                            e.stopPropagation();
+                            this.reset();
+                        };
+                        
+                        // Remove any existing handlers to avoid duplicates
+                        slice.removeEventListener('click', slice._clickHandler);
+                        slice.removeEventListener('touchend', slice._touchHandler);
+                        
+                        // Add new handlers
+                        slice._clickHandler = clickHandler;
+                        slice.addEventListener('click', clickHandler);
+                        
+                        // Mobile touch handling for detailed slices
+                        const touchHandler = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.reset();
+                        };
+                        
+                        slice._touchHandler = touchHandler;
+                        slice.addEventListener('touchend', touchHandler);
+                        
+                    } else {
+                        // Hide unfocused detailed slices
+                        slice.style.display = 'none';
+                    }
+                });
+                
+                // Find the indices of the focused pair in the original sequence
+                const focusedThesisIndex = originalSequence.findIndex(s => s.pair === pairIndex && s.type === 'thesis');
+                const focusedAntithesisIndex = originalSequence.findIndex(s => s.pair === pairIndex && s.type === 'antithesis');
+                
+                // Get positions for unfocused slices
+                const gapPositions = this.calculateGapPositions();
+                
+                // Create simple slices for unfocused pairs
+                let currentGapIndex = 0;
+                
+                // Walk around the circle starting from the focused thesis
+                for (let offset = 1; offset < originalSequence.length && currentGapIndex < gapPositions.length; offset++) {
+                    const checkIndex = (focusedThesisIndex + offset) % originalSequence.length;
+                    
+                    // Skip the focused antithesis
+                    if (checkIndex === focusedAntithesisIndex) continue;
+                    
+                    // Place this unfocused slice as a simple slice
+                    const slice = originalSequence[checkIndex];
+                    const position = gapPositions[currentGapIndex];
+                    
+                    const sliceElement = this.createClickableSlice(position, this.unfocusedSliceAngle, slice.label, slice.pair, slice.type);
+                    if (sliceElement) record.appendChild(sliceElement);
+                    
+                    currentGapIndex++;
+                }
+                
+                this.focusedPair = pairIndex;
+            }
+            
+            createClickableSlice(centerAngle, sliceWidth, label, pairIndex, sliceType) {
+                const record = document.querySelector('.record');
+                if (!record) return null;
+                
+                const cx = 200, cy = 200, radius = 150;
+                const halfAngle = sliceWidth / 2;
+                const startAngle = centerAngle - halfAngle;
+                const endAngle = centerAngle + halfAngle;
+                
+                // Create group for this slice
+                const sliceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                sliceGroup.setAttribute('class', `equal-slice ${sliceType}-slice`);
+                sliceGroup.setAttribute('data-pair', pairIndex);
+                sliceGroup.setAttribute('data-type', sliceType);
+                
+                // Create slice path
+                const outerRadius = radius;
+                const innerRadius = radius * 0.3;
+                
+                // Calculate points for the slice
+                const outer1X = cx + outerRadius * Math.cos(Math.radians(startAngle));
+                const outer1Y = cy + outerRadius * Math.sin(Math.radians(startAngle));
+                const outer2X = cx + outerRadius * Math.cos(Math.radians(endAngle));
+                const outer2Y = cy + outerRadius * Math.sin(Math.radians(endAngle));
+                
+                const inner1X = cx + innerRadius * Math.cos(Math.radians(startAngle));
+                const inner1Y = cy + innerRadius * Math.sin(Math.radians(startAngle));
+                const inner2X = cx + innerRadius * Math.cos(Math.radians(endAngle));
+                const inner2Y = cy + innerRadius * Math.sin(Math.radians(endAngle));
+                
+                const largeArc = sliceWidth > 180 ? 1 : 0;
+                
+                // Create slice path
+                const slicePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const pathD = `M ${outer1X},${outer1Y} 
+                              A ${outerRadius},${outerRadius} 0 ${largeArc},1 ${outer2X},${outer2Y} 
+                              L ${inner2X},${inner2Y} 
+                              A ${innerRadius},${innerRadius} 0 ${largeArc},0 ${inner1X},${inner1Y} Z`;
+                
+                slicePath.setAttribute('d', pathD);
+                slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.6)' : 'rgba(244, 67, 54, 0.6)');
+                slicePath.setAttribute('stroke', '#888');
+                slicePath.setAttribute('stroke-width', '1');
+                slicePath.style.cursor = 'pointer';
+                
+                // Add text label with dynamic font size
+                const textRadius = (outerRadius + innerRadius) / 2;
+                const textAngle = centerAngle * Math.PI / 180;
+                const textX = cx + textRadius * Math.cos(textAngle);
+                const textY = cy + textRadius * Math.sin(textAngle);
+                
+                // Dynamic font sizing based on slice width
+                let fontSize;
+                if (sliceWidth >= this.normalSliceAngle) {
+                    fontSize = Math.min(20, sliceWidth / 3); // Larger for normal+ size slices
+                } else {
+                    fontSize = Math.min(14, sliceWidth / 2); // Smaller for compressed slices
+                }
+                
+                const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textElement.setAttribute('x', textX);
+                textElement.setAttribute('y', textY);
+                textElement.setAttribute('text-anchor', 'middle');
+                textElement.setAttribute('dominant-baseline', 'middle');
+                textElement.setAttribute('font-size', fontSize);
+                textElement.setAttribute('font-weight', 'bold');
+                textElement.setAttribute('fill', 'white');
+                textElement.style.pointerEvents = 'none';
+                textElement.textContent = label;
+                
+                // Add click handler
+                slicePath.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    console.log(`Clicked ${label} (pair ${pairIndex}, ${sliceType})`);
+                    
+                    if (this.focusedPair === pairIndex) {
+                        // If clicking on already focused pair, reset to equal slices
+                        this.reset();
+                    } else {
+                        // Focus on the clicked pair
+                        this.focusOnPair(pairIndex);
+                    }
+                });
+                
+                // Add mobile touch handling
+                let touchStartTime = 0;
+                let touchStartPos = null;
+                
+                slicePath.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    touchStartTime = Date.now();
+                    const touch = e.touches[0];
+                    touchStartPos = { x: touch.clientX, y: touch.clientY };
+                });
+                
+                slicePath.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const touchDuration = Date.now() - touchStartTime;
+                    const touch = e.changedTouches[0];
+                    const touchEndPos = { x: touch.clientX, y: touch.clientY };
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(touchEndPos.x - touchStartPos.x, 2) + 
+                        Math.pow(touchEndPos.y - touchStartPos.y, 2)
+                    );
+                    
+                    if (touchDuration < 300 && distance < 20) {
+                        console.log(`Touch clicked ${label} (pair ${pairIndex}, ${sliceType})`);
+                        
+                        if (this.focusedPair === pairIndex) {
+                            // If touching already focused pair, reset to equal slices
+                            this.reset();
                         } else {
-                            antithesisSlice = { element: slice, index, mapping };
+                            // Focus on the touched pair
+                            this.focusOnPair(pairIndex);
                         }
-                    } else {
-                        otherSlices.push({ element: slice, index, mapping });
                     }
                 });
                 
-                // Position thesis and antithesis directly opposite each other
-                // Thesis at 0°, Antithesis at 180°
-                const thesisAngle = 0;
-                const antithesisAngle = 180;
-                
-                // Position thesis slice at 0°
-                if (thesisSlice) {
-                    thesisSlice.element.style.transformOrigin = '200px 200px';
-                    thesisSlice.element.style.transform = `rotate(${thesisAngle}deg) scale(1)`;
-                    thesisSlice.element.style.opacity = '1';
-                    thesisSlice.element.style.zIndex = '10';
-                    thesisSlice.element.classList.add('focused-pair');
-                }
-                
-                // Position antithesis slice at 180° (directly opposite)
-                if (antithesisSlice) {
-                    antithesisSlice.element.style.transformOrigin = '200px 200px';
-                    antithesisSlice.element.style.transform = `rotate(${antithesisAngle}deg) scale(1)`;
-                    antithesisSlice.element.style.opacity = '1';
-                    antithesisSlice.element.style.zIndex = '10';
-                    antithesisSlice.element.classList.add('focused-pair');
-                }
-                
-                // Position other slices around the remaining space, but make them smaller
-                otherSlices.forEach(({ element }, i) => {
-                    const angle = 90 + (i * 45); // Position at sides: 90°, 135°, 225°, 270°
-                    element.style.transformOrigin = '200px 200px';
-                    element.style.transform = `rotate(${angle}deg) scale(0.5)`;
-                    element.style.opacity = '0.3';
-                    element.style.zIndex = '1';
-                    element.classList.remove('focused-pair');
+                // Add hover effects
+                slicePath.addEventListener('mouseenter', () => {
+                    slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)');
                 });
                 
-                // Add visual connection line between thesis and antithesis
-                this.addPairConnectionLine();
+                slicePath.addEventListener('mouseleave', () => {
+                    slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.6)' : 'rgba(244, 67, 54, 0.6)');
+                });
                 
-                // Update controls text
-                this.updateControlsText('pair-focused');
+                sliceGroup.appendChild(slicePath);
+                sliceGroup.appendChild(textElement);
                 
-                // Set smooth transitions
-                this.setTransitions();
-            }
-            
-            addPairConnectionLine() {
-                // Remove any existing connection line
-                this.removePairConnectionLine();
-                
-                // Create a connection line between center points
-                const svg = document.querySelector('.wheel-svg');
-                const sliceContainer = document.getElementById('slice-container');
-                
-                // Create connection line element
-                const connectionLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                connectionLine.setAttribute('id', 'pair-connection-line');
-                connectionLine.setAttribute('x1', '200');
-                connectionLine.setAttribute('y1', '80');  // Top of wheel
-                connectionLine.setAttribute('x2', '200');
-                connectionLine.setAttribute('y2', '320'); // Bottom of wheel
-                connectionLine.setAttribute('stroke', 'rgba(0, 116, 217, 0.4)');
-                connectionLine.setAttribute('stroke-width', '2');
-                connectionLine.setAttribute('stroke-dasharray', '5,5');
-                connectionLine.style.opacity = '0';
-                connectionLine.style.transition = 'opacity 0.5s ease-in-out';
-                
-                // Insert before slice container so it appears behind slices
-                svg.insertBefore(connectionLine, sliceContainer);
-                
-                // Fade in the line
-                setTimeout(() => {
-                    connectionLine.style.opacity = '1';
-                }, 100);
-            }
-            
-            removePairConnectionLine() {
-                const existingLine = document.getElementById('pair-connection-line');
-                if (existingLine) {
-                    existingLine.style.opacity = '0';
-                    setTimeout(() => {
-                        if (existingLine.parentNode) {
-                            existingLine.parentNode.removeChild(existingLine);
-                        }
-                    }, 500);
-                }
+                return sliceGroup;
             }
             
             reset() {
-                this.enlargedPair = null;
-                this.currentState = 'normal';
-                this.clearHighlights();
+                this.focusedPair = null;
                 
-                // Remove connection line
-                this.removePairConnectionLine();
-                
-                // Reset controls text
-                this.updateControlsText('normal');
-                
-                // Clear animations first
-                this.clearAnimations();
-                
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                sliceComponents.forEach((slice, index) => {
-                    const mapping = this.sliceMapping[index];
-                    // Reset to original thesis-antithesis positioning
-                    slice.style.transformOrigin = '200px 200px';
-                    slice.style.transform = `rotate(${mapping.baseAngle}deg)`;
-                    slice.style.opacity = '1';
-                    slice.style.zIndex = '0';
-                    // Remove focused pair highlighting
-                    slice.classList.remove('focused-pair');
+                // Hide all original detailed slice components
+                const originalSlices = document.querySelectorAll('.slice-component');
+                originalSlices.forEach(slice => {
+                    slice.style.display = 'none';
                 });
                 
-                // Set smooth transitions
-                this.setTransitions();
-            }
-            
-            clearAnimations() {
-                const sliceComponents = document.querySelectorAll('.slice-component');
-                sliceComponents.forEach(slice => {
-                    slice.style.transition = 'none';
-                });
-            }
-            
-            setTransitions() {
-                // Add transitions back after a brief moment to avoid conflicts
-                setTimeout(() => {
-                    const sliceComponents = document.querySelectorAll('.slice-component');
-                    sliceComponents.forEach(slice => {
-                        slice.style.transition = 'all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)';
-                    });
-                }, 50);
+                this.createEqualSlices();
             }
         }
         
-        // Initialize wheel
-        const dialecticalWheel = new DialecticalWheel();
+        // Initialize wheel with N pairs (change the number here to test different configurations)
+        const dialecticalWheel = new DialecticalWheel(3); // Try 2, 4, 5, etc.
         
         // Global reset function
         function resetSlices() {
