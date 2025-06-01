@@ -180,7 +180,8 @@ def svg_dialectical_wheel(slices, center_label="Core", radius=150, width=400, he
     n_slices = len(slices)
     
     # Start SVG
-    svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    #svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    svg = [f'<svg class="wheel-svg" viewBox="0 0 {width} {height}">']
 
     if interactive:
         svg.append('<g class="record">')
@@ -239,7 +240,7 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
     Generate dialectical wheel from WisdomUnit objects with configurable slice properties.
     
     Args:
-    wisdom_units: list of WisdomUnit objects
+        wisdom_units: list of WisdomUnit objects
         center_label: text for center circle
         radius: outer radius of wheel
         width, height: SVG dimensions
@@ -249,11 +250,11 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
         layer_colors: list of background colors for layers
         font_sizes: list of font sizes for layers
     
-    Each WisdomUnit produces two slices: thesis (T-, T, T+) and antithesis (A+, A, A-), which are opposite each other.
-    Slices are ordered so that thesis and antithesis are opposite.
+    Each WisdomUnit produces a thesis-antithesis pair: thesis (T-, T, T+) and antithesis (A+, A, A-), 
+    which are positioned opposite each other in the wheel.
     """
-    thesis_slices = []
-    antithesis_slices = []
+    thesis_antithesis_pairs = []
+    
     for wu in wisdom_units:
         # Thesis slice: T-, T, T+
         thesis_labels = []
@@ -261,21 +262,32 @@ def svg_dialectical_wheel_wisdom(wisdom_units, center_label="Core", radius=150, 
             comp = getattr(wu, attr, None)
             if comp and getattr(comp, "statement", None):
                 thesis_labels.append((comp.statement, color))
-        if thesis_labels:
-            thesis_slices.append({"labels": thesis_labels})
-    for wu in wisdom_units:
+        
         # Antithesis slice: A+, A, A-
         antithesis_labels = []
         for attr, color in [("a_plus", "green"), ("a", "black"), ("a_minus", "red")]:
             comp = getattr(wu, attr, None)
             if comp and getattr(comp, "statement", None):
                 antithesis_labels.append((comp.statement, color))
-        if antithesis_labels:
-            antithesis_slices.append({"labels": antithesis_labels})
-    slices = thesis_slices + antithesis_slices
-    return svg_dialectical_wheel(slices, center_label=center_label, radius=radius, width=width, height=height, 
-                                arrows=arrows, interactive=interactive, slice_angle=slice_angle,
-                                layer_colors=layer_colors, font_sizes=font_sizes)
+        
+        # Only add pairs where we have at least one label for each side
+        if thesis_labels and antithesis_labels:
+            thesis_antithesis_pairs.append({
+                'thesis': {"labels": thesis_labels},
+                'antithesis': {"labels": antithesis_labels}
+            })
+    
+    return create_thesis_antithesis_wheel(
+        thesis_antithesis_pairs, 
+        center_label=center_label, 
+        radius=radius, 
+        width=width, 
+        height=height,
+        slice_angle=slice_angle, 
+        interactive=interactive, 
+        layer_colors=layer_colors, 
+        font_sizes=font_sizes
+    )
 
 def create_thesis_antithesis_wheel(thesis_antithesis_pairs, center_label="Core", radius=150, width=400, height=400, 
                                   slice_angle=120, interactive=True, layer_colors=None, font_sizes=None):
@@ -339,7 +351,8 @@ def create_thesis_antithesis_wheel(thesis_antithesis_pairs, center_label="Core",
     cx, cy = width // 2, height // 2
     
     # Start SVG
-    svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    #svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
+    svg = [f'<svg class="wheel-svg" viewBox="0 0 {width} {height}">']
     
     if interactive:
         svg.append('<g class="record">')
@@ -497,11 +510,11 @@ if __name__ == "__main__":
     {"labels": [("Liberation", "green"), ("Be homeless", "black"), ("Discomfort", "red")]},
 ]
 
-# Example arrows connecting labels
-arrows = [
-        {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},
-        {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},
-    ]
+    # Example arrows connecting labels
+    arrows = [
+            {"from_slice": 1, "from_layer": 2, "to_slice": 0, "to_layer": 0, "color": "blue"},
+            {"from_slice": 1, "from_layer": 0, "to_slice": 0, "to_layer": 2, "color": "purple"},
+        ]
 
     # Generate interactive SVG with 120-degree slice components
     interactive_svg_120 = svg_dialectical_wheel(slices_120, center_label="Core", arrows=arrows, interactive=True)
