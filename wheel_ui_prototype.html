@@ -325,11 +325,39 @@
     <script>
         // Generalized N-pair dialectical wheel
         class DialecticalWheel {
-            constructor(numPairs = 3) {
+            constructor(numPairs = 3, sliceSequence = null) {
                 this.centerX = 200;
                 this.centerY = 200;
                 this.numPairs = numPairs;
                 this.focusedPair = null;
+                
+                // Default sequence: T1, T2, ..., TN, A1, A2, ..., AN
+                if (sliceSequence === null) {
+                    sliceSequence = [];
+                    // First N slices: all thesis
+                    for (let i = 0; i < this.numPairs; i++) {
+                        sliceSequence.push({ pair: i, type: 'thesis' });
+                    }
+                    // Next N slices: all antithesis (opposites)
+                    for (let i = 0; i < this.numPairs; i++) {
+                        sliceSequence.push({ pair: i, type: 'antithesis' });
+                    }
+                } else {
+                    // Validate and complete the sequence
+                    if (sliceSequence.length !== this.numPairs) {
+                        throw new Error(`sliceSequence must contain exactly ${this.numPairs} elements for the first half`);
+                    }
+                    
+                    // Create full sequence: first N as specified, next N as opposites
+                    const firstHalf = [...sliceSequence];
+                    const secondHalf = firstHalf.map(slice => ({
+                        pair: slice.pair,
+                        type: slice.type === 'thesis' ? 'antithesis' : 'thesis'
+                    }));
+                    sliceSequence = [...firstHalf, ...secondHalf];
+                }
+                
+                this.sliceSequence = sliceSequence;
                 
                 // Helper function for converting degrees to radians
                 if (!Math.radians) {
@@ -347,24 +375,11 @@
             }
             
             generateSequence() {
-                const sequence = [];
-                // Add all thesis slices: T1, T2, ..., TN
-                for (let i = 0; i < this.numPairs; i++) {
-                    sequence.push({ 
-                        label: `T${i+1}`, 
-                        pair: i, 
-                        type: 'thesis'
-                    });
-                }
-                // Add all antithesis slices: A1, A2, ..., AN  
-                for (let i = 0; i < this.numPairs; i++) {
-                    sequence.push({ 
-                        label: `A${i+1}`, 
-                        pair: i, 
-                        type: 'antithesis'
-                    });
-                }
-                return sequence;
+                return this.sliceSequence.map((slice, index) => ({
+                    label: `${slice.type === 'thesis' ? 'T' : 'A'}${slice.pair + 1}`,
+                    pair: slice.pair,
+                    type: slice.type
+                }));
             }
             
             createEqualSlices() {
@@ -680,9 +695,32 @@
 
         const slicePairCount = (document.querySelectorAll('.slice-component').length)/2;
         
-        // Initialize wheel with N pairs (change the number here to test different configurations)
-        const dialecticalWheel = new DialecticalWheel(slicePairCount); // Try 2, 4, 5, etc.
+        // Initialize wheel with different sequence patterns
+        // Default pattern: T1, T2, T3, A1, A2, A3
+        // const dialecticalWheel = new DialecticalWheel(slicePairCount);
         
+        // Custom pattern example: T2, T1, T3, A2, A1, A3
+        // const customSequence = [
+        //     { pair: 1, type: 'thesis' },   // T2
+        //     { pair: 0, type: 'thesis' },   // T1  
+        //     { pair: 2, type: 'thesis' }    // T3
+        // ];
+        // const dialecticalWheel = new DialecticalWheel(slicePairCount, customSequence);
+        
+        // Mixed pattern example: T1, A2, T3, A1, T2, A3 (ACTIVE DEMO)
+        const mixedSequence = [
+            { pair: 0, type: 'thesis' },     // T1
+            { pair: 1, type: 'antithesis' }, // A2
+            { pair: 2, type: 'thesis' },     // T3
+            { pair: 3, type: 'antithesis' }  // A4
+        ];
+        const dialecticalWheel = new DialecticalWheel(slicePairCount, mixedSequence);
+        
+        // Use default sequence
+        // const dialecticalWheel = new DialecticalWheel(slicePairCount);
+        
+        console.log('Initialized wheel with sequence:', dialecticalWheel.generateSequence());
+
         // Global reset function
         function resetSlices() {
             dialecticalWheel.reset();
