@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win-Win Wheel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f7f7f7;
+            font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 0.5em 1em;
+            height: 48px;
+        }
+        .header .icon {
+            font-size: 1.5em;
+            color: #222;
+            background: none;
+            border: none;
+            padding: 0 0.3em;
+            cursor: pointer;
+        }
+        .header-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #222;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5em 0.5em 2em 0.5em;
+        }
+        .wheel-container {
+            width: 100vw;
+            max-width: 100vw;
+            max-height: 100%;
+        }
+        .wheel-svg {
+            width: 100vw;
+            height: 100vw;
+            max-width: 100vw;
+            max-height: 100%;
+            display: block;
+        }
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0.5em 0;
+            z-index: 10;
+        }
+        .bottom-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 1.1em;
+            color: #0074d9;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5em 1em;
+        }
+        .bottom-btn svg {
+            margin-bottom: 0.2em;
+        }
+        @media (max-width: 500px) {
+            .wheel-container {
+                width: 100vw;
+                max-width: 100vw;
+            }
+            .wheel-svg {
+                width: 100vw;
+                height: 100vw;
+                max-width: 100vw;
+                max-height: 100vw;
+            }
+        }
+        .record {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            touch-action: none;
+        }
+        
+        /* Styles for clickable slices with thesis/antithesis distinction */
+        .clickable-slice {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            fill: transparent;
+            stroke: transparent;
+            stroke-width: 2;
+        }
+        .clickable-slice:hover {
+            stroke: rgba(0, 116, 217, 0.3);
+            fill: rgba(0, 116, 217, 0.1);
+        }
+        
+        /* Different hover colors for thesis vs antithesis */
+        .thesis-slice .clickable-slice:hover {
+            stroke: rgba(76, 175, 80, 0.3);
+            fill: rgba(76, 175, 80, 0.1);
+        }
+        .antithesis-slice .clickable-slice:hover {
+            stroke: rgba(244, 67, 54, 0.3);
+            fill: rgba(244, 67, 54, 0.1);
+        }
+        
+        .slice-boundary {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .slice-component {
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-origin: 200px 200px;
+        }
+        
+        /* Highlighting for paired slices */
+        .slice-component.paired-highlight {
+            filter: brightness(1.1) drop-shadow(0 0 8px rgba(0, 116, 217, 0.5));
+        }
+        
+        /* Special styling for focused thesis-antithesis pair */
+        .slice-component.focused-pair {
+            filter: brightness(1.2) drop-shadow(0 0 12px rgba(0, 116, 217, 0.8));
+        }
+        
+        .focused-pair .clickable-slice {
+            stroke: rgba(0, 116, 217, 0.6) !important;
+            stroke-width: 3 !important;
+        }
+        
+        /* Enhanced visual connection for focused pairs */
+        .focused-pair.thesis-slice {
+            filter: brightness(1.2) drop-shadow(0 0 12px rgba(76, 175, 80, 0.8));
+        }
+        
+        .focused-pair.antithesis-slice {
+            filter: brightness(1.2) drop-shadow(0 0 12px rgba(244, 67, 54, 0.8));
+        }
+        
+        .controls-overlay {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            color: #333;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="icon" aria-label="Menu">&#9776;</button>
+        <span class="header-title">Win-Win</span>
+        <div>
+            <button class="icon" aria-label="Help">&#x2753;</button>
+            <button class="icon" aria-label="Zoom">&#128269;</button>
+            <button class="icon" aria-label="Close">&#10006;</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="controls-overlay">
+            Drag to rotate • Pinch to zoom • Click thesis/antithesis pairs to see opposition clearly
+        </div>
+        <div class="wheel-container">
+            <!-- Generate the thesis-antithesis wheel using the new SVG generator -->
+            <svg class="wheel-svg" viewBox="0 0 400 400">
+                <g class="record">
+                <defs>
+                </defs>
+                <g id="slice-container">
+                <g class="slice-component thesis-slice" data-slice="0" data-pair="0" data-type="thesis" transform="rotate(0.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-0-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-0-arc-0" startOffset="50%" text-anchor="middle">Strategic power projection</textPath></text>
+                <path id="slice-0-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-0-arc-1" startOffset="50%" text-anchor="middle">Putin initiates war</textPath></text>
+                <path id="slice-0-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-0-arc-2" startOffset="50%" text-anchor="middle">Destructive aggression</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="0" data-pair="0" data-type="thesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component antithesis-slice" data-slice="1" data-pair="2" data-type="antithesis" transform="rotate(0.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-1-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-1-arc-0" startOffset="50%" text-anchor="middle">Strategic military strength maintained</textPath></text>
+                <path id="slice-1-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-1-arc-1" startOffset="50%" text-anchor="middle">Russian military dominance persists</textPath></text>
+                <path id="slice-1-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-1-arc-2" startOffset="50%" text-anchor="middle">Total defeat inevitable</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="1" data-pair="2" data-type="antithesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component thesis-slice" data-slice="2" data-pair="1" data-type="thesis" transform="rotate(90.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-2-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-2-arc-0" startOffset="50%" text-anchor="middle">Liberation and sovereignty protected</textPath></text>
+                <path id="slice-2-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-2-arc-1" startOffset="50%" text-anchor="middle">Ukraine resists invasion</textPath></text>
+                <path id="slice-2-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-2-arc-2" startOffset="50%" text-anchor="middle">Endless conflict and destruction</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="2" data-pair="1" data-type="thesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component antithesis-slice" data-slice="3" data-pair="3" data-type="antithesis" transform="rotate(90.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-3-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-3-arc-0" startOffset="50%" text-anchor="middle">Stability maintained</textPath></text>
+                <path id="slice-3-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-3-arc-1" startOffset="50%" text-anchor="middle">Russian dominance persists</textPath></text>
+                <path id="slice-3-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-3-arc-2" startOffset="50%" text-anchor="middle">Oppression deepens</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="3" data-pair="3" data-type="antithesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component antithesis-slice" data-slice="4" data-pair="0" data-type="antithesis" transform="rotate(180.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-4-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-4-arc-0" startOffset="50%" text-anchor="middle">Mutual understanding</textPath></text>
+                <path id="slice-4-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-4-arc-1" startOffset="50%" text-anchor="middle">Peace negotiations</textPath></text>
+                <path id="slice-4-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-4-arc-2" startOffset="50%" text-anchor="middle">Passive submission</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="4" data-pair="0" data-type="antithesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component thesis-slice" data-slice="5" data-pair="2" data-type="thesis" transform="rotate(180.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-5-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-5-arc-0" startOffset="50%" text-anchor="middle">Ukrainian victory approaches</textPath></text>
+                <path id="slice-5-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-5-arc-1" startOffset="50%" text-anchor="middle">Russian offensive weakens</textPath></text>
+                <path id="slice-5-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-5-arc-2" startOffset="50%" text-anchor="middle">Military resources drain rapidly</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="5" data-pair="2" data-type="thesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component antithesis-slice" data-slice="6" data-pair="1" data-type="antithesis" transform="rotate(270.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-6-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-6-arc-0" startOffset="50%" text-anchor="middle">Immediate peace achieved</textPath></text>
+                <path id="slice-6-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-6-arc-1" startOffset="50%" text-anchor="middle">Ukraine surrenders to invasion</textPath></text>
+                <path id="slice-6-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-6-arc-2" startOffset="50%" text-anchor="middle">Freedom and independence lost</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="6" data-pair="1" data-type="antithesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                <g class="slice-component thesis-slice" data-slice="7" data-pair="3" data-type="thesis" transform="rotate(270.0 200 200)">
+                <path d="M 240.0,130.71796769724492 A 80.0,80.0 0 0,1 240.0,269.28203230275506 L 222.5,238.97114317029974 A 45.0,45.0 0 0,0 222.5,161.02885682970026 Z" fill="#C6E5B3" stroke="#888" stroke-width="0.5"/>
+                <path d="M 257.5,100.40707856478957 A 114.99999999999999,114.99999999999999 0 0,1 257.5,299.5929214352104 L 240.0,269.28203230275506 A 80.0,80.0 0 0,0 240.0,130.71796769724492 Z" fill="#FFFFFF" stroke="#888" stroke-width="0.5"/>
+                <path d="M 275.0,70.09618943233423 A 149.99999999999997,149.99999999999997 0 0,1 275.0,329.9038105676658 L 257.5,299.5929214352104 A 114.99999999999999,114.99999999999999 0 0,0 257.5,100.40707856478957 Z" fill="#F9C6CC" stroke="#888" stroke-width="0.5"/>
+                <path id="slice-7-arc-0" d="M 235.0,139.3782217350893 A 70.0,70.0 0 0,1 235.0,260.6217782649107" fill="none"/>
+                <text font-size="8" fill="green"><textPath href="#slice-7-arc-0" startOffset="50%" text-anchor="middle">Freedom restored</textPath></text>
+                <path id="slice-7-arc-1" d="M 252.5,109.06733260263395 A 104.99999999999999,104.99999999999999 0 0,1 252.5,290.93266739736606" fill="none"/>
+                <text font-size="10" fill="black"><textPath href="#slice-7-arc-1" startOffset="50%" text-anchor="middle">Ukrainian victory approaches</textPath></text>
+                <path id="slice-7-arc-2" d="M 270.0,78.75644347017862 A 139.99999999999997,139.99999999999997 0 0,1 270.0,321.2435565298214" fill="none"/>
+                <text font-size="14" fill="red"><textPath href="#slice-7-arc-2" startOffset="50%" text-anchor="middle">Vengeance intensifies</textPath></text>
+                <line x1="200" y1="200" x2="275.0" y2="70.0961894323342" stroke="#888" stroke-width="1"/>
+                <line x1="200" y1="200" x2="275.0" y2="329.9038105676658" stroke="#888" stroke-width="1"/>
+                <path class="clickable-slice" data-slice="7" data-pair="3" data-type="thesis" d="M 200,200 L 275.0,70.0961894323342 A 150,150 0 0,1 275.0,329.9038105676658 Z" fill="transparent" stroke="transparent"/>
+                </g>
+                </g>
+                <circle cx="200" cy="200" r="30.0" fill="#FFC107"/>
+                <text x="200" y="200" font-size="16" font-weight="bold" text-anchor="middle" alignment-baseline="middle">Core</text>
+                </g>
+                </svg>
+        </div>
+    </div>
+    <div class="bottom-bar">
+        <button class="bottom-btn">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Enrich
+        </button>
+        <button class="bottom-btn" onclick="resetSlices()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Reset
+        </button>
+    </div>
+    
+    <script>
+        // Generalized N-pair dialectical wheel
+        class DialecticalWheel {
+            constructor(numPairs = 3) {
+                this.centerX = 200;
+                this.centerY = 200;
+                this.numPairs = numPairs;
+                this.focusedPair = null;
+                
+                // Helper function for converting degrees to radians
+                if (!Math.radians) {
+                    Math.radians = function(degrees) {
+                        return degrees * Math.PI / 180;
+                    };
+                }
+                
+                // Calculate angles dynamically based on N
+                this.normalSliceAngle = 360 / (2 * this.numPairs);  // Each slice in normal mode
+                this.focusedSliceAngle = 120;                       // Always 120° for focused slices
+                this.unfocusedSliceAngle = (360 - 2 * this.focusedSliceAngle) / (2 * this.numPairs - 2);
+                
+                this.createEqualSlices();
+            }
+            
+            generateSequence() {
+                const sequence = [];
+                // Add all thesis slices: T1, T2, ..., TN
+                for (let i = 0; i < this.numPairs; i++) {
+                    sequence.push({ 
+                        label: `T${i+1}`, 
+                        pair: i, 
+                        type: 'thesis'
+                    });
+                }
+                // Add all antithesis slices: A1, A2, ..., AN  
+                for (let i = 0; i < this.numPairs; i++) {
+                    sequence.push({ 
+                        label: `A${i+1}`, 
+                        pair: i, 
+                        type: 'antithesis'
+                    });
+                }
+                return sequence;
+            }
+            
+            createEqualSlices() {
+                // Remove any existing slices
+                const existingSlices = document.querySelectorAll('.equal-slice');
+                existingSlices.forEach(slice => {
+                    if (slice.parentNode) {
+                        slice.parentNode.removeChild(slice);
+                    }
+                });
+                
+                // Hide the original 120-degree slice components completely
+                const originalSlices = document.querySelectorAll('.slice-component');
+                originalSlices.forEach(slice => {
+                    slice.style.display = 'none';
+                });
+                
+                const record = document.querySelector('.record');
+                if (!record) return;
+                
+                const sequence = this.generateSequence();
+                
+                // Place slices at equal intervals
+                sequence.forEach((slice, index) => {
+                    const angle = index * this.normalSliceAngle;
+                    const sliceElement = this.createClickableSlice(
+                        angle, this.normalSliceAngle, slice.label, slice.pair, slice.type
+                    );
+                    if (sliceElement) record.appendChild(sliceElement);
+                });
+            }
+            
+            calculateGapPositions() {
+                // Calculate where to place unfocused slices
+                // Focused slices occupy: [0° ± focusedSliceAngle/2] and [180° ± focusedSliceAngle/2]
+                
+                const halfFocused = this.focusedSliceAngle / 2;
+                
+                // Gap 1: from end of first focused slice to start of second focused slice
+                const gap1Start = halfFocused;
+                const gap1End = 180 - halfFocused;
+                const gap1Size = gap1End - gap1Start;
+                
+                // Gap 2: from end of second focused slice to start of first focused slice (next cycle)
+                const gap2Start = 180 + halfFocused;
+                const gap2End = 360 - halfFocused;
+                const gap2Size = gap2End - gap2Start;
+                
+                const numUnfocused = 2 * this.numPairs - 2;
+                const slicesPerGap = Math.floor(numUnfocused / 2);
+                const extraSlices = numUnfocused % 2;
+                
+                const positions = [];
+                
+                // Distribute slices in gap 1
+                for (let i = 0; i < slicesPerGap + extraSlices; i++) {
+                    const position = gap1Start + (gap1Size / (slicesPerGap + extraSlices)) * (i + 0.5);
+                    positions.push(position);
+                }
+                
+                // Distribute slices in gap 2
+                for (let i = 0; i < slicesPerGap; i++) {
+                    const position = gap2Start + (gap2Size / slicesPerGap) * (i + 0.5);
+                    positions.push(position);
+                }
+                
+                return positions;
+            }
+            
+            focusOnPair(pairIndex) {
+                // Clear existing equal slices
+                const existingSlices = document.querySelectorAll('.equal-slice');
+                existingSlices.forEach(slice => {
+                    if (slice.parentNode) {
+                        slice.parentNode.removeChild(slice);
+                    }
+                });
+                
+                const record = document.querySelector('.record');
+                if (!record) return;
+                
+                const originalSequence = this.generateSequence();
+                
+                // Show and position the original detailed slices for the focused pair
+                const originalSliceComponents = document.querySelectorAll('.slice-component');
+                originalSliceComponents.forEach((slice, index) => {
+                    const sliceData = slice.dataset;
+                    const slicePair = parseInt(sliceData.pair);
+                    const sliceType = sliceData.type;
+                    
+                    if (slicePair === pairIndex) {
+                        // Show and position the focused detailed slices
+                        slice.style.display = 'block';
+                        slice.style.transformOrigin = '200px 200px';
+                        
+                        if (sliceType === 'thesis') {
+                            slice.style.transform = 'rotate(0deg) scale(1)';
+                        } else if (sliceType === 'antithesis') {
+                            slice.style.transform = 'rotate(180deg) scale(1)';
+                        }
+                        
+                        slice.style.opacity = '1';
+                        slice.style.zIndex = '10';
+                        
+                        // Add click handler to detailed slices for resetting
+                        const clickHandler = (e) => {
+                            e.stopPropagation();
+                            this.reset();
+                        };
+                        
+                        // Remove any existing handlers to avoid duplicates
+                        slice.removeEventListener('click', slice._clickHandler);
+                        slice.removeEventListener('touchend', slice._touchHandler);
+                        
+                        // Add new handlers
+                        slice._clickHandler = clickHandler;
+                        slice.addEventListener('click', clickHandler);
+                        
+                        // Mobile touch handling for detailed slices
+                        const touchHandler = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.reset();
+                        };
+                        
+                        slice._touchHandler = touchHandler;
+                        slice.addEventListener('touchend', touchHandler);
+                        
+                    } else {
+                        // Hide unfocused detailed slices
+                        slice.style.display = 'none';
+                    }
+                });
+                
+                // Find the indices of the focused pair in the original sequence
+                const focusedThesisIndex = originalSequence.findIndex(s => s.pair === pairIndex && s.type === 'thesis');
+                const focusedAntithesisIndex = originalSequence.findIndex(s => s.pair === pairIndex && s.type === 'antithesis');
+                
+                // Get positions for unfocused slices
+                const gapPositions = this.calculateGapPositions();
+                
+                // Create simple slices for unfocused pairs
+                let currentGapIndex = 0;
+                
+                // Walk around the circle starting from the focused thesis
+                for (let offset = 1; offset < originalSequence.length && currentGapIndex < gapPositions.length; offset++) {
+                    const checkIndex = (focusedThesisIndex + offset) % originalSequence.length;
+                    
+                    // Skip the focused antithesis
+                    if (checkIndex === focusedAntithesisIndex) continue;
+                    
+                    // Place this unfocused slice as a simple slice
+                    const slice = originalSequence[checkIndex];
+                    const position = gapPositions[currentGapIndex];
+                    
+                    const sliceElement = this.createClickableSlice(position, this.unfocusedSliceAngle, slice.label, slice.pair, slice.type);
+                    if (sliceElement) record.appendChild(sliceElement);
+                    
+                    currentGapIndex++;
+                }
+                
+                this.focusedPair = pairIndex;
+            }
+            
+            createClickableSlice(centerAngle, sliceWidth, label, pairIndex, sliceType) {
+                const record = document.querySelector('.record');
+                if (!record) return null;
+                
+                const cx = 200, cy = 200, radius = 150;
+                const halfAngle = sliceWidth / 2;
+                const startAngle = centerAngle - halfAngle;
+                const endAngle = centerAngle + halfAngle;
+                
+                // Create group for this slice
+                const sliceGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                sliceGroup.setAttribute('class', `equal-slice ${sliceType}-slice`);
+                sliceGroup.setAttribute('data-pair', pairIndex);
+                sliceGroup.setAttribute('data-type', sliceType);
+                
+                // Create slice path
+                const outerRadius = radius;
+                const innerRadius = radius * 0.3;
+                
+                // Calculate points for the slice
+                const outer1X = cx + outerRadius * Math.cos(Math.radians(startAngle));
+                const outer1Y = cy + outerRadius * Math.sin(Math.radians(startAngle));
+                const outer2X = cx + outerRadius * Math.cos(Math.radians(endAngle));
+                const outer2Y = cy + outerRadius * Math.sin(Math.radians(endAngle));
+                
+                const inner1X = cx + innerRadius * Math.cos(Math.radians(startAngle));
+                const inner1Y = cy + innerRadius * Math.sin(Math.radians(startAngle));
+                const inner2X = cx + innerRadius * Math.cos(Math.radians(endAngle));
+                const inner2Y = cy + innerRadius * Math.sin(Math.radians(endAngle));
+                
+                const largeArc = sliceWidth > 180 ? 1 : 0;
+                
+                // Create slice path
+                const slicePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const pathD = `M ${outer1X},${outer1Y} 
+                              A ${outerRadius},${outerRadius} 0 ${largeArc},1 ${outer2X},${outer2Y} 
+                              L ${inner2X},${inner2Y} 
+                              A ${innerRadius},${innerRadius} 0 ${largeArc},0 ${inner1X},${inner1Y} Z`;
+                
+                slicePath.setAttribute('d', pathD);
+                slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.6)' : 'rgba(244, 67, 54, 0.6)');
+                slicePath.setAttribute('stroke', '#888');
+                slicePath.setAttribute('stroke-width', '1');
+                slicePath.style.cursor = 'pointer';
+                
+                // Add text label with dynamic font size
+                const textRadius = (outerRadius + innerRadius) / 2;
+                const textAngle = centerAngle * Math.PI / 180;
+                const textX = cx + textRadius * Math.cos(textAngle);
+                const textY = cy + textRadius * Math.sin(textAngle);
+                
+                // Dynamic font sizing based on slice width
+                let fontSize;
+                if (sliceWidth >= this.normalSliceAngle) {
+                    fontSize = Math.min(20, sliceWidth / 3); // Larger for normal+ size slices
+                } else {
+                    fontSize = Math.min(14, sliceWidth / 2); // Smaller for compressed slices
+                }
+                
+                const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textElement.setAttribute('x', textX);
+                textElement.setAttribute('y', textY);
+                textElement.setAttribute('text-anchor', 'middle');
+                textElement.setAttribute('dominant-baseline', 'middle');
+                textElement.setAttribute('font-size', fontSize);
+                textElement.setAttribute('font-weight', 'bold');
+                textElement.setAttribute('fill', 'white');
+                textElement.style.pointerEvents = 'none';
+                textElement.textContent = label;
+                
+                // Add click handler
+                slicePath.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    console.log(`Clicked ${label} (pair ${pairIndex}, ${sliceType})`);
+                    
+                    if (this.focusedPair === pairIndex) {
+                        // If clicking on already focused pair, reset to equal slices
+                        this.reset();
+                    } else {
+                        // Focus on the clicked pair
+                        this.focusOnPair(pairIndex);
+                    }
+                });
+                
+                // Add mobile touch handling
+                let touchStartTime = 0;
+                let touchStartPos = null;
+                
+                slicePath.addEventListener('touchstart', (e) => {
+                    e.stopPropagation();
+                    touchStartTime = Date.now();
+                    const touch = e.touches[0];
+                    touchStartPos = { x: touch.clientX, y: touch.clientY };
+                });
+                
+                slicePath.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const touchDuration = Date.now() - touchStartTime;
+                    const touch = e.changedTouches[0];
+                    const touchEndPos = { x: touch.clientX, y: touch.clientY };
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(touchEndPos.x - touchStartPos.x, 2) + 
+                        Math.pow(touchEndPos.y - touchStartPos.y, 2)
+                    );
+                    
+                    if (touchDuration < 300 && distance < 20) {
+                        console.log(`Touch clicked ${label} (pair ${pairIndex}, ${sliceType})`);
+                        
+                        if (this.focusedPair === pairIndex) {
+                            // If touching already focused pair, reset to equal slices
+                            this.reset();
+                        } else {
+                            // Focus on the touched pair
+                            this.focusOnPair(pairIndex);
+                        }
+                    }
+                });
+                
+                // Add hover effects
+                slicePath.addEventListener('mouseenter', () => {
+                    slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)');
+                });
+                
+                slicePath.addEventListener('mouseleave', () => {
+                    slicePath.setAttribute('fill', sliceType === 'thesis' ? 'rgba(76, 175, 80, 0.6)' : 'rgba(244, 67, 54, 0.6)');
+                });
+                
+                sliceGroup.appendChild(slicePath);
+                sliceGroup.appendChild(textElement);
+                
+                return sliceGroup;
+            }
+            
+            reset() {
+                this.focusedPair = null;
+                
+                // Hide all original detailed slice components
+                const originalSlices = document.querySelectorAll('.slice-component');
+                originalSlices.forEach(slice => {
+                    slice.style.display = 'none';
+                });
+                
+                this.createEqualSlices();
+            }
+        }
+
+        const slicePairCount = (document.querySelectorAll('.slice-component').length)/2;
+        
+        // Initialize wheel with N pairs (change the number here to test different configurations)
+        const dialecticalWheel = new DialecticalWheel(slicePairCount); // Try 2, 4, 5, etc.
+        
+        // Global reset function
+        function resetSlices() {
+            dialecticalWheel.reset();
+        }
+
+        // Existing rotation and zoom functionality
+        const record = document.querySelector('.record');
+        let rotation = 0;
+        let isDragging = false;
+        let startAngle = 0;
+        let startRotation = 0;
+        let scale = 1;
+        let startScale = 1;
+        let isPinching = false;
+        let pinchStartDist = 0;
+        let offsetX = 0;
+        let offsetY = 0;
+        let startOffsetX = 0;
+        let startOffsetY = 0;
+        let pinchMidStart = {x: 200, y: 200};
+
+        function getCenter(el) {
+            const rect = el.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
+
+        function clientToSvg(svg, clientX, clientY) {
+            const pt = svg.createSVGPoint();
+            pt.x = clientX;
+            pt.y = clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        function setTransform() {
+            record.setAttribute('transform', `translate(${offsetX} ${offsetY}) translate(200 200) scale(${scale}) rotate(${rotation}) translate(-200 -200)`);
+        }
+
+        record.addEventListener('mousedown', (e) => {
+            if (e.touches && e.touches.length > 1) return;
+            if (e.target.classList.contains('clickable-slice')) return;
+            
+            isDragging = true;
+            const center = getCenter(record.closest('svg'));
+            startAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
+            startRotation = rotation;
+            document.body.style.userSelect = 'none';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || isPinching) return;
+            const center = getCenter(record.closest('svg'));
+            const currentAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
+            let angleDiff = currentAngle - startAngle;
+            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            rotation = startRotation + (angleDiff * (180 / Math.PI));
+            setTransform();
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.userSelect = '';
+        });
+
+        // Touch support for mobile
+        record.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 2) {
+                isPinching = true;
+                isDragging = false;
+                pinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                startScale = scale;
+                const svg = record.closest('svg');
+                const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                pinchMidStart = clientToSvg(svg, midClientX, midClientY);
+                startOffsetX = offsetX;
+                startOffsetY = offsetY;
+            } else if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target && target.classList.contains('clickable-slice')) return;
+                
+                isDragging = true;
+                isPinching = false;
+                const center = getCenter(record.closest('svg'));
+                startAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
+                startRotation = rotation;
+            }
+            document.body.style.userSelect = 'none';
+        });
+
+        record.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isPinching && e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                let newScale = startScale * (dist / pinchStartDist);
+                newScale = Math.max(1, Math.min(newScale, 3));
+                const center = {x: 200, y: 200};
+                offsetX = startOffsetX + (pinchMidStart.x - center.x) * (1 - newScale / startScale);
+                offsetY = startOffsetY + (pinchMidStart.y - center.y) * (1 - newScale / startScale);
+                if (newScale === 1) {
+                    offsetX = 0;
+                    offsetY = 0;
+                }
+                scale = newScale;
+                setTransform();
+            } else if (isDragging && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const center = getCenter(record.closest('svg'));
+                const currentAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
+                let angleDiff = currentAngle - startAngle;
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                rotation = startRotation + (angleDiff * (180 / Math.PI));
+                setTransform();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                isDragging = false;
+                isPinching = false;
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // Initial transform
+        setTransform();
+    </script>
+</body>
+</html>
