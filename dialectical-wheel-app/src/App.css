@@ -1,0 +1,8 @@
+.App {
+  text-align: center;
+}
+
+/* Remove any default margins/padding that might interfere */
+* {
+  box-sizing: border-box;
+} 
