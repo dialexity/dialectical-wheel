@@ -421,8 +421,10 @@ await WisdomService.createWheel(sessionId, manualData);`}
       {/* Show API call results */}
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#e8f4fd', borderRadius: '5px', marginBottom: '20px' }}>
-          <p>🔄 Making API calls...</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>Creating session → Auto-building wheel → Transforming data</p>
+          <p>🔄 {enableDemo ? 'Creating new session and analyzing cycles...' : 'Retrieving session data...'}</p>
+          <p style={{ fontSize: '12px', color: '#666' }}>
+            {enableDemo ? 'Session → Wheel → Cycles Analysis' : `GET /api/session/${sessionId || sessionId}`}
+          </p>
         </div>
       )}
 
@@ -719,8 +721,10 @@ function ApiCyclesDemo() {
       {/* Show API call results */}
       {loading && (
         <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#e8f4fd', borderRadius: '5px', marginBottom: '20px' }}>
-          <p>🔄 Analyzing optimal sequence...</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>Session → Wheel → Cycles Analysis</p>
+          <p>🔄 {enableDemo ? 'Creating new session and analyzing cycles...' : 'Retrieving session data...'}</p>
+          <p style={{ fontSize: '12px', color: '#666' }}>
+            {enableDemo ? 'Session → Wheel → Cycles Analysis' : `GET /api/session/${savedSessionId || sessionId}`}
+          </p>
         </div>
       )}
 
@@ -784,8 +788,19 @@ function ApiCyclesDemo() {
 
       {/* Real API wheel with optimal sequence */}
       {!loading && !error && wisdomUnits.length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
-          <h4>🎯 API Wheel with Selected Cycle:</h4>
+        <div style={{ marginBottom: '20px', border: '3px solid #28a745', borderRadius: '10px', padding: '20px', backgroundColor: '#f8fff9' }}>
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: '0 0 5px 0', color: '#155724' }}>🎯 Retrieved Wheel Data</h3>
+            <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
+              Successfully loaded from session: <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>{sessionId}</code>
+            </p>
+            {currentApiCycle && (
+              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>
+                Using {currentApiCycle.causality_direction} sequence: <strong>{currentApiCycle.rawSequence?.join(" → ")}</strong>
+              </p>
+            )}
+          </div>
+          
           <DialecticalWheel 
             key={`api-cycles-${selectedApiCycleIndex}`}
             numPairs={wisdomUnits.length}
@@ -794,6 +809,10 @@ function ApiCyclesDemo() {
             title={`Cycle ${selectedApiCycleIndex + 1}: ${currentApiCycle?.rawSequence?.join(" → ") || "Default"}`}
             centerLabel={`C${selectedApiCycleIndex + 1}`}
           />
+          
+          <div style={{ textAlign: 'center', marginTop: '15px', fontSize: '12px', color: '#666' }}>
+            💡 <strong>Tip:</strong> Use the cycle selector above to try different arrangements
+          </div>
         </div>
       )}
 

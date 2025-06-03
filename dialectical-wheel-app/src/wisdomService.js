@@ -121,6 +121,24 @@ export class WisdomService {
     }
   }
 
+  // 5. Get session data directly
+  static async getSessionData(sessionId, baseUrl = '/api') {
+    try {
+      const response = await fetch(`${baseUrl}/session/${sessionId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Retrieved session data:', data);
+      return data; // Complete session data including wheels and cycles
+    } catch (error) {
+      console.error('Error getting session data:', error);
+      throw error;
+    }
+  }
+
   // Convert API sequence format to our slice sequence format
   static convertSequenceToSliceSequence(apiSequence) {
     // API provides first half of sequence like ["T1", "A2", "T3"] 
@@ -303,34 +321,37 @@ export class WisdomService {
     try {
       console.log('DEBUG: Getting existing data for session:', sessionId);
       
-      // Step 1: Get cycles data (this gives us wheel info too)
-      const cyclesData = await this.getWheelCycles(sessionId, baseUrl);
-      const bestCycle = this.getBestCycleSequence(cyclesData);
+      // Single GET call to retrieve all session data
+      const sessionData = await this.getSessionData(sessionId, baseUrl);
       
-      // Step 2: Get wisdom units for each wheel
-      // We'll try to get wisdom units for wheel IDs 0, 1, 2, 3... until we get an error
-      const allWheels = [];
-      let wheelIndex = 0;
-      let hasMoreWheels = true;
-      
-      while (hasMoreWheels) {
-        try {
-          const wheelData = await this.getWisdomUnits(sessionId, wheelIndex, baseUrl);
-          allWheels.push({
-            wheelId: wheelIndex,
-            wisdomUnits: this.transformApiWisdomUnits(wheelData.wisdom_units),
-            rawWisdomUnits: wheelData.wisdom_units
-          });
-          wheelIndex++;
-        } catch (error) {
-          // No more wheels available
-          hasMoreWheels = false;
-          console.log(`DEBUG: Found ${wheelIndex} wheels total`);
-        }
+      // Extract wheels data
+      if (!sessionData.wheels || sessionData.wheels.length === 0) {
+        throw new Error('No wheels found in session data');
       }
       
-      if (allWheels.length === 0) {
-        throw new Error('No wheels found for this session');
+      const allWheels = sessionData.wheels.map((wheel, index) => ({
+        wheelId: index,
+        wisdomUnits: this.transformApiWisdomUnits(wheel.wisdom_units),
+        rawWisdomUnits: wheel.wisdom_units
+      }));
+      
+      console.log(`DEBUG: Found ${allWheels.length} wheels from session data`);
+      
+      // Extract cycles data if available
+      let cycles = null;
+      let bestCycle = null;
+      
+      if (sessionData.cycles) {
+        cycles = sessionData.cycles;
+        bestCycle = this.getBestCycleSequence(sessionData.cycles);
+      } else {
+        // If no cycles in session data, try to get them separately
+        try {
+          cycles = await this.getWheelCycles(sessionId, baseUrl);
+          bestCycle = this.getBestCycleSequence(cycles);
+        } catch (error) {
+          console.warn('Could not retrieve cycles data:', error);
+        }
       }
       
       return {
@@ -338,9 +359,9 @@ export class WisdomService {
         wheels: allWheels,
         selectedWheelIndex: 0,
         sliceSequence: bestCycle?.sequence || null,
-        cycles: cyclesData,
+        cycles,
         bestCycle,
-        rawData: { wheels: allWheels.map(w => ({ wisdom_units: w.rawWisdomUnits })) }
+        rawData: { wheels: sessionData.wheels }
       };
     } catch (error) {
       console.error('Error getting existing session data:', error);
