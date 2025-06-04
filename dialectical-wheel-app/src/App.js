@@ -1,508 +1,56 @@
 import React from 'react';
 import DialecticalWheel from './DialecticalWheel';
-import { 
-  createWisdomUnit, 
-  createComponent, 
-  generatePairTextsFromWisdomUnits
-} from './sliceGenerator';
-import { WisdomService, useDialecticalWheel, useDialecticalWheelWithCycles } from './wisdomService';
+import { WisdomService, useDialecticalWheelWithCycles } from './wisdomService';
 import './App.css';
 
 function App() {
-  /* Example wheels available - uncomment to use:
-  
-  // Example 1: Default sequence (T1, T2, T3, T4, A1, A2, A3, A4)
-  const defaultWheel = (
-    <div style={{ marginBottom: '40px' }}>
-      <h2>Default Sequence: T1, T2, T3, T4, A1, A2, A3, A4</h2>
-      <DialecticalWheel 
-        numPairs={4}
-        title="Default Sequence"
-        centerLabel="Core"
-      />
-    </div>
-  );
-
-  // Example 2: Custom thesis reordering (T2, T1, T4, T3, A2, A1, A4, A3)
-  const customSequence = [
-    { pair: 1, type: 'thesis' },   // T2
-    { pair: 0, type: 'thesis' },   // T1
-    { pair: 3, type: 'thesis' },   // T4
-    { pair: 2, type: 'thesis' }    // T3
-  ];
-  const customWheel = (
-    <div style={{ marginBottom: '40px' }}>
-      <h2>Custom Thesis Order: T2, T1, T4, T3, A2, A1, A4, A3</h2>
-      <DialecticalWheel 
-        numPairs={4}
-        sliceSequence={customSequence}
-        title="Custom Sequence"
-        centerLabel="Reordered"
-      />
-    </div>
-  );
-
-  // Example 3: Mixed sequence (T1, A2, T3, A4, A1, T2, A3, T4)
-  const mixedSequence = [
-    { pair: 0, type: 'thesis' },     // T1
-    { pair: 1, type: 'antithesis' }, // A2
-    { pair: 2, type: 'thesis' },     // T3
-    { pair: 3, type: 'antithesis' }  // A4
-  ];
-  const mixedWheel = (
-    <div style={{ marginBottom: '40px' }}>
-      <h2>Mixed Sequence: T1, A2, T3, A4, A1, T2, A3, T4</h2>
-      <DialecticalWheel 
-        numPairs={4}
-        sliceSequence={mixedSequence}
-        title="Mixed Sequence"
-        centerLabel="Mixed"
-      />
-    </div>
-  );
-
-  // Example 4: All antithesis first (A1, A2, A3, A4, T1, T2, T3, T4)
-  const antithesisFirstSequence = [
-    { pair: 0, type: 'antithesis' }, // A1
-    { pair: 1, type: 'antithesis' }, // A2
-    { pair: 2, type: 'antithesis' }, // A3
-    { pair: 3, type: 'antithesis' }  // A4
-  ];
-  const antithesisFirstWheel = (
-    <div style={{ marginBottom: '40px' }}>
-      <h2>Antithesis First: A1, A2, A3, A4, T1, T2, T3, T4</h2>
-      <DialecticalWheel 
-        numPairs={4}
-        sliceSequence={antithesisFirstSequence}
-        title="Antithesis First"
-        centerLabel="Flipped"
-      />
-    </div>
-  );
-
-  // Example 5: Smaller wheel with 3 pairs
-  const smallWheel = (
-    <div style={{ marginBottom: '40px' }}>
-      <h2>3-Pair Wheel: T1, T2, T3, A1, A2, A3</h2>
-      <DialecticalWheel 
-        numPairs={3}
-        title="3-Pair Wheel"
-        centerLabel="Small"
-      />
-    </div>
-  );
-  */
-
-  /* Example detailed slices:
-  // Example: Wheel with detailed slices (like the original HTML)
-  const detailedSlices = {
-  */
-
-  /* const detailedWheel = (
-    <DialecticalWheel 
-      numPairs={4}
-      title="Detailed Slices"
-      centerLabel="Core"
-    />
-  ); */
-
-  // You can switch between different wheels by uncommenting the one you want
   return (
-    <div className="App" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Dialectical Wheel - Node System Demo</h1>
-      <p>Click on slices to focus on thesis/antithesis pairs. The node system allows arbitrary arrow connections between any layer nodes.</p>
-      
-      {/* Multiple sequence examples available: */}
-      {/* {defaultWheel} */}
-      {/* {customWheel} */}
-      {/* {mixedWheel} */}
-      {/* {antithesisFirstWheel} */}
-      {/* {smallWheel} */}
-      
-      <div style={{ marginBottom: '40px' }}>
-        <h2>Node System Demo - Automatic Arrow Connections</h2>
-        <p>
-          Each layer (green, white, pink ring) in every slice is now a clickable node. 
-          This demo automatically creates several arrow connections to show the capabilities:
-        </p>
-        <ul style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px' }}>
-          <li><strong>Orange Arrow:</strong> Green layer of first thesis → Pink layer of its antithesis pair (same pair connection)</li>
-          <li><strong>Blue Arrow:</strong> White layer → White layer (cross-pair connection)</li>  
-          <li><strong>Purple Arrow:</strong> Pink layer of thesis → Green layer of different antithesis (arbitrary cross-type)</li>
-          <li><strong>Green Arrows:</strong> Chain connection showing multiple hops between different nodes</li>
-        </ul>
-        <p><strong>Available API functions (check console):</strong></p>
-        <ul>
-          <li><code>getAllLayerNodes()</code> - Get all layer nodes</li>
-          <li><code>getLayerNodeById(nodeId)</code> - Get specific node by ID</li>
-          <li><code>getLayerNodesForPair(pairIndex)</code> - Get all nodes for a pair</li>
-          <li><code>getLayerNodesByType(layerType)</code> - Get nodes by layer type (green/white/pink)</li>
-          <li><code>getLayerNodeInfo(element)</code> - Get metadata for a node</li>
-          <li><code>connectNodes(fromId, toId, color, strokeWidth)</code> - Draw colored arrow between two nodes</li>
-        </ul>
-        <p>
-          <strong>Node ID pattern:</strong> <code>slice-[index]-layer-[0|1|2]</code><br/>
-          Example: <code>"slice-0-layer-0"</code> = first slice, green layer<br/>
-          Layer 0 = Green (inner), Layer 1 = White (middle), Layer 2 = Pink (outer)
-        </p>
-        <DialecticalWheel 
-          numPairs={4}
-          title="Node System Demo"
-          centerLabel="Nodes"
-        />
-      </div>
-      
-      <div style={{ marginBottom: '40px' }}>
-        <h2>WisdomUnit Demo - Using Structured Data</h2>
-        <p>
-          This wheel is generated from an array of WisdomUnit objects, similar to the original Python implementation.
-          Each WisdomUnit contains thesis and antithesis components with statements.
-        </p>
-        <WisdomUnitDemo />
-      </div>
-      
-      <div style={{ marginBottom: '40px' }}>
-        <h2>API Integration Demo - Fetching WisdomUnits from API</h2>
-        <p>
-          This demonstrates how to fetch WisdomUnit data from an API endpoint and transform it into a wheel.
-          Check the console for API data transformation logs.
-        </p>
-        <ApiWisdomUnitDemo />
-      </div>
-      
-      <div style={{ marginBottom: '40px' }}>
-        <h2>API Cycles Demo - Custom Wheel Sequences from API</h2>
-        <p>
-          This demonstrates how to fetch cycle data with custom slice sequences from the API.
-          The API determines the optimal ordering of thesis/antithesis pairs based on causality analysis.
-        </p>
-        <ApiCyclesDemo />
-      </div>
-    </div>
-  );
-}
-
-// Demo component using WisdomUnits
-function WisdomUnitDemo() {
-  // Create sample WisdomUnits using the helper functions
-  const wisdomUnits = [
-    createWisdomUnit(
-      {
-        tPlus: createComponent("Strategic power projection"),
-        t: createComponent("Putin initiates war"),
-        tMinus: createComponent("Destructive aggression")
-      },
-      {
-        aPlus: createComponent("Mutual understanding"),
-        a: createComponent("Peace negotiations"),
-        aMinus: createComponent("Passive submission")
-      }
-    ),
-    createWisdomUnit(
-      {
-        tPlus: createComponent("Liberation and sovereignty"),
-        t: createComponent("Ukraine resists invasion"),
-        tMinus: createComponent("Endless conflict")
-      },
-      {
-        aPlus: createComponent("Immediate peace achieved"),
-        a: createComponent("Ukraine surrenders"),
-        aMinus: createComponent("Freedom lost")
-      }
-    ),
-    createWisdomUnit(
-      {
-        tPlus: createComponent("Ukrainian victory approaches"),
-        t: createComponent("Russian offensive weakens"),
-        tMinus: createComponent("Military resources drain")
-      },
-      {
-        aPlus: createComponent("Strategic military strength"),
-        a: createComponent("Russian dominance persists"),
-        aMinus: createComponent("Total defeat inevitable")
-      }
-    )
-  ];
-
-  // Generate pair texts from WisdomUnits for compatibility with existing DialecticalWheel
-  const pairTexts = generatePairTextsFromWisdomUnits(wisdomUnits);
-  
-  console.log('Generated WisdomUnits:', wisdomUnits);
-  console.log('Generated pair texts:', pairTexts);
-
-  return (
-    <div>
-      <div style={{ backgroundColor: '#f0f8ff', padding: '15px', marginBottom: '20px', borderRadius: '5px' }}>
-        <h4>WisdomUnit Structure Example:</h4>
-        <pre style={{ fontSize: '12px', overflow: 'auto' }}>
-{`const wisdomUnit = createWisdomUnit(
-  {
-    tPlus: createComponent("Strategic power projection"),
-    t: createComponent("Putin initiates war"),
-    tMinus: createComponent("Destructive aggression")
-  },
-  {
-    aPlus: createComponent("Mutual understanding"),
-    a: createComponent("Peace negotiations"),
-    aMinus: createComponent("Passive submission")
-  }
-);`}
-        </pre>
-        <p><strong>Structure:</strong> Each WisdomUnit has thesis (tPlus, t, tMinus) and antithesis (aPlus, a, aMinus) components, where each component contains a statement.</p>
-      </div>
-      
-      <DialecticalWheel 
-        numPairs={wisdomUnits.length}
-        title="WisdomUnit Wheel"
-        centerLabel="Wisdom"
-      />
-    </div>
-  );
-}
-
-// Demo component using API calls for WisdomUnits
-function ApiWisdomUnitDemo() {
-  const [userMessage, setUserMessage] = React.useState("Should we invest in renewable energy?");
-  const [numberOfThoughts, setNumberOfThoughts] = React.useState(3);
-  const [componentLength, setComponentLength] = React.useState(7);
-  const [enableDemo, setEnableDemo] = React.useState(false);
-
-  // Use the real API workflow hook (only when enabled to avoid unnecessary calls)
-  const { 
-    sessionId, 
-    wheels,
-    wisdomUnits, 
-    pairTexts, 
-    loading, 
-    error, 
-    rawData, 
-    refetch 
-  } = useDialecticalWheel(
-    enableDemo ? userMessage : null, 
-    numberOfThoughts, 
-    componentLength,
-    '/api'
-  );
-
-  // Demo with mock data that matches the API structure
-  const mockWisdomUnits = [
-    {
-      t_minus: "Renewable energy is too expensive initially",
-      t: "We should invest in renewable energy",
-      t_plus: "Renewable energy creates sustainable future",
-      a_plus: "Fossil fuels provide reliable energy now",
-      a: "We should stick with fossil fuels",
-      a_minus: "Fossil fuels will eventually run out"
-    },
-    {
-      t_minus: "Economic transition costs are high",
-      t: "Green jobs will boost the economy",
-      t_plus: "Innovation drives economic growth",
-      a_plus: "Current jobs need protection",
-      a: "Traditional industries provide stability",
-      a_minus: "Old industries become obsolete"
-    }
-  ];
-
-  const mockTransformedUnits = WisdomService.transformApiWisdomUnits(mockWisdomUnits);
-  const mockPairTexts = WisdomService.getPairTextsFromWisdomUnits(mockTransformedUnits);
-
-  return (
-    <div>
-      <div style={{ backgroundColor: '#f0f8ff', padding: '15px', marginBottom: '20px', borderRadius: '5px' }}>
-        <h4>Real API Integration:</h4>
-        
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            <strong>User Message (Dialectical Question):</strong>
-          </label>
-          <input 
-            type="text" 
-            value={userMessage}
-            onChange={(e) => setUserMessage(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-            placeholder="Enter your dialectical question..."
-          />
+    <div className="App" style={{ 
+      padding: '0', 
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      backgroundColor: '#f8f9fa',
+      minHeight: '100vh'
+    }}>
+      {/* Global styles to prevent mobile zoom issues */}
+      <style>
+        {`
+          /* Prevent mobile zoom on all input elements */
+          input, textarea, select {
+            font-size: 16px !important;
+            -webkit-appearance: none;
+            -webkit-border-radius: 0;
+            border-radius: 0;
+          }
           
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
-            <label>
-              Number of Thoughts:
-              <input 
-                type="number" 
-                value={numberOfThoughts}
-                onChange={(e) => setNumberOfThoughts(parseInt(e.target.value))}
-                min="1"
-                max="10"
-                style={{ width: '60px', marginLeft: '5px' }}
-              />
-            </label>
-            <label>
-              Component Length:
-              <input 
-                type="number" 
-                value={componentLength}
-                onChange={(e) => setComponentLength(parseInt(e.target.value))}
-                min="1"
-                max="20"
-                style={{ width: '60px', marginLeft: '5px' }}
-              />
-            </label>
-          </div>
+          /* Reset zoom on screen transitions */
+          body {
+            zoom: 1 !important;
+            -webkit-text-size-adjust: 100% !important;
+            -ms-text-size-adjust: 100% !important;
+          }
           
-          <button 
-            onClick={() => {
-              setEnableDemo(true);
-              refetch();
-            }}
-            disabled={loading}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: '#0074d9', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Creating Session & Building Wheel...' : 'Call Real API'}
-          </button>
-        </div>
-
-        <pre style={{ fontSize: '11px', overflow: 'auto', backgroundColor: '#f8f9fa', padding: '10px' }}>
-{`// API Workflow:
-1. POST /api/session
-   { "user_message": "${userMessage}" }
-   
-2. POST /api/session/{session_id}/wheel/auto  
-   { "number_of_thoughts": ${numberOfThoughts}, "component_length": ${componentLength} }
-   
-3. Response format:
-   {
-     "wheels": [{
-       "wisdom_units": [{
-         "t_minus": {...}, "t": {...}, "t_plus": {...},
-         "a_plus": {...}, "a": {...}, "a_minus": {...}
-       }]
-     }]
-   }`}
-        </pre>
-      </div>
-
-      <div style={{ backgroundColor: '#fff3cd', padding: '15px', marginBottom: '20px', borderRadius: '5px' }}>
-        <h4>Usage in Your Code:</h4>
-        <pre style={{ fontSize: '11px', overflow: 'auto' }}>
-{`// Option 1: Complete workflow with React hook
-const { sessionId, wheelId, wisdomUnits, loading, error } = useDialecticalWheel(
-  "Should we invest in renewable energy?",
-  3, // number of thoughts
-  7  // component length
-);
-
-// Option 2: Step by step with service class
-const sessionData = await WisdomService.createSession("Your question");
-const wheelData = await WisdomService.autoBuildWheel(sessionData.session_id, 3, 7);
-const wisdomUnits = WisdomService.transformApiWisdomUnits(wheelData.wheels[0].wisdom_units);
-
-// Option 3: Manual wheel creation
-const manualData = [
-  {
-    "t_minus": "negative thesis",
-    "t": "central thesis", 
-    "t_plus": "positive thesis",
-    "a_plus": "positive antithesis",
-    "a": "central antithesis",
-    "a_minus": "negative antithesis"
-  }
-];
-await WisdomService.createWheel(sessionId, manualData);`}
-        </pre>
-      </div>
-
-      {/* Show API call results */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#e8f4fd', borderRadius: '5px', marginBottom: '20px' }}>
-          <p>🔄 {enableDemo ? 'Creating new session and analyzing cycles...' : 'Retrieving session data...'}</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>
-            {enableDemo ? 'Session → Wheel → Cycles Analysis' : `GET /api/session/${sessionId || sessionId}`}
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-          <strong>API Error:</strong> {error}
-          <p style={{ fontSize: '12px', marginTop: '5px' }}>
-            This is expected if the API server is not running. The mock demo below shows the expected functionality.
-          </p>
-        </div>
-      )}
-
-      {sessionId && !loading && (
-        <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-          <strong>✅ API Success!</strong><br/>
-          Session ID: {sessionId}<br/>
-          Wheel ID: {wheels[0]?.wheelId || 0}<br/>
-          Wisdom Units: {wisdomUnits.length}
-          
-          <details style={{ marginTop: '10px' }}>
-            <summary style={{ cursor: 'pointer' }}>View Raw API Response</summary>
-            <pre style={{ fontSize: '10px', backgroundColor: '#fff', padding: '10px', marginTop: '5px', overflow: 'auto' }}>
-              {JSON.stringify(rawData, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
-
-      {/* Real API wheel (if available) */}
-      {!loading && !error && wisdomUnits.length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
-          <h4>🎯 Live API Wheel:</h4>
-          <DialecticalWheel 
-            key="api-wheel-simple"
-            numPairs={wisdomUnits.length}
-            pairTexts={pairTexts}
-            title="Live API Data"
-            centerLabel="API"
-          />
-        </div>
-      )}
-
-      {/* Mock demo */}
-      <div style={{ borderTop: '2px dashed #ccc', paddingTop: '20px' }}>
-        <h4>🎭 Mock Demo (Expected API Format):</h4>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-          This shows how the wheel would look with data in your API format:
-        </p>
-        
-        <div style={{ backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
-          <details>
-            <summary style={{ cursor: 'pointer' }}>📋 Mock API Data Structure</summary>
-            <pre style={{ fontSize: '11px', marginTop: '10px' }}>
-              {JSON.stringify(mockWisdomUnits, null, 2)}
-            </pre>
-          </details>
-        </div>
-        
-        <DialecticalWheel 
-          numPairs={mockTransformedUnits.length}
-          pairTexts={mockPairTexts}
-          title="Mock API Data Demo"
-          centerLabel="Mock"
-        />
-      </div>
+          /* Ensure proper touch behavior */
+          * {
+            -webkit-tap-highlight-color: transparent;
+          }
+        `}
+      </style>
+      <ApiCyclesDemo />
     </div>
   );
 }
 
 // Demo component using API calls for cycles
 function ApiCyclesDemo() {
-  const [userMessage, setUserMessage] = React.useState("What's the best approach to climate change?");
+  const [userMessage, setUserMessage] = React.useState("Should I buy a house for family reunion?");
   const [numberOfThoughts, setNumberOfThoughts] = React.useState(3);
   const [componentLength, setComponentLength] = React.useState(7);
   const [enableDemo, setEnableDemo] = React.useState(false);
-  const [selectedCycleIndex, setSelectedCycleIndex] = React.useState(0);
   const [selectedApiCycleIndex, setSelectedApiCycleIndex] = React.useState(0);
   const [savedSessionId, setSavedSessionId] = React.useState('');
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [showInputs, setShowInputs] = React.useState(true);
+  const [currentScreen, setCurrentScreen] = React.useState('input'); // 'input', 'wheel', 'loading', 'explore'
 
   // Use the cycles workflow hook (only when enabled)
   const { 
@@ -518,11 +66,23 @@ function ApiCyclesDemo() {
     getExisting,
     clearSession
   } = useDialecticalWheelWithCycles(
-    enableDemo ? userMessage : null, 
+    userMessage, // Always pass userMessage, control with createNew() calls
     numberOfThoughts, 
     componentLength,
     '/api'
   );
+
+  // Add debugging for hook state changes
+  React.useEffect(() => {
+    console.log('Hook state changed:', {
+      loading,
+      error,
+      sessionId,
+      wisdomUnitsCount: wisdomUnits.length,
+      cyclesCount: cycles?.cycles?.length || 0,
+      enableDemo
+    });
+  }, [loading, error, sessionId, wisdomUnits.length, cycles?.cycles?.length, enableDemo]);
 
   // Use selected API cycle instead of always the best one
   const selectedApiCycle = cycles?.cycles?.[selectedApiCycleIndex];
@@ -537,351 +97,865 @@ function ApiCyclesDemo() {
     firstHalf: selectedApiCycle.sequence.slice(0, selectedApiCycle.sequence.length / 2)
   } : bestCycle;
 
-  // Mock cycles data for demonstration
-  const mockCyclesData = {
-    cycles: [
-      {
-        sequence: ["T1", "A2", "T3", "A1", "T2", "A3"],
-        probability: 0.85,
-        causality_direction: "clockwise",
-        concepts: {
-          "T1": { statement: "Immediate action is needed", explanation: "Urgency drives policy" },
-          "T2": { statement: "Technology will solve it", explanation: "Innovation as solution" },
-          "T3": { statement: "Individual responsibility matters", explanation: "Personal choices impact" },
-          "A1": { statement: "Economic costs are too high", explanation: "Financial concerns" },
-          "A2": { statement: "Natural cycles will balance", explanation: "Earth self-corrects" },
-          "A3": { statement: "Change is impossible", explanation: "System too complex" }
-        },
-        reasoning: "This sequence maximizes causal flow between opposing viewpoints",
-        argumentation: "The alternating pattern creates dynamic tension that drives synthesis"
-      },
-      {
-        sequence: ["T1", "T2", "T3", "A1", "A2", "A3"],
-        probability: 0.15,
-        causality_direction: "counterclockwise",
-        reasoning: "Traditional grouping with lower probability"
-      }
-    ]
-  };
+  // Handle screen transitions
+  React.useEffect(() => {
+    console.log('Screen transition logic:', { loading, error, wisdomUnitsLength: wisdomUnits.length, currentScreen });
+    
+    if (loading) {
+      setCurrentScreen('loading');
+      
+      // Add timeout for stuck loading states
+      const timeout = setTimeout(() => {
+        if (loading && currentScreen === 'loading') {
+          console.error('API call timed out after 30 seconds');
+          setCurrentScreen('input');
+          setEnableDemo(false);
+        }
+      }, 30000); // 30 second timeout
+      
+      return () => clearTimeout(timeout);
+    } else if (!loading && !error && wisdomUnits.length > 0) {
+      console.log('Transitioning to wheel screen');
+      setCurrentScreen('wheel');
+    } else if (error) {
+      console.error('Error occurred, staying on input screen:', error);
+      setCurrentScreen('input'); // Stay on input screen if error
+    }
+  }, [loading, error, wisdomUnits.length, currentScreen]);
 
-  const mockBestCycle = WisdomService.getBestCycleSequence(mockCyclesData);
-  
-  // Use selected cycle instead of always the best one
-  const selectedCycle = mockCyclesData.cycles[selectedCycleIndex];
-  const mockSelectedCycle = selectedCycle ? {
-    sequence: WisdomService.convertSequenceToSliceSequence(selectedCycle.sequence.slice(0, selectedCycle.sequence.length / 2)),
-    probability: selectedCycle.probability,
-    causality_direction: selectedCycle.causality_direction,
-    reasoning: selectedCycle.reasoning,
-    argumentation: selectedCycle.argumentation,
-    concepts: selectedCycle.concepts,
-    rawSequence: selectedCycle.sequence,
-    firstHalf: selectedCycle.sequence.slice(0, selectedCycle.sequence.length / 2)
-  } : mockBestCycle;
-
-  const mockCyclesPairTexts = {
-    0: {
-      thesis: ["Immediate action is needed", "Urgency drives policy", "Crisis requires response"],
-      antithesis: ["Economic costs are too high", "Financial concerns", "Budget constraints"]
-    },
-    1: {
-      thesis: ["Technology will solve it", "Innovation as solution", "Tech advancement"],
-      antithesis: ["Natural cycles will balance", "Earth self-corrects", "Natural regulation"]
-    },
-    2: {
-      thesis: ["Individual responsibility matters", "Personal choices impact", "Individual agency"],
-      antithesis: ["Change is impossible", "System too complex", "Structural barriers"]
+  const handleAnalyze = async () => {
+    console.log('=== STARTING ANALYSIS ===');
+    console.log('User message:', userMessage);
+    console.log('API endpoint:', '/api');
+    console.log('Number of thoughts:', numberOfThoughts);
+    console.log('Component length:', componentLength);
+    console.log('Current hook state before createNew():', { loading, error, sessionId, wisdomUnitsCount: wisdomUnits.length });
+    
+    // Test API connectivity first
+    try {
+      console.log('Testing API connectivity...');
+      const testResponse = await fetch('/api/health', { method: 'GET' });
+      console.log('API health check response:', testResponse.status, testResponse.statusText);
+    } catch (healthError) {
+      console.error('API health check failed:', healthError);
+    }
+    
+    try {
+      setEnableDemo(true);
+      setCurrentScreen('loading');
+      console.log('About to call createNew()...');
+      await createNew();
+      console.log('createNew() completed');
+    } catch (err) {
+      console.error('Error in handleAnalyze:', err);
+      setCurrentScreen('input');
+      setEnableDemo(false);
     }
   };
 
+  const handleBackToInput = () => {
+    setCurrentScreen('input');
+    setShowInputs(true);
+  };
+
+  const handleNewAnalysis = () => {
+    setCurrentScreen('input');
+    setShowInputs(true);
+    clearSession();
+  };
+
+  const handleExplore = () => {
+    setCurrentScreen('explore');
+  };
+
+  const handleBackToWheel = () => {
+    setCurrentScreen('wheel');
+  };
+
   return (
-    <div>
-      <div style={{ backgroundColor: '#f0f8ff', padding: '15px', marginBottom: '20px', borderRadius: '5px' }}>
-        <h4>API Cycles Integration:</h4>
-        
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            <strong>Dialectical Question:</strong>
-          </label>
-          <input 
-            type="text" 
-            value={userMessage}
-            onChange={(e) => setUserMessage(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-            placeholder="Enter your question for sequence analysis..."
-          />
-          
-          <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
-            <label>
-              Number of Thoughts:
-              <input 
-                type="number" 
-                value={numberOfThoughts}
-                onChange={(e) => setNumberOfThoughts(parseInt(e.target.value))}
-                min="1"
-                max="10"
-                style={{ width: '60px', marginLeft: '5px' }}
-              />
-            </label>
-            <label>
-              Component Length:
-              <input 
-                type="number" 
-                value={componentLength}
-                onChange={(e) => setComponentLength(parseInt(e.target.value))}
-                min="1"
-                max="20"
-                style={{ width: '60px', marginLeft: '5px' }}
-              />
-            </label>
-          </div>
-          
-          <button 
-            onClick={() => {
-              setEnableDemo(true);
-              createNew();
-            }}
-            disabled={loading}
-            style={{ 
-              padding: '10px 20px', 
-              backgroundColor: '#dc3545', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '5px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              marginRight: '10px'
-            }}
-          >
-            {loading ? 'Creating New Session...' : '🔴 Create New Session (Expensive)'}
-          </button>
-          
-          {sessionId && (
-            <button 
-              onClick={clearSession}
-              style={{ 
-                padding: '10px 20px', 
-                backgroundColor: '#6c757d', 
-                color: 'white', 
+    <div style={{ backgroundColor: 'white', minHeight: '100vh' }}>
+      
+      {/* INPUT SCREEN */}
+      {currentScreen === 'input' && (
+        <>
+          {/* Header */}
+          <div style={{ 
+            padding: '20px 20px 0 20px', 
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: 'white',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ 
+                padding: '8px', 
+                backgroundColor: 'transparent', 
+                color: '#333', 
                 border: 'none', 
-                borderRadius: '5px',
-                cursor: 'pointer',
-                marginRight: '10px'
+                borderRadius: '6px',
+                fontSize: '20px',
+                cursor: 'pointer'
+              }}>
+                ≡
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ 
+                  width: '32px', 
+                  height: '32px', 
+                  backgroundColor: '#17a2b8', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '12px'
+                }}>
+                  <span style={{ color: 'white', fontWeight: 'bold', fontSize: '18px' }}>N</span>
+                </div>
+                <h1 style={{ 
+                  margin: 0, 
+                  fontSize: '24px', 
+                  fontWeight: '600', 
+                  color: '#2c3e50' 
+                }}>
+                  Dialexity
+                </h1>
+              </div>
+              
+              <div style={{ width: '32px' }}></div> {/* Spacer for centering */}
+            </div>
+            
+            {/* Bullet Points */}
+            <div style={{ maxWidth: '400px', margin: '0 auto 30px auto' }}>
+              <ul style={{ 
+                listStyle: 'disc', 
+                paddingLeft: '20px', 
+                margin: 0,
+                fontSize: '16px',
+                lineHeight: '1.6',
+                color: '#495057'
+              }}>
+                <li>Difficult choice or dilemma?</li>
+                <li>Having a conflict with someone?</li>
+                <li>Cannot make a decision?</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div style={{ padding: '20px', maxWidth: '400px', margin: '0 auto' }}>
+            {/* Problem Input */}
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ 
+                margin: '0 0 15px 0', 
+                fontSize: '20px', 
+                fontWeight: '600',
+                color: '#2c3e50' 
+              }}>
+                Problem:
+              </h3>
+              
+              <div style={{ 
+                border: '2px solid #e9ecef',
+                borderRadius: '8px',
+                padding: '15px',
+                backgroundColor: 'white',
+                minHeight: '120px',
+                position: 'relative'
+              }}>
+                <textarea 
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  style={{ 
+                    width: '100%', 
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '16px',
+                    lineHeight: '1.4',
+                    minHeight: '80px',
+                    resize: 'none',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'transparent'
+                  }}
+                  placeholder="Considering buying a house for family reunion, but the land is leased from government with unclear terms and limited renovation potential."
+                />
+                
+                {/* Icon Buttons Row */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginTop: '10px',
+                  paddingTop: '10px',
+                  borderTop: '1px solid #f1f3f4'
+                }}>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <button style={{ 
+                      backgroundColor: 'transparent', 
+                      border: 'none', 
+                      fontSize: '20px', 
+                      cursor: 'pointer',
+                      padding: '5px',
+                      color: '#6c757d'
+                    }}>
+                      🎤
+                    </button>
+                    <button style={{ 
+                      backgroundColor: 'transparent', 
+                      border: 'none', 
+                      fontSize: '20px', 
+                      cursor: 'pointer',
+                      padding: '5px',
+                      color: '#6c757d'
+                    }}>
+                      📄
+                    </button>
+                    <button 
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      style={{ 
+                        backgroundColor: 'transparent', 
+                        border: 'none', 
+                        fontSize: '20px', 
+                        cursor: 'pointer',
+                        padding: '5px',
+                        color: '#6c757d'
+                      }}
+                    >
+                      📎
+                    </button>
+                  </div>
+                  
+                  {/* Submit Button */}
+                  <button 
+                    onClick={handleAnalyze}
+                    disabled={loading || !userMessage.trim()}
+                    style={{ 
+                      padding: '12px 24px', 
+                      backgroundColor: loading ? '#6c757d' : '#28a745', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: (loading || !userMessage.trim()) ? 'not-allowed' : 'pointer',
+                      minWidth: '100px'
+                    }}
+                  >
+                    {loading ? 'Processing...' : 'Submit'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Advanced Options - Hidden by Default */}
+            {showAdvanced && (
+              <div style={{ 
+                marginBottom: '20px',
+                padding: '15px', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '8px',
+                border: '1px solid #e9ecef'
+              }}>
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                  <label style={{ flex: 1 }}>
+                    <span style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                      Thoughts:
+                    </span>
+                    <input 
+                      type="number" 
+                      value={numberOfThoughts}
+                      onChange={(e) => setNumberOfThoughts(parseInt(e.target.value))}
+                      min="1"
+                      max="10"
+                      style={{ 
+                        width: '100%', 
+                        padding: '8px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </label>
+                  <label style={{ flex: 1 }}>
+                    <span style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: '500' }}>
+                      Length:
+                    </span>
+                    <input 
+                      type="number" 
+                      value={componentLength}
+                      onChange={(e) => setComponentLength(parseInt(e.target.value))}
+                      min="1"
+                      max="20"
+                      style={{ 
+                        width: '100%', 
+                        padding: '8px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </label>
+                </div>
+                
+                {/* Session Management */}
+                <div style={{ borderTop: '1px solid #dee2e6', paddingTop: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
+                    Load Existing Session:
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      value={savedSessionId}
+                      onChange={(e) => setSavedSessionId(e.target.value)}
+                      placeholder="Session ID..."
+                      style={{ 
+                        flex: 1, 
+                        padding: '8px', 
+                        border: '1px solid #ccc', 
+                        borderRadius: '4px',
+                        fontSize: '16px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button 
+                      onClick={() => getExisting(savedSessionId)}
+                      disabled={loading || !savedSessionId.trim()}
+                      style={{ 
+                        padding: '8px 12px', 
+                        backgroundColor: '#17a2b8', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        cursor: (loading || !savedSessionId.trim()) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Load
+                    </button>
+                  </div>
+                </div>
+                
+                {sessionId && (
+                  <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e9ecef', borderRadius: '4px' }}>
+                    <div style={{ fontSize: '12px', color: '#495057', marginBottom: '5px' }}>
+                      Active Session:
+                    </div>
+                    <div style={{ 
+                      fontSize: '11px', 
+                      fontFamily: 'monospace', 
+                      color: '#6c757d',
+                      wordBreak: 'break-all',
+                      marginBottom: '8px'
+                    }}>
+                      {sessionId}
+                    </div>
+                    <button 
+                      onClick={clearSession}
+                      style={{ 
+                        padding: '4px 8px', 
+                        backgroundColor: '#dc3545', 
+                        color: 'white', 
+                        border: 'none', 
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Disclaimer */}
+            <div style={{ 
+              textAlign: 'center',
+              color: '#6c757d',
+              fontSize: '12px',
+              lineHeight: '1.4',
+              marginTop: '40px',
+              paddingTop: '20px',
+              borderTop: '1px solid #f1f3f4'
+            }}>
+              <div style={{ fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                DISCLAIMER
+              </div>
+              <div>
+                All results provided by our services are<br/>
+                estimates by proprietary LLM.
+              </div>
+            </div>
+          </div>
+
+          {/* Error State */}
+          {error && (
+            <div style={{ 
+              padding: '20px', 
+              margin: '20px auto', 
+              maxWidth: '400px',
+              backgroundColor: '#f8d7da', 
+              color: '#721c24', 
+              borderRadius: '8px',
+              border: '1px solid #f5c6cb'
+            }}>
+              <strong>⚠️ Connection Error</strong>
+              <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
+                {error}
+              </p>
+            </div>
+          )}
+
+          {/* Default State - No Analysis Yet */}
+          {!loading && !error && wisdomUnits.length === 0 && !enableDemo && (
+            <div style={{ 
+              padding: '40px 20px', 
+              textAlign: 'center',
+              color: '#6c757d'
+            }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>⚖️</div>
+              <h3 style={{ margin: '0 0 10px 0', color: '#495057' }}>
+                Ready to analyze your dilemma?
+              </h3>
+              <p style={{ margin: 0, lineHeight: '1.5' }}>
+                Enter your problem above and tap Submit to discover<br/>
+                win-win solutions through dialectical reasoning.
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* LOADING SCREEN */}
+      {currentScreen === 'loading' && (
+        <div style={{ 
+          padding: '40px 20px', 
+          textAlign: 'center', 
+          backgroundColor: '#e8f4fd',
+          margin: '0',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔄</div>
+          <h2 style={{ margin: '0 0 10px 0', fontSize: '24px', color: '#495057' }}>
+            Analyzing Your Dilemma
+          </h2>
+          <p style={{ margin: 0, fontSize: '16px', color: '#495057', textAlign: 'center', maxWidth: '300px' }}>
+            Creating session and finding optimal dialectical sequences...
+          </p>
+          
+          {/* Debug Information */}
+          <div style={{ 
+            marginTop: '30px', 
+            padding: '15px', 
+            backgroundColor: 'rgba(255,255,255,0.8)', 
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#666',
+            maxWidth: '300px'
+          }}>
+            <div><strong>Status:</strong> {loading ? 'Loading...' : 'Complete'}</div>
+            <div><strong>Session ID:</strong> {sessionId || 'Creating...'}</div>
+            <div><strong>Wisdom Units:</strong> {wisdomUnits.length}</div>
+            <div><strong>Cycles:</strong> {cycles?.cycles?.length || 0}</div>
+            <div><strong>Enable Demo:</strong> {enableDemo ? 'Yes' : 'No'}</div>
+            <div><strong>User Message:</strong> {userMessage ? 'Set' : 'Empty'}</div>
+            {error && (
+              <div style={{ color: '#dc3545', marginTop: '10px' }}>
+                <strong>Error:</strong> {error}
+              </div>
+            )}
+            
+            {/* API Test Button */}
+            <button 
+              onClick={async () => {
+                try {
+                  console.log('Manual API test...');
+                  const response = await fetch('/api/health');
+                  console.log('API Response:', response.status, response.statusText);
+                  alert(`API Status: ${response.status} ${response.statusText}`);
+                } catch (err) {
+                  console.error('API Test failed:', err);
+                  alert(`API Test Failed: ${err.message}`);
+                }
+              }}
+              style={{
+                marginTop: '10px',
+                padding: '5px 10px',
+                fontSize: '11px',
+                backgroundColor: '#17a2b8',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
               }}
             >
-              🗑️ Clear Session
+              Test API Connection
             </button>
-          )}
-        </div>
-        
-        {sessionId && (
-          <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e9ecef', borderRadius: '5px' }}>
-            <p style={{ margin: '0 0 10px 0', fontWeight: 'bold' }}>💾 Session Saved:</p>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontFamily: 'monospace', backgroundColor: '#f8f9fa', padding: '5px', borderRadius: '3px' }}>
-              {sessionId}
-            </p>
-            <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
-              You can use this session ID to retrieve data cheaply without recreating it.
-            </p>
           </div>
-        )}
-        
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
-            <strong>💰 Retrieve Existing Session (Cheap):</strong>
-          </label>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input 
-              type="text" 
-              value={savedSessionId}
-              onChange={(e) => setSavedSessionId(e.target.value)}
-              placeholder="Paste session ID here..."
-              style={{ flex: 1, padding: '8px', borderRadius: '3px', border: '1px solid #ccc' }}
-            />
+          
+          <div style={{ 
+            width: '200px', 
+            height: '4px', 
+            backgroundColor: '#dee2e6', 
+            borderRadius: '2px',
+            marginTop: '30px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              width: '40%', 
+              height: '100%', 
+              backgroundColor: '#17a2b8',
+              borderRadius: '2px',
+              animation: 'loading 2s ease-in-out infinite'
+            }}></div>
+          </div>
+          
+          {/* Back Button for Stuck Loading */}
+          <button 
+            onClick={() => {
+              setCurrentScreen('input');
+              setEnableDemo(false);
+              clearSession();
+            }}
+            style={{ 
+              marginTop: '40px',
+              padding: '12px 24px', 
+              backgroundColor: '#6c757d', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            ← Cancel & Go Back
+          </button>
+        </div>
+      )}
+
+      {/* WHEEL SCREEN */}
+      {currentScreen === 'wheel' && (
+        <div style={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {/* Header with Back Button */}
+          <div style={{ 
+            padding: '15px 20px', 
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: 'white',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0
+          }}>
             <button 
-              onClick={() => getExisting(savedSessionId)}
-              disabled={loading || !savedSessionId.trim()}
+              onClick={handleBackToInput}
               style={{ 
-                padding: '8px 16px', 
+                padding: '8px', 
+                backgroundColor: 'transparent', 
+                color: '#6c757d', 
+                border: 'none', 
+                borderRadius: '6px',
+                fontSize: '18px',
+                cursor: 'pointer'
+              }}
+            >
+              ← Back
+            </button>
+            
+            <h2 style={{ 
+              margin: 0, 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: '#2c3e50',
+              textAlign: 'center',
+              flex: 1
+            }}>
+              Win-Win Solution
+            </h2>
+            
+            <button 
+              onClick={handleNewAnalysis}
+              style={{ 
+                padding: '8px', 
+                backgroundColor: 'transparent', 
+                color: '#6c757d', 
+                border: 'none', 
+                borderRadius: '6px',
+                fontSize: '16px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div style={{ 
+            flex: 1, 
+            overflow: 'auto', 
+            padding: '20px', 
+            maxWidth: '800px', 
+            margin: '0 auto',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            {/* Cycle Info */}
+            {currentApiCycle && (
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '15px', 
+                backgroundColor: '#d4edda', 
+                borderRadius: '8px',
+                border: '1px solid #c3e6cb'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '20px', marginRight: '8px' }}>✅</span>
+                  <strong style={{ color: '#155724', fontSize: '16px' }}>
+                    Solution Found
+                  </strong>
+                </div>
+                <div style={{ fontSize: '14px', color: '#155724', lineHeight: '1.4' }}>
+                  <div><strong>Sequence:</strong> {currentApiCycle.rawSequence?.join(" → ")}</div>
+                  <div><strong>Confidence:</strong> {(currentApiCycle.probability * 100).toFixed(0)}%</div>
+                  {currentApiCycle.reasoning && (
+                    <div style={{ marginTop: '8px' }}>
+                      <strong>Reasoning:</strong> {currentApiCycle.reasoning}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Cycle Selector */}
+                {cycles?.cycles && cycles.cycles.length > 1 && (
+                  <div style={{ marginTop: '12px' }}>
+                    <select 
+                      value={selectedApiCycleIndex} 
+                      onChange={(e) => setSelectedApiCycleIndex(parseInt(e.target.value))}
+                      style={{ 
+                        width: '100%',
+                        padding: '8px', 
+                        borderRadius: '4px', 
+                        border: '1px solid #c3e6cb',
+                        backgroundColor: 'white',
+                        fontSize: '16px'
+                      }}
+                    >
+                      {cycles.cycles.map((cycle, index) => (
+                        <option key={index} value={index}>
+                          Option {index + 1}: {(cycle.probability * 100).toFixed(0)}% confidence - {cycle.causality_direction}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Dialectical Wheel */}
+            <div style={{ 
+              backgroundColor: 'white', 
+              borderRadius: '12px', 
+              padding: '20px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e9ecef',
+              height: 'calc(100vh - 300px)', // Constrain height based on viewport
+              minHeight: '300px',
+              maxHeight: '600px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <style>
+                {`
+                  .dialectical-wheel-container .bottom-bar {
+                    display: none !important;
+                  }
+                  .dialectical-wheel-container .main-content {
+                    padding-bottom: 0.5em !important;
+                  }
+                  .dialectical-wheel-container {
+                    height: 100% !important;
+                    min-height: auto !important;
+                  }
+                `}
+              </style>
+              <DialecticalWheel 
+                key={`api-cycles-${selectedApiCycleIndex}`}
+                numPairs={wisdomUnits.length}
+                sliceSequence={currentApiCycle?.sequence}
+                pairTexts={pairTexts}
+                title=""
+                centerLabel="Decision"
+              />
+            </div>
+            
+            {/* Action Buttons */}
+            <div style={{ 
+              marginTop: '20px', 
+              display: 'flex', 
+              gap: '10px',
+              justifyContent: 'center',
+              paddingBottom: '20px'
+            }}>
+              <button 
+                onClick={handleExplore}
+                style={{ 
+                  padding: '12px 20px', 
+                  backgroundColor: '#17a2b8', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                💡 Explore
+              </button>
+              <button style={{ 
+                padding: '12px 20px', 
                 backgroundColor: '#28a745', 
                 color: 'white', 
                 border: 'none', 
-                borderRadius: '5px',
-                cursor: (loading || !savedSessionId.trim()) ? 'not-allowed' : 'pointer'
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}>
+                📝 Action Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXPLORE SCREEN */}
+      {currentScreen === 'explore' && (
+        <>
+          {/* Header with Back Button */}
+          <div style={{ 
+            padding: '15px 20px', 
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: 'white',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <button 
+              onClick={handleBackToWheel}
+              style={{ 
+                padding: '8px', 
+                backgroundColor: 'transparent', 
+                color: '#6c757d', 
+                border: 'none', 
+                borderRadius: '6px',
+                fontSize: '18px',
+                cursor: 'pointer'
               }}
             >
-              {loading ? 'Loading...' : '🔄 Get Data'}
+              ← Back
+            </button>
+            
+            <h2 style={{ 
+              margin: 0, 
+              fontSize: '18px', 
+              fontWeight: '600', 
+              color: '#2c3e50',
+              textAlign: 'center',
+              flex: 1
+            }}>
+              Explore Solutions
+            </h2>
+            
+            <button 
+              onClick={handleNewAnalysis}
+              style={{ 
+                padding: '8px', 
+                backgroundColor: 'transparent', 
+                color: '#6c757d', 
+                border: 'none', 
+                borderRadius: '6px',
+                fontSize: '16px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
             </button>
           </div>
-          <p style={{ fontSize: '12px', color: '#666', margin: '5px 0 0 0' }}>
-            This only does GET requests - much cheaper than creating new sessions
-          </p>
-        </div>
-      </div>
 
-      {/* Show API call results */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '20px', backgroundColor: '#e8f4fd', borderRadius: '5px', marginBottom: '20px' }}>
-          <p>🔄 {enableDemo ? 'Creating new session and analyzing cycles...' : 'Retrieving session data...'}</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>
-            {enableDemo ? 'Session → Wheel → Cycles Analysis' : `GET /api/session/${savedSessionId || sessionId}`}
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-          <strong>API Error:</strong> {error}
-          <p style={{ fontSize: '12px', marginTop: '5px' }}>
-            Using mock data below to demonstrate expected functionality.
-          </p>
-        </div>
-      )}
-
-      {/* Real API results */}
-      {sessionId && !loading && currentApiCycle && (
-        <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-          <strong>✅ Optimal Sequence Found!</strong><br/>
-          <strong>Sequence:</strong> {currentApiCycle.rawSequence?.join(" → ")}<br/>
-          <strong>Probability:</strong> {(currentApiCycle.probability * 100).toFixed(1)}%<br/>
-          <strong>Direction:</strong> {currentApiCycle.causality_direction}<br/>
-          <strong>Reasoning:</strong> {currentApiCycle.reasoning}
-          
-          {/* API Cycle Selector */}
-          {cycles?.cycles && cycles.cycles.length > 1 && (
-            <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '5px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                🔄 Select API Cycle ({cycles.cycles.length} available):
-              </label>
-              <select 
-                value={selectedApiCycleIndex} 
-                onChange={(e) => setSelectedApiCycleIndex(parseInt(e.target.value))}
-                style={{ padding: '5px', borderRadius: '3px', border: '1px solid #ccc', marginRight: '10px' }}
-              >
-                {cycles.cycles.map((cycle, index) => (
-                  <option key={index} value={index}>
-                    Cycle {index + 1}: {cycle.sequence.join(" → ")} ({(cycle.probability * 100).toFixed(1)}% - {cycle.causality_direction})
-                  </option>
-                ))}
-              </select>
-              <span style={{ fontSize: '12px', color: '#666' }}>
-                Compare different API cycle arrangements and probabilities
-              </span>
-            </div>
-          )}
-          
-          {/* Raw API Data Viewer */}
-          <details style={{ marginTop: '10px' }}>
-            <summary style={{ cursor: 'pointer' }}>📋 View Raw API Response</summary>
-            <div style={{ marginTop: '10px' }}>
-              <h5>Cycles Data:</h5>
-              <pre style={{ fontSize: '10px', backgroundColor: '#fff', padding: '10px', marginBottom: '10px', overflow: 'auto', maxHeight: '200px' }}>
-                {JSON.stringify(cycles, null, 2)}
-              </pre>
-              <h5>Wheels Data:</h5>
-              <pre style={{ fontSize: '10px', backgroundColor: '#fff', padding: '10px', overflow: 'auto', maxHeight: '200px' }}>
-                {JSON.stringify({ wheels: wheels.map(w => ({ wheelId: w.wheelId, wisdomUnits: w.rawWisdomUnits })) }, null, 2)}
-              </pre>
-            </div>
-          </details>
-        </div>
-      )}
-
-      {/* Real API wheel with optimal sequence */}
-      {!loading && !error && wisdomUnits.length > 0 && (
-        <div style={{ marginBottom: '20px', border: '3px solid #28a745', borderRadius: '10px', padding: '20px', backgroundColor: '#f8fff9' }}>
-          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-            <h3 style={{ margin: '0 0 5px 0', color: '#155724' }}>🎯 Retrieved Wheel Data</h3>
-            <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
-              Successfully loaded from session: <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>{sessionId}</code>
-            </p>
-            {currentApiCycle && (
-              <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666' }}>
-                Using {currentApiCycle.causality_direction} sequence: <strong>{currentApiCycle.rawSequence?.join(" → ")}</strong>
+          {/* Explore Component Placeholder */}
+          <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '12px', 
+              padding: '40px 20px',
+              textAlign: 'center',
+              border: '2px dashed #dee2e6'
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
+              <h3 style={{ 
+                margin: '0 0 15px 0', 
+                fontSize: '20px', 
+                fontWeight: '600',
+                color: '#495057' 
+              }}>
+                Explore Component
+              </h3>
+              <p style={{ 
+                margin: 0, 
+                fontSize: '16px', 
+                color: '#6c757d',
+                lineHeight: '1.5' 
+              }}>
+                This is where your custom explore component will be loaded.<br/>
+                You can replace this placeholder with your component.
               </p>
-            )}
+              
+              {/* Component Props Available */}
+              <div style={{ 
+                marginTop: '30px',
+                padding: '20px',
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                textAlign: 'left',
+                border: '1px solid #e9ecef'
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 15px 0', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: '#495057' 
+                }}>
+                  Available Data:
+                </h4>
+                <div style={{ fontSize: '14px', color: '#6c757d', lineHeight: '1.6' }}>
+                  <div>• <strong>Problem:</strong> {userMessage}</div>
+                  <div>• <strong>Wisdom Units:</strong> {wisdomUnits.length} pairs</div>
+                  <div>• <strong>Selected Cycle:</strong> {currentApiCycle?.rawSequence?.join(" → ")}</div>
+                  <div>• <strong>Confidence:</strong> {currentApiCycle ? (currentApiCycle.probability * 100).toFixed(0) + '%' : 'N/A'}</div>
+                  {currentApiCycle?.reasoning && (
+                    <div>• <strong>Reasoning:</strong> {currentApiCycle.reasoning.substring(0, 100)}...</div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <DialecticalWheel 
-            key={`api-cycles-${selectedApiCycleIndex}`}
-            numPairs={wisdomUnits.length}
-            sliceSequence={currentApiCycle?.sequence}
-            pairTexts={pairTexts}
-            title={`Cycle ${selectedApiCycleIndex + 1}: ${currentApiCycle?.rawSequence?.join(" → ") || "Default"}`}
-            centerLabel={`C${selectedApiCycleIndex + 1}`}
-          />
-          
-          <div style={{ textAlign: 'center', marginTop: '15px', fontSize: '12px', color: '#666' }}>
-            💡 <strong>Tip:</strong> Use the cycle selector above to try different arrangements
-          </div>
-        </div>
+        </>
       )}
-
-      {/* Mock demo */}
-      <div style={{ borderTop: '2px dashed #ccc', paddingTop: '20px' }}>
-        <h4>🎭 Mock Cycles Demo:</h4>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-          Showing optimal sequence analysis with mock data:
-        </p>
-        
-        <div style={{ backgroundColor: '#d4edda', color: '#155724', padding: '15px', borderRadius: '5px', marginBottom: '15px' }}>
-          <strong>Mock Optimal Sequence:</strong> {mockSelectedCycle.rawSequence?.join(" → ")}<br/>
-          <strong>First Half (used by wheel):</strong> {mockSelectedCycle.firstHalf?.join(" → ")}<br/>
-          <strong>Probability:</strong> {(mockSelectedCycle.probability * 100).toFixed(1)}%<br/>
-          <strong>Direction:</strong> {mockSelectedCycle.causality_direction}<br/>
-          <strong>Reasoning:</strong> {mockSelectedCycle.reasoning}
-          
-          {/* Cycle Selector */}
-          <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '5px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              🔄 Select Cycle ({mockCyclesData.cycles.length} available):
-            </label>
-            <select 
-              value={selectedCycleIndex} 
-              onChange={(e) => setSelectedCycleIndex(parseInt(e.target.value))}
-              style={{ padding: '5px', borderRadius: '3px', border: '1px solid #ccc', marginRight: '10px' }}
-            >
-              {mockCyclesData.cycles.map((cycle, index) => (
-                <option key={index} value={index}>
-                  Cycle {index + 1}: {cycle.sequence.join(" → ")} ({(cycle.probability * 100).toFixed(1)}% - {cycle.causality_direction})
-                </option>
-              ))}
-            </select>
-            <span style={{ fontSize: '12px', color: '#666' }}>
-              Compare different sequence arrangements and their probabilities
-            </span>
-          </div>
-        </div>
-        
-        <div style={{ backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
-          <details>
-            <summary style={{ cursor: 'pointer' }}>📋 View Full Cycles Data</summary>
-            <pre style={{ fontSize: '11px', marginTop: '10px', overflow: 'auto' }}>
-              {JSON.stringify(mockCyclesData, null, 2)}
-            </pre>
-          </details>
-        </div>
-        
-        <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-          <strong>How it works:</strong> API returns complete sequence <code>{mockSelectedCycle.rawSequence?.join(" → ")}</code><br/>
-          <strong>Wheel uses first half:</strong> <code>{mockSelectedCycle.firstHalf?.join(" → ")}</code> and auto-generates opposites: <code>{mockSelectedCycle.firstHalf?.map(item => {
-            const type = item.startsWith('T') ? 'A' : 'T';
-            const num = item.slice(1);
-            return type + num;
-          }).join(" → ")}</code><br/>
-          <strong>This creates the full sequence</strong> with maximum dialectical tension.
-        </p>
-        
-        <DialecticalWheel 
-          key={`mock-cycle-${selectedCycleIndex}`}
-          numPairs={3}
-          sliceSequence={mockSelectedCycle.sequence}
-          pairTexts={mockCyclesPairTexts}
-          title="Mock Optimal Sequence Demo"
-          centerLabel="Mock"
-        />
-      </div>
     </div>
   );
 }
 
-export default App;
+export default App; 

@@ -846,6 +846,7 @@ const DialecticalWheel = ({
 
   return (
     <div className="dialectical-wheel-container">
+      {/* Header with buttons - HIDDEN
       <div className="header">
         <button className="icon" aria-label="Menu">&#9776;</button>
         <span className="header-title">{title}</span>
@@ -855,8 +856,9 @@ const DialecticalWheel = ({
           <button className="icon" aria-label="Close">&#10006;</button>
         </div>
       </div>
+      */}
       
-      <div className="main-content">
+      <div className="main-content" style={{ paddingTop: '0' }}>
         <div className="controls-overlay">
           Drag to rotate • Pinch to zoom • Tap thesis/antithesis pairs to see opposition clearly
         </div>
