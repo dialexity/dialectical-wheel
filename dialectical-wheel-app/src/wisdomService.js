@@ -337,20 +337,22 @@ export class WisdomService {
       
       console.log(`DEBUG: Found ${allWheels.length} wheels from session data`);
       
-      // Extract cycles data if available
+      // Always fetch cycles explicitly to ensure we have the full data
       let cycles = null;
       let bestCycle = null;
       
-      if (sessionData.cycles) {
-        cycles = sessionData.cycles;
-        bestCycle = this.getBestCycleSequence(sessionData.cycles);
-      } else {
-        // If no cycles in session data, try to get them separately
-        try {
-          cycles = await this.getWheelCycles(sessionId, baseUrl);
-          bestCycle = this.getBestCycleSequence(cycles);
-        } catch (error) {
-          console.warn('Could not retrieve cycles data:', error);
+      try {
+        console.log('DEBUG: Fetching cycles data explicitly for session:', sessionId);
+        cycles = await this.getWheelCycles(sessionId, baseUrl);
+        bestCycle = this.getBestCycleSequence(cycles);
+        console.log('DEBUG: Successfully retrieved cycles:', cycles?.cycles?.length || 0);
+      } catch (error) {
+        console.error('Failed to retrieve cycles data:', error);
+        // Fallback to session data if available
+        if (sessionData.cycles) {
+          console.log('DEBUG: Using cycles from session data as fallback');
+          cycles = sessionData.cycles;
+          bestCycle = this.getBestCycleSequence(sessionData.cycles);
         }
       }
       

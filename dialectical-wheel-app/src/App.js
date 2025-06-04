@@ -2,6 +2,7 @@ import React from 'react';
 import DialecticalWheel from './DialecticalWheel';
 import { WisdomService, useDialecticalWheelWithCycles } from './wisdomService';
 import './App.css';
+import ExploreComponent from './ExploreComponent';
 
 function App() {
   return (
@@ -42,7 +43,7 @@ function App() {
 
 // Demo component using API calls for cycles
 function ApiCyclesDemo() {
-  const [userMessage, setUserMessage] = React.useState("Should I buy a house for family reunion?");
+  const [userMessage, setUserMessage] = React.useState("Considering buying a house for family reunion, but the land is leased from government with unclear terms and limited renovation potential.");
   const [numberOfThoughts, setNumberOfThoughts] = React.useState(3);
   const [componentLength, setComponentLength] = React.useState(7);
   const [enableDemo, setEnableDemo] = React.useState(false);
@@ -103,25 +104,16 @@ function ApiCyclesDemo() {
     
     if (loading) {
       setCurrentScreen('loading');
-      
-      // Add timeout for stuck loading states
-      const timeout = setTimeout(() => {
-        if (loading && currentScreen === 'loading') {
-          console.error('API call timed out after 30 seconds');
-          setCurrentScreen('input');
-          setEnableDemo(false);
-        }
-      }, 30000); // 30 second timeout
-      
-      return () => clearTimeout(timeout);
-    } else if (!loading && !error && wisdomUnits.length > 0) {
-      console.log('Transitioning to wheel screen');
+    } else if (!loading && !error && wisdomUnits.length > 0 && currentScreen === 'loading') {
+      // Only auto-transition to wheel if we're coming FROM loading screen
+      console.log('Transitioning to wheel screen from loading');
       setCurrentScreen('wheel');
-    } else if (error) {
-      console.error('Error occurred, staying on input screen:', error);
-      setCurrentScreen('input'); // Stay on input screen if error
+    } else if (error && currentScreen === 'loading') {
+      // Only auto-transition to input if we're coming FROM loading screen with error
+      console.error('Error occurred, going back to input screen:', error);
+      setCurrentScreen('input');
     }
-  }, [loading, error, wisdomUnits.length, currentScreen]);
+  }, [loading, error, wisdomUnits.length]); // Remove currentScreen from dependencies
 
   const handleAnalyze = async () => {
     console.log('=== STARTING ANALYSIS ===');
@@ -204,14 +196,20 @@ function ApiCyclesDemo() {
                 <div style={{ 
                   width: '32px', 
                   height: '32px', 
-                  backgroundColor: '#17a2b8', 
-                  borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: '12px'
                 }}>
-                  <span style={{ color: 'white', fontWeight: 'bold', fontSize: '18px' }}>N</span>
+                  <img 
+                    src="/logo.png" 
+                    alt="Dialexity Logo" 
+                    style={{ 
+                      width: '30px', 
+                      height: '30px', 
+                      objectFit: 'contain' 
+                    }} 
+                  />
                 </div>
                 <h1 style={{ 
                   margin: 0, 
@@ -313,7 +311,6 @@ function ApiCyclesDemo() {
                       📄
                     </button>
                     <button 
-                      onClick={() => setShowAdvanced(!showAdvanced)}
                       style={{ 
                         backgroundColor: 'transparent', 
                         border: 'none', 
@@ -324,6 +321,19 @@ function ApiCyclesDemo() {
                       }}
                     >
                       📎
+                    </button>
+                    <button 
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      style={{ 
+                        backgroundColor: 'transparent', 
+                        border: 'none', 
+                        fontSize: '20px', 
+                        cursor: 'pointer',
+                        padding: '5px',
+                        color: '#6c757d'
+                      }}
+                    >
+                      ⚙️
                     </button>
                   </div>
                   
@@ -794,7 +804,7 @@ function ApiCyclesDemo() {
                 sliceSequence={currentApiCycle?.sequence}
                 pairTexts={pairTexts}
                 title=""
-                centerLabel="Decision"
+                centerLabel=""
               />
             </div>
             
@@ -895,63 +905,13 @@ function ApiCyclesDemo() {
             </button>
           </div>
 
-          {/* Explore Component Placeholder */}
-          <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ 
-              backgroundColor: '#f8f9fa', 
-              borderRadius: '12px', 
-              padding: '40px 20px',
-              textAlign: 'center',
-              border: '2px dashed #dee2e6'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔍</div>
-              <h3 style={{ 
-                margin: '0 0 15px 0', 
-                fontSize: '20px', 
-                fontWeight: '600',
-                color: '#495057' 
-              }}>
-                Explore Component
-              </h3>
-              <p style={{ 
-                margin: 0, 
-                fontSize: '16px', 
-                color: '#6c757d',
-                lineHeight: '1.5' 
-              }}>
-                This is where your custom explore component will be loaded.<br/>
-                You can replace this placeholder with your component.
-              </p>
-              
-              {/* Component Props Available */}
-              <div style={{ 
-                marginTop: '30px',
-                padding: '20px',
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                textAlign: 'left',
-                border: '1px solid #e9ecef'
-              }}>
-                <h4 style={{ 
-                  margin: '0 0 15px 0', 
-                  fontSize: '16px', 
-                  fontWeight: '600',
-                  color: '#495057' 
-                }}>
-                  Available Data:
-                </h4>
-                <div style={{ fontSize: '14px', color: '#6c757d', lineHeight: '1.6' }}>
-                  <div>• <strong>Problem:</strong> {userMessage}</div>
-                  <div>• <strong>Wisdom Units:</strong> {wisdomUnits.length} pairs</div>
-                  <div>• <strong>Selected Cycle:</strong> {currentApiCycle?.rawSequence?.join(" → ")}</div>
-                  <div>• <strong>Confidence:</strong> {currentApiCycle ? (currentApiCycle.probability * 100).toFixed(0) + '%' : 'N/A'}</div>
-                  {currentApiCycle?.reasoning && (
-                    <div>• <strong>Reasoning:</strong> {currentApiCycle.reasoning.substring(0, 100)}...</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Explore Component */}
+          <ExploreComponent
+            userMessage={userMessage}
+            wisdomUnits={wisdomUnits}
+            currentApiCycle={currentApiCycle}
+            onEdit={handleNewAnalysis}
+          />
         </>
       )}
     </div>
