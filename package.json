@@ -8,6 +8,8 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "src",
+    "rollup.config.js",
     "README.md"
   ],
   "scripts": {
