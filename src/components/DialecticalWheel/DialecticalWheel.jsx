@@ -195,26 +195,78 @@ const DialecticalWheel = ({
   const handleSliceClick = (pairIndex) => {
     console.log(`Clicked pair ${pairIndex}`);
     if (focusedPair === pairIndex) {
-      // Reset to equal slices
-      setFocusedPair(null);
-      createEqualSlices();
+      // Unfocus: find the clicked focused slice and preserve its visual position
+      const clickedFocusedSlice = dynamicSlices.find(s => s.pair === pairIndex);
+      if (clickedFocusedSlice) {
+        // Current visual angle where the focused slice appears
+        const currentVisualAngle = (clickedFocusedSlice.angle + rotation) % 360;
+        console.log(`Unfocusing slice at visual angle: ${currentVisualAngle}°`);
+        
+        // Reset to equal slices first
+        setFocusedPair(null);
+        createEqualSlices();
+        
+        // Calculate where this slice will be in the equal layout
+        const sliceInEqualLayout = sequenceWithLabels.find(s => s.pair === pairIndex && s.type === clickedFocusedSlice.type);
+        if (sliceInEqualLayout) {
+          const sliceIndexInEqual = sequenceWithLabels.indexOf(sliceInEqualLayout);
+          const equalLayoutAngle = sliceIndexInEqual * normalSliceAngle;
+          
+          // Calculate rotation to put the equal slice at the same visual angle
+          // We want: equalLayoutAngle + newRotation = currentVisualAngle
+          const newRotation = (currentVisualAngle - equalLayoutAngle + 360) % 360;
+          console.log(`Setting rotation to ${newRotation}° to keep slice at visual angle ${currentVisualAngle}°`);
+          setRotation(newRotation);
+        }
+      } else {
+        // Fallback to simple unfocus
+        setFocusedPair(null);
+        createEqualSlices();
+      }
     } else {
-      // Focus on clicked pair
-      focusOnPair(pairIndex);
+      // Find any slice from this pair to get its current visual position
+      const pairSlice = dynamicSlices.find(s => s.pair === pairIndex);
+      if (pairSlice) {
+        // Current visual angle where the slice appears (this is what we want to preserve)
+        const clickedVisualAngle = (pairSlice.angle + rotation) % 360;
+        console.log(`Slice clicked at visual angle: ${clickedVisualAngle}°`);
+        
+        // Focus on clicked pair, positioning it at the same visual angle
+        focusOnPair(pairIndex, pairSlice.type, clickedVisualAngle);
+      } else {
+        // Fallback to old behavior if slice not found
+        focusOnPair(pairIndex);
+      }
     }
   };
 
   // Focus on pair function (simplified version of the JavaScript focusOnPair)
-  const focusOnPair = (pairIndex) => {
+  const focusOnPair = (pairIndex, clickedSliceType = null, targetVisualAngle = null) => {
     setFocusedPair(pairIndex);
     
-    // Find the original angle of the focused thesis to calculate rotation
+    // Find the thesis index - needed throughout the function
     const focusedThesisIndex = sequenceWithLabels.findIndex(s => s.pair === pairIndex && s.type === 'thesis');
-    const originalThesisAngle = focusedThesisIndex * normalSliceAngle;
     
-    // Rotate the wheel so the focused thesis appears at its original position
-    // Since the focused thesis will be at 0° in the new layout, we need to rotate by its original angle
-    setRotation(rotation + originalThesisAngle);
+    // Calculate rotation to position the clicked slice at the same visual angle
+    if (clickedSliceType && targetVisualAngle !== null) {
+      // Determine where the clicked slice will be positioned in the focused layout  
+      let focusedPosition;
+      if (clickedSliceType === 'thesis') {
+        focusedPosition = 0; // Thesis goes to 0° in focused layout
+      } else {
+        focusedPosition = 180; // Antithesis goes to 180° in focused layout
+      }
+      
+      // We want: focusedPosition + newRotation = targetVisualAngle
+      // Therefore: newRotation = targetVisualAngle - focusedPosition
+      const newRotation = (targetVisualAngle - focusedPosition + 360) % 360;
+      console.log(`Setting rotation to ${newRotation}° to keep ${clickedSliceType} at visual angle ${targetVisualAngle}°`);
+      setRotation(newRotation);
+    } else {
+      // Fallback to old behavior
+      const originalThesisAngle = focusedThesisIndex * normalSliceAngle;
+      setRotation(rotation + originalThesisAngle);
+    }
     
     // Calculate gap positions for unfocused slices
     const halfFocused = focusedSliceAngle / 2;
