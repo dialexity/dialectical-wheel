@@ -1191,83 +1191,38 @@ const DialecticalWheel = ({
               </g>
               
               {/* Rotation hint ripples */}
-              <g className="rotation-hints" opacity="0.4">
-                {/* Outer ripple */}
-                <circle 
-                  cx="200" 
-                  cy="200" 
-                  r="170" 
-                  fill="none" 
-                  stroke="#007AFF" 
-                  strokeWidth="1" 
-                  strokeDasharray="4 8"
-                  opacity="0.3"
-                >
-                  <animateTransform
-                    attributeName="transform"
-                    attributeType="XML"
-                    type="rotate"
-                    from="0 200 200"
-                    to="360 200 200"
-                    dur="8s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-                
-                {/* Middle ripple */}
-                <circle 
-                  cx="200" 
-                  cy="200" 
-                  r="180" 
-                  fill="none" 
-                  stroke="#007AFF" 
-                  strokeWidth="1" 
-                  strokeDasharray="2 4"
-                  opacity="0.2"
-                >
-                  <animateTransform
-                    attributeName="transform"
-                    attributeType="XML"
-                    type="rotate"
-                    from="0 200 200"
-                    to="-360 200 200"
-                    dur="12s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-                
-                {/* Rotation arrows at cardinal points */}
-                <g opacity="0.5">
-                  {[0, 90, 180, 270].map((angle, index) => {
-                    const radius = 165;
-                    const x = 200 + radius * Math.cos((angle - 90) * Math.PI / 180);
-                    const y = 200 + radius * Math.sin((angle - 90) * Math.PI / 180);
-                    const nextAngle = angle + 30;
-                    const nextX = 200 + radius * Math.cos((nextAngle - 90) * Math.PI / 180);
-                    const nextY = 200 + radius * Math.sin((nextAngle - 90) * Math.PI / 180);
-                    
-                    return (
-                      <path
-                        key={index}
-                        d={`M ${x},${y} A ${radius},${radius} 0 0,1 ${nextX},${nextY}`}
-                        fill="none"
-                        stroke="#007AFF"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        markerEnd="url(#rotation-arrow)"
-                        opacity="0.4"
-                      >
-                        <animate
-                          attributeName="opacity"
-                          values="0.4;0.8;0.4"
-                          dur="2s"
-                          begin={`${index * 0.5}s`}
-                          repeatCount="indefinite"
-                        />
-                      </path>
-                    );
-                  })}
-                </g>
+              <g className="rotation-hints" opacity="0.8">
+                {/* Multiple concentric ripples with different speeds and patterns */}
+                {[
+                  { radius: 160, opacity: 0.7, strokeWidth: 2, dashArray: "8 4", duration: "6s", direction: 1 },
+                  { radius: 170, opacity: 0.6, strokeWidth: 1.5, dashArray: "4 8", duration: "8s", direction: 1 },
+                  { radius: 180, opacity: 0.5, strokeWidth: 2, dashArray: "2 4", duration: "12s", direction: -1 },
+                  { radius: 190, opacity: 0.4, strokeWidth: 1, dashArray: "6 3", duration: "10s", direction: 1 },
+                  { radius: 200, opacity: 0.3, strokeWidth: 1.5, dashArray: "3 6", duration: "15s", direction: -1 },
+                  { radius: 210, opacity: 0.2, strokeWidth: 1, dashArray: "5 2", duration: "18s", direction: 1 }
+                ].map((ripple, index) => (
+                  <circle 
+                    key={index}
+                    cx="200" 
+                    cy="200" 
+                    r={ripple.radius} 
+                    fill="none" 
+                    stroke="#007AFF" 
+                    strokeWidth={ripple.strokeWidth} 
+                    strokeDasharray={ripple.dashArray}
+                    opacity={ripple.opacity}
+                  >
+                    <animateTransform
+                      attributeName="transform"
+                      attributeType="XML"
+                      type="rotate"
+                      from="0 200 200"
+                      to={`${ripple.direction * 360} 200 200`}
+                      dur={ripple.duration}
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                ))}
               </g>
 
               {/* Center circle */}
