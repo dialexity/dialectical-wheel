@@ -269,4 +269,81 @@
 
 .node-connection:hover {
   opacity: 0.7;
+}
+
+/* Rotation hint styles */
+.rotation-hints {
+  pointer-events: none;
+  animation: fadeInHints 3s ease-in-out;
+}
+
+@keyframes fadeInHints {
+  0% { opacity: 0; }
+  50% { opacity: 0; }
+  100% { opacity: 0.4; }
+}
+
+/* Hide rotation hints on mobile to reduce visual clutter */
+@media (max-width: 768px) {
+  .rotation-hints {
+    opacity: 0.2;
+  }
+}
+
+/* Floating Q2 zoom button */
+.floating-q2-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #007AFF;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #007AFF;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.floating-q2-btn:hover {
+  background: #007AFF;
+  color: white;
+  transform: scale(1.05);
+}
+
+.floating-q2-btn:hover svg {
+  stroke: white;
+}
+
+.floating-q2-btn:active {
+  transform: scale(0.95);
+}
+
+.floating-q2-btn.zoomed {
+  background: #007AFF;
+  color: white;
+}
+
+.floating-q2-btn.zoomed svg {
+  stroke: white;
+}
+
+.floating-q2-btn.zoomed:hover {
+  background: #0056CC;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .floating-q2-btn {
+    top: 15px;
+    right: 15px;
+    padding: 6px 10px;
+    font-size: 11px;
+  }
 } 

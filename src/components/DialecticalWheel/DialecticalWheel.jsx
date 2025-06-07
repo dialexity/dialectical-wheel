@@ -417,6 +417,8 @@ const DialecticalWheel = ({
     return pt.matrixTransform(svg.getScreenCTM().inverse());
   };
 
+
+
   const handleTouchStart = (e) => {
     e.preventDefault();
     if (e.touches.length === 2) {
@@ -693,6 +695,66 @@ const DialecticalWheel = ({
 
   // Store demo connections to recreate them when slices move
   const [demoConnections, setDemoConnections] = useState([]);
+  const [isZoomedToQ2, setIsZoomedToQ2] = useState(false);
+  
+  // Function to toggle zoom on second quadrant (upper-left)
+  const toggleSecondQuadrantZoom = () => {
+    if (isZoomedToQ2) {
+      // Zoom out to full view
+      const targetScale = 1;
+      const targetOffsetX = 0;
+      const targetOffsetY = 0;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToQ2(false);
+    } else {
+            // Zoom into second quadrant (top-left)
+      const targetScale = 2.2;
+      const quadrantCenterAngle = 315; // 315° is center of second quadrant (top-left) - fixed angle
+      const quadrantRadius = 100; // Distance from center to focus point
+      
+      // Calculate the center point of the second quadrant (FIXED position, not following rotation)
+      const angleRad = quadrantCenterAngle * Math.PI / 180; // Use absolute angle, not relative to rotation
+      const cx = 200, cy = 200; // Wheel center
+      const focusX = cx + quadrantRadius * Math.cos(angleRad);
+      const focusY = cy + quadrantRadius * Math.sin(angleRad);
+      
+      // Calculate offset to center this point in the view
+      const viewCenterX = 200, viewCenterY = 200;
+      const targetOffsetX = (viewCenterX - focusX) * targetScale;
+      const targetOffsetY = (viewCenterY - focusY) * targetScale;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToQ2(true);
+    }
+  };
+  
+  // Helper function for smooth animation
+  const animateToTransform = (targetScale, targetOffsetX, targetOffsetY) => {
+    const startTime = Date.now();
+    const startScale = scale;
+    const startOffsetX = offsetX;
+    const startOffsetY = offsetY;
+    const duration = 400;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeOutCubic for smooth animation
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      setScale(startScale + (targetScale - startScale) * eased);
+      setOffsetX(startOffsetX + (targetOffsetX - startOffsetX) * eased);
+      setOffsetY(startOffsetY + (targetOffsetY - startOffsetY) * eased);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
   
   // Function to toggle arrow visibility
   const toggleArrows = () => {
@@ -863,6 +925,20 @@ const DialecticalWheel = ({
           Drag to rotate • Pinch to zoom • Tap thesis/antithesis pairs to see opposition clearly
         </div>
         
+        {/* Floating Q2 zoom toggle button */}
+        <button className={`floating-q2-btn ${isZoomedToQ2 ? 'zoomed' : ''}`} onClick={toggleSecondQuadrantZoom}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+            {isZoomedToQ2 ? (
+              <path d="M8 13l2-2-2-2"/>
+            ) : (
+              <path d="M8 9l-2 2 2 2"/>
+            )}
+          </svg>
+          {isZoomedToQ2 ? 'Out' : 'Q2'}
+        </button>
+        
         <div className="wheel-container">
           <svg 
             ref={svgRef}
@@ -878,6 +954,22 @@ const DialecticalWheel = ({
           >
             <g ref={recordRef} className="record">
               <defs>
+                {/* Rotation hint arrowheads */}
+                <marker
+                  id="rotation-arrow"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="8"
+                  refY="3"
+                  orient="auto"
+                >
+                  <polygon
+                    points="0 0, 8 3, 0 6"
+                    fill="#007AFF"
+                    fillOpacity="0.6"
+                  />
+                </marker>
+                
                 <marker
                   id="arrowhead"
                   markerWidth="6"
@@ -1046,6 +1138,86 @@ const DialecticalWheel = ({
                 })}
               </g>
               
+              {/* Rotation hint ripples */}
+              <g className="rotation-hints" opacity="0.4">
+                {/* Outer ripple */}
+                <circle 
+                  cx="200" 
+                  cy="200" 
+                  r="170" 
+                  fill="none" 
+                  stroke="#007AFF" 
+                  strokeWidth="1" 
+                  strokeDasharray="4 8"
+                  opacity="0.3"
+                >
+                  <animateTransform
+                    attributeName="transform"
+                    attributeType="XML"
+                    type="rotate"
+                    from="0 200 200"
+                    to="360 200 200"
+                    dur="8s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+                
+                {/* Middle ripple */}
+                <circle 
+                  cx="200" 
+                  cy="200" 
+                  r="180" 
+                  fill="none" 
+                  stroke="#007AFF" 
+                  strokeWidth="1" 
+                  strokeDasharray="2 4"
+                  opacity="0.2"
+                >
+                  <animateTransform
+                    attributeName="transform"
+                    attributeType="XML"
+                    type="rotate"
+                    from="0 200 200"
+                    to="-360 200 200"
+                    dur="12s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+                
+                {/* Rotation arrows at cardinal points */}
+                <g opacity="0.5">
+                  {[0, 90, 180, 270].map((angle, index) => {
+                    const radius = 165;
+                    const x = 200 + radius * Math.cos((angle - 90) * Math.PI / 180);
+                    const y = 200 + radius * Math.sin((angle - 90) * Math.PI / 180);
+                    const nextAngle = angle + 30;
+                    const nextX = 200 + radius * Math.cos((nextAngle - 90) * Math.PI / 180);
+                    const nextY = 200 + radius * Math.sin((nextAngle - 90) * Math.PI / 180);
+                    
+                    return (
+                      <path
+                        key={index}
+                        d={`M ${x},${y} A ${radius},${radius} 0 0,1 ${nextX},${nextY}`}
+                        fill="none"
+                        stroke="#007AFF"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        markerEnd="url(#rotation-arrow)"
+                        opacity="0.4"
+                      >
+                        <animate
+                          attributeName="opacity"
+                          values="0.4;0.8;0.4"
+                          dur="2s"
+                          begin={`${index * 0.5}s`}
+                          repeatCount="indefinite"
+                        />
+                      </path>
+                    );
+                  })}
+                </g>
+              </g>
+
               {/* Center circle */}
               <circle cx="200" cy="200" r="30" fill="#FFC107"/>
               <text 
@@ -1072,6 +1244,7 @@ const DialecticalWheel = ({
           </svg>
           Enrich
         </button>
+
         <button className="bottom-btn" onClick={toggleArrows}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={showArrows ? "#0074d9" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="7" y1="7" x2="17" y2="17"/>
