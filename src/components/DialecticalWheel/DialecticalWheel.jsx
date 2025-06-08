@@ -12,7 +12,7 @@ const DialecticalWheel = ({
   pairTexts = null // Custom pair texts data from API
 }) => {
   // State matching the JavaScript variables
-  const [rotation, setRotation] = useState(0);
+  const [rotation, setRotation] = useState(270); // Start with first slice at top center
   const [scale, setScale] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
