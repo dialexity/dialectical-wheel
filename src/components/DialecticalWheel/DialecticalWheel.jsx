@@ -749,8 +749,8 @@ const DialecticalWheel = ({
   const [demoConnections, setDemoConnections] = useState([]);
   const [isZoomedToQ2, setIsZoomedToQ2] = useState(false);
   
-  // Function to toggle zoom on second quadrant (upper-left)
-  const toggleSecondQuadrantZoom = () => {
+    // Function to toggle zoom on top half of wheel
+  const toggleTopHalfZoom = () => {
     if (isZoomedToQ2) {
       // Zoom out to full view
       const targetScale = 1;
@@ -760,16 +760,16 @@ const DialecticalWheel = ({
       animateToTransform(targetScale, targetOffsetX, targetOffsetY);
       setIsZoomedToQ2(false);
     } else {
-            // Zoom into second quadrant (top-left)
-      const targetScale = 2.2;
-      const quadrantCenterAngle = 315; // 315° is center of second quadrant (top-left) - fixed angle
-      const quadrantRadius = 100; // Distance from center to focus point
+      // Zoom into top half of wheel
+      const targetScale = 1.6; // Reduced zoom to show entire top semicircle
+      const topCenterAngle = 270; // 270° is straight up (top center)
+      const topRadius = 90; // Distance from center to focus point (closer since we want the whole top half)
       
-      // Calculate the center point of the second quadrant (FIXED position, not following rotation)
-      const angleRad = quadrantCenterAngle * Math.PI / 180; // Use absolute angle, not relative to rotation
+      // Calculate the center point of the top half (FIXED position, not following rotation)
+      const angleRad = topCenterAngle * Math.PI / 180; // Use absolute angle, not relative to rotation
       const cx = 200, cy = 200; // Wheel center
-      const focusX = cx + quadrantRadius * Math.cos(angleRad);
-      const focusY = cy + quadrantRadius * Math.sin(angleRad);
+      const focusX = cx + topRadius * Math.cos(angleRad);
+      const focusY = cy + topRadius * Math.sin(angleRad);
       
       // Calculate offset to center this point in the view
       const viewCenterX = 200, viewCenterY = 200;
@@ -977,8 +977,8 @@ const DialecticalWheel = ({
           Drag to rotate • Pinch to zoom • Tap thesis/antithesis pairs to see opposition clearly
         </div>
         
-        {/* Floating Q2 zoom toggle button */}
-        <button className={`floating-q2-btn ${isZoomedToQ2 ? 'zoomed' : ''}`} onClick={toggleSecondQuadrantZoom}>
+        {/* Floating top half zoom toggle button */}
+        <button className={`floating-q2-btn ${isZoomedToQ2 ? 'zoomed' : ''}`} onClick={toggleTopHalfZoom}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/>
             <path d="m21 21-4.35-4.35"/>
@@ -988,7 +988,7 @@ const DialecticalWheel = ({
               <path d="M8 9l-2 2 2 2"/>
             )}
           </svg>
-          {isZoomedToQ2 ? 'Out' : 'Q2'}
+          {isZoomedToQ2 ? 'Out' : 'Top'}
         </button>
         
         <div className="wheel-container">
