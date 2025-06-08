@@ -12,7 +12,7 @@ const DialecticalWheel = ({
   pairTexts = null // Custom pair texts data from API
 }) => {
   // State matching the JavaScript variables
-  const [rotation, setRotation] = useState(0);
+  const [rotation, setRotation] = useState(270); // Start with first slice at top center
   const [scale, setScale] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -195,26 +195,78 @@ const DialecticalWheel = ({
   const handleSliceClick = (pairIndex) => {
     console.log(`Clicked pair ${pairIndex}`);
     if (focusedPair === pairIndex) {
-      // Reset to equal slices
-      setFocusedPair(null);
-      createEqualSlices();
+      // Unfocus: find the clicked focused slice and preserve its visual position
+      const clickedFocusedSlice = dynamicSlices.find(s => s.pair === pairIndex);
+      if (clickedFocusedSlice) {
+        // Current visual angle where the focused slice appears
+        const currentVisualAngle = (clickedFocusedSlice.angle + rotation) % 360;
+        console.log(`Unfocusing slice at visual angle: ${currentVisualAngle}°`);
+        
+        // Reset to equal slices first
+        setFocusedPair(null);
+        createEqualSlices();
+        
+        // Calculate where this slice will be in the equal layout
+        const sliceInEqualLayout = sequenceWithLabels.find(s => s.pair === pairIndex && s.type === clickedFocusedSlice.type);
+        if (sliceInEqualLayout) {
+          const sliceIndexInEqual = sequenceWithLabels.indexOf(sliceInEqualLayout);
+          const equalLayoutAngle = sliceIndexInEqual * normalSliceAngle;
+          
+          // Calculate rotation to put the equal slice at the same visual angle
+          // We want: equalLayoutAngle + newRotation = currentVisualAngle
+          const newRotation = (currentVisualAngle - equalLayoutAngle + 360) % 360;
+          console.log(`Setting rotation to ${newRotation}° to keep slice at visual angle ${currentVisualAngle}°`);
+          setRotation(newRotation);
+        }
+      } else {
+        // Fallback to simple unfocus
+        setFocusedPair(null);
+        createEqualSlices();
+      }
     } else {
-      // Focus on clicked pair
-      focusOnPair(pairIndex);
+      // Find any slice from this pair to get its current visual position
+      const pairSlice = dynamicSlices.find(s => s.pair === pairIndex);
+      if (pairSlice) {
+        // Current visual angle where the slice appears (this is what we want to preserve)
+        const clickedVisualAngle = (pairSlice.angle + rotation) % 360;
+        console.log(`Slice clicked at visual angle: ${clickedVisualAngle}°`);
+        
+        // Focus on clicked pair, positioning it at the same visual angle
+        focusOnPair(pairIndex, pairSlice.type, clickedVisualAngle);
+      } else {
+        // Fallback to old behavior if slice not found
+        focusOnPair(pairIndex);
+      }
     }
   };
 
   // Focus on pair function (simplified version of the JavaScript focusOnPair)
-  const focusOnPair = (pairIndex) => {
+  const focusOnPair = (pairIndex, clickedSliceType = null, targetVisualAngle = null) => {
     setFocusedPair(pairIndex);
     
-    // Find the original angle of the focused thesis to calculate rotation
+    // Find the thesis index - needed throughout the function
     const focusedThesisIndex = sequenceWithLabels.findIndex(s => s.pair === pairIndex && s.type === 'thesis');
-    const originalThesisAngle = focusedThesisIndex * normalSliceAngle;
     
-    // Rotate the wheel so the focused thesis appears at its original position
-    // Since the focused thesis will be at 0° in the new layout, we need to rotate by its original angle
-    setRotation(rotation + originalThesisAngle);
+    // Calculate rotation to position the clicked slice at the same visual angle
+    if (clickedSliceType && targetVisualAngle !== null) {
+      // Determine where the clicked slice will be positioned in the focused layout  
+      let focusedPosition;
+      if (clickedSliceType === 'thesis') {
+        focusedPosition = 0; // Thesis goes to 0° in focused layout
+      } else {
+        focusedPosition = 180; // Antithesis goes to 180° in focused layout
+      }
+      
+      // We want: focusedPosition + newRotation = targetVisualAngle
+      // Therefore: newRotation = targetVisualAngle - focusedPosition
+      const newRotation = (targetVisualAngle - focusedPosition + 360) % 360;
+      console.log(`Setting rotation to ${newRotation}° to keep ${clickedSliceType} at visual angle ${targetVisualAngle}°`);
+      setRotation(newRotation);
+    } else {
+      // Fallback to old behavior
+      const originalThesisAngle = focusedThesisIndex * normalSliceAngle;
+      setRotation(rotation + originalThesisAngle);
+    }
     
     // Calculate gap positions for unfocused slices
     const halfFocused = focusedSliceAngle / 2;
@@ -416,6 +468,8 @@ const DialecticalWheel = ({
     pt.y = clientY;
     return pt.matrixTransform(svg.getScreenCTM().inverse());
   };
+
+
 
   const handleTouchStart = (e) => {
     e.preventDefault();
@@ -693,6 +747,66 @@ const DialecticalWheel = ({
 
   // Store demo connections to recreate them when slices move
   const [demoConnections, setDemoConnections] = useState([]);
+  const [isZoomedToQ2, setIsZoomedToQ2] = useState(false);
+  
+    // Function to toggle zoom on top half of wheel
+  const toggleTopHalfZoom = () => {
+    if (isZoomedToQ2) {
+      // Zoom out to full view
+      const targetScale = 1;
+      const targetOffsetX = 0;
+      const targetOffsetY = 0;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToQ2(false);
+    } else {
+      // Zoom into top half of wheel
+      const targetScale = 1.6; // Reduced zoom to show entire top semicircle
+      const topCenterAngle = 270; // 270° is straight up (top center)
+      const topRadius = 90; // Distance from center to focus point (closer since we want the whole top half)
+      
+      // Calculate the center point of the top half (FIXED position, not following rotation)
+      const angleRad = topCenterAngle * Math.PI / 180; // Use absolute angle, not relative to rotation
+      const cx = 200, cy = 200; // Wheel center
+      const focusX = cx + topRadius * Math.cos(angleRad);
+      const focusY = cy + topRadius * Math.sin(angleRad);
+      
+      // Calculate offset to center this point in the view
+      const viewCenterX = 200, viewCenterY = 200;
+      const targetOffsetX = (viewCenterX - focusX) * targetScale;
+      const targetOffsetY = (viewCenterY - focusY) * targetScale;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToQ2(true);
+    }
+  };
+  
+  // Helper function for smooth animation
+  const animateToTransform = (targetScale, targetOffsetX, targetOffsetY) => {
+    const startTime = Date.now();
+    const startScale = scale;
+    const startOffsetX = offsetX;
+    const startOffsetY = offsetY;
+    const duration = 400;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeOutCubic for smooth animation
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      setScale(startScale + (targetScale - startScale) * eased);
+      setOffsetX(startOffsetX + (targetOffsetX - startOffsetX) * eased);
+      setOffsetY(startOffsetY + (targetOffsetY - startOffsetY) * eased);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
   
   // Function to toggle arrow visibility
   const toggleArrows = () => {
@@ -863,6 +977,20 @@ const DialecticalWheel = ({
           Drag to rotate • Pinch to zoom • Tap thesis/antithesis pairs to see opposition clearly
         </div>
         
+        {/* Floating top half zoom toggle button */}
+        <button className={`floating-q2-btn ${isZoomedToQ2 ? 'zoomed' : ''}`} onClick={toggleTopHalfZoom}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+            {isZoomedToQ2 ? (
+              <path d="M8 13l2-2-2-2"/>
+            ) : (
+              <path d="M8 9l-2 2 2 2"/>
+            )}
+          </svg>
+          {isZoomedToQ2 ? 'Out' : 'Top'}
+        </button>
+        
         <div className="wheel-container">
           <svg 
             ref={svgRef}
@@ -878,6 +1006,22 @@ const DialecticalWheel = ({
           >
             <g ref={recordRef} className="record">
               <defs>
+                {/* Rotation hint arrowheads */}
+                <marker
+                  id="rotation-arrow"
+                  markerWidth="8"
+                  markerHeight="6"
+                  refX="8"
+                  refY="3"
+                  orient="auto"
+                >
+                  <polygon
+                    points="0 0, 8 3, 0 6"
+                    fill="#007AFF"
+                    fillOpacity="0.6"
+                  />
+                </marker>
+                
                 <marker
                   id="arrowhead"
                   markerWidth="6"
@@ -1046,6 +1190,41 @@ const DialecticalWheel = ({
                 })}
               </g>
               
+              {/* Rotation hint ripples */}
+              <g className="rotation-hints" opacity="0.8">
+                {/* Multiple concentric ripples with different speeds and patterns */}
+                {[
+                  { radius: 160, opacity: 0.7, strokeWidth: 2, dashArray: "8 4", duration: "6s", direction: 1 },
+                  { radius: 170, opacity: 0.6, strokeWidth: 1.5, dashArray: "4 8", duration: "8s", direction: 1 },
+                  { radius: 180, opacity: 0.5, strokeWidth: 2, dashArray: "2 4", duration: "12s", direction: -1 },
+                  { radius: 190, opacity: 0.4, strokeWidth: 1, dashArray: "6 3", duration: "10s", direction: 1 },
+                  { radius: 200, opacity: 0.3, strokeWidth: 1.5, dashArray: "3 6", duration: "15s", direction: -1 },
+                  { radius: 210, opacity: 0.2, strokeWidth: 1, dashArray: "5 2", duration: "18s", direction: 1 }
+                ].map((ripple, index) => (
+                  <circle 
+                    key={index}
+                    cx="200" 
+                    cy="200" 
+                    r={ripple.radius} 
+                    fill="none" 
+                    stroke="#007AFF" 
+                    strokeWidth={ripple.strokeWidth} 
+                    strokeDasharray={ripple.dashArray}
+                    opacity={ripple.opacity}
+                  >
+                    <animateTransform
+                      attributeName="transform"
+                      attributeType="XML"
+                      type="rotate"
+                      from="0 200 200"
+                      to={`${ripple.direction * 360} 200 200`}
+                      dur={ripple.duration}
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                ))}
+              </g>
+
               {/* Center circle */}
               <circle cx="200" cy="200" r="30" fill="#FFC107"/>
               <text 
@@ -1072,6 +1251,7 @@ const DialecticalWheel = ({
           </svg>
           Enrich
         </button>
+
         <button className="bottom-btn" onClick={toggleArrows}>
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={showArrows ? "#0074d9" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="7" y1="7" x2="17" y2="17"/>
