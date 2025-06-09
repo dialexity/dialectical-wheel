@@ -2,56 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import './DialecticalWheel.css';
 import { createSliceAtAngle, defaultPairTexts } from '../../utils/sliceGenerator';
 
-// Type definitions
-interface SliceConfig {
-  pair: number;
-  type: 'thesis' | 'antithesis';
-}
-
-interface SequenceWithLabels {
-  label: string;
-  pair: number;
-  type: 'thesis' | 'antithesis';
-}
-
-interface DynamicSlice {
-  id: string;
-  angle: number;
-  width: number;
-  label: string;
-  pair: number;
-  type: 'thesis' | 'antithesis';
-  focused?: boolean;
-  detailed?: boolean;
-  originalIndex?: number;
-  svgContent?: string;
-}
-
-interface DetailedSlices {
-  [key: number]: {
-    thesis: string;
-    antithesis: string;
-  };
-}
-
-interface PairTexts {
-  [key: number]: {
-    thesis: string[][];
-    antithesis: string[][];
-  };
-}
-
-interface DialecticalWheelProps {
-  numPairs?: number;
-  title?: string;
-  centerLabel?: string;
-  sliceSequence?: SliceConfig[] | null;
-  fullSequence?: SequenceWithLabels[] | null;
-  detailedSlices?: DetailedSlices;
-  pairTexts?: PairTexts | null;
-}
-
-const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
+const DialecticalWheel = ({ 
   numPairs = 4, 
   title = "Win-Win",
   centerLabel = "Core",
@@ -61,19 +12,19 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   pairTexts = null // Custom pair texts data from API
 }) => {
   // State matching the JavaScript variables
-  const [rotation, setRotation] = useState<number>(270); // Start with first slice at top center
-  const [scale, setScale] = useState<number>(1);
-  const [offsetX, setOffsetX] = useState<number>(0);
-  const [offsetY, setOffsetY] = useState<number>(0);
-  const [focusedPair, setFocusedPair] = useState<number | null>(null);
-  const [dynamicSlices, setDynamicSlices] = useState<DynamicSlice[]>([]);
-  const [showArrows, setShowArrows] = useState<boolean>(true);
+  const [rotation, setRotation] = useState(270); // Start with first slice at top center
+  const [scale, setScale] = useState(1);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [focusedPair, setFocusedPair] = useState(null);
+  const [dynamicSlices, setDynamicSlices] = useState([]);
+  const [showArrows, setShowArrows] = useState(true);
   
-  const recordRef = useRef<SVGGElement>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const isDraggingRef = useRef<boolean>(false);
-  const startAngleRef = useRef<number>(0);
-  const startRotationRef = useRef<number>(0);
+  const recordRef = useRef(null);
+  const svgRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const startAngleRef = useRef(0);
+  const startRotationRef = useRef(0);
 
   // Constants from the JavaScript class
   const normalSliceAngle = 360 / (2 * numPairs);
@@ -141,8 +92,8 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   }, [rotation, scale, offsetX, offsetY]);
 
   // Create equal slices function (matches the JavaScript createEqualSlices)
-  const createEqualSlices = (): void => {
-    const slices: DynamicSlice[] = [];
+  const createEqualSlices = () => {
+    const slices = [];
     sequenceWithLabels.forEach((slice, index) => {
       const angle = index * normalSliceAngle;
       slices.push({
@@ -168,7 +119,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   }, [numPairs, sliceSequence, pairTexts]);
 
   // Helper functions from HTML
-  const getCenter = (el: Element): { x: number; y: number } => {
+  const getCenter = (el) => {
     const rect = el.getBoundingClientRect();
     return {
       x: rect.left + rect.width / 2,
@@ -177,19 +128,13 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Create clickable slice function (matches the JavaScript createClickableSlice)
-  const createClickableSlice = (
-    centerAngle: number, 
-    sliceWidth: number, 
-    label: string, 
-    pairIndex: number, 
-    sliceType: 'thesis' | 'antithesis'
-  ) => {
+  const createClickableSlice = (centerAngle, sliceWidth, label, pairIndex, sliceType) => {
     const cx = 200, cy = 200, radius = 150;
     const halfAngle = sliceWidth / 2;
     const startAngle = centerAngle - halfAngle;
     const endAngle = centerAngle + halfAngle;
     
-    const toRadians = (deg: number): number => deg * Math.PI / 180;
+    const toRadians = (deg) => deg * Math.PI / 180;
     
     // Create layered rings like detailed slices
     const layerColors = ["#C6E5B3", "#FFFFFF", "#F9C6CC"]; // green, white, pink
@@ -247,7 +192,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Handle slice click (matches the JavaScript click handlers)
-  const handleSliceClick = (pairIndex: number): void => {
+  const handleSliceClick = (pairIndex) => {
     console.log(`Clicked pair ${pairIndex}`);
     if (focusedPair === pairIndex) {
       // Unfocus: find the clicked focused slice and preserve its visual position
@@ -296,7 +241,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Focus on pair function (simplified version of the JavaScript focusOnPair)
-  const focusOnPair = (pairIndex: number, clickedSliceType: 'thesis' | 'antithesis' | null = null, targetVisualAngle: number | null = null): void => {
+  const focusOnPair = (pairIndex, clickedSliceType = null, targetVisualAngle = null) => {
     setFocusedPair(pairIndex);
     
     // Find the thesis index - needed throughout the function
