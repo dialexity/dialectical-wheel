@@ -23,5 +23,8 @@ export {
   defaultPairTexts
 } from './utils';
 
+// Export types
+export * from './types';
+
 // Default export for convenience
 export { DialecticalWheel as default } from './components'; 
