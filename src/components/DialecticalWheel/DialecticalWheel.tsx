@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import './DialecticalWheel.css';
-import { createSliceAtAngle, defaultPairTexts } from '../../utils/sliceGenerator';
+import { defaultPairTexts } from '../../utils/sliceGenerator';
+import { SliceAtAngle } from '../../utils/SliceGenerator';
 
 // Type definitions
 interface SliceConfig {
@@ -116,11 +117,11 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     return sequence;
   }, [numPairs, sliceSequence]);
   
-  const sequenceWithLabels = useMemo(() => {
+  const sequenceWithLabels = useMemo((): SequenceWithLabels[] => {
     return wheelSequence.map((slice, index) => ({
       label: `${slice.type === 'thesis' ? 'T' : 'A'}${slice.pair + 1}`,
       pair: slice.pair,
-      type: slice.type
+      type: slice.type as 'thesis' | 'antithesis'
     }));
   }, [wheelSequence]);
 
@@ -184,6 +185,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     pairIndex: number, 
     sliceType: 'thesis' | 'antithesis'
   ) => {
+    console.log(`🔥 EXPENSIVE: createClickableSlice called for ${label} (angle: ${centerAngle}°)`);
     const cx = 200, cy = 200, radius = 150;
     const halfAngle = sliceWidth / 2;
     const startAngle = centerAngle - halfAngle;
@@ -245,6 +247,22 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
       sliceType
     };
   };
+
+  // Memoize slice data to prevent recalculation on every render
+  const memoizedSliceData = useMemo(() => {
+    console.log(`🚀 MEMOIZATION: Recalculating slice data for ${dynamicSlices.length} slices`);
+    const sliceDataMap = new Map();
+    
+    dynamicSlices.forEach(slice => {
+      if (!slice.detailed) {
+        const key = `${slice.angle}-${slice.width}-${slice.label}-${slice.pair}-${slice.type}`;
+        sliceDataMap.set(slice.id, createClickableSlice(slice.angle, slice.width, slice.label, slice.pair, slice.type));
+      }
+    });
+    
+    console.log(`✅ MEMOIZATION: Created ${sliceDataMap.size} memoized slice data entries`);
+    return sliceDataMap;
+  }, [dynamicSlices, normalSliceAngle]);
 
   // Handle slice click (matches the JavaScript click handlers)
   const handleSliceClick = (pairIndex: number): void => {
@@ -352,7 +370,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     }
     
     // Create new slice configuration
-    const newSlices = [];
+    const newSlices: DynamicSlice[] = [];
     
     // Find the antithesis index (needed for unfocused slices logic)
     const focusedAntithesisIndex = sequenceWithLabels.findIndex(s => s.pair === pairIndex && s.type === 'antithesis');
@@ -369,8 +387,8 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
       // Use provided detailed slices (SVG strings from prop)
       console.log('Using provided detailed slices for pair', pairIndex);
       // Add logic here if needed for provided detailed slices
-    } else if (usePairTexts[pairIndex]) {
-      // Generate detailed slices using defaultPairTexts and createSliceAtAngle
+    } else if (usePairTexts[pairIndex as keyof typeof usePairTexts]) {
+      // Generate detailed slices using defaultPairTexts and React components
       console.log('Generating detailed slices for pair', pairIndex, 'using defaultPairTexts');
       
       // Find the original slice IDs to preserve identity
@@ -386,17 +404,11 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
         width: focusedSliceAngle,
         label: originalThesisSlice.label,
         pair: pairIndex,
-        type: 'thesis',
+        type: 'thesis' as const,
         focused: true,
         detailed: true,
         originalIndex: focusedThesisIndex, // Track original position
-        svgContent: createSliceAtAngle(
-          { labels: usePairTexts[pairIndex].thesis },
-          originalThesisSliceId, // Use original slice ID
-          0, // angle parameter
-          200, 200, 150, 120, null, null, true, // default parameters
-          pairIndex, 'thesis', focusedThesisIndex // pass original index for node IDs
-        )
+        // No more svgContent - we'll use React component directly
       });
       
       newSlices.push({
@@ -405,17 +417,11 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
         width: focusedSliceAngle,
         label: originalAntithesisSlice.label,
         pair: pairIndex,
-        type: 'antithesis',
+        type: 'antithesis' as const,
         focused: true,
         detailed: true,
         originalIndex: focusedAntithesisIndex, // Track original position
-        svgContent: createSliceAtAngle(
-          { labels: usePairTexts[pairIndex].antithesis },
-          originalAntithesisSliceId, // Use original slice ID
-          180, // angle parameter
-          200, 200, 150, 120, null, null, true, // default parameters
-          pairIndex, 'antithesis', focusedAntithesisIndex // pass original index for node IDs
-        )
+        // No more svgContent - we'll use React component directly
       });
       
       console.log('Created detailed slices for pair', pairIndex, ':', newSlices.filter(s => s.detailed));
@@ -432,7 +438,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
             width: focusedSliceAngle,
             label: slice.label,
             pair: slice.pair,
-            type: slice.type,
+            type: slice.type as 'thesis',
             focused: true,
             originalIndex: index
           });
@@ -443,7 +449,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
             width: focusedSliceAngle,
             label: slice.label,
             pair: slice.pair,
-            type: slice.type,
+            type: slice.type as 'antithesis',
             focused: true,
             originalIndex: index
           });
@@ -473,7 +479,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
           width: unfocusedSliceAngle,
           label: slice.label,
           pair: slice.pair,
-          type: slice.type,
+          type: slice.type as 'thesis' | 'antithesis',
           focused: false,
           originalIndex: checkIndex // Track original position
       });
@@ -486,18 +492,18 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Mouse event handlers (from HTML)
-  const handleMouseDown = (e) => {
-    if (e.target.classList.contains('clickable-slice')) return;
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>): void => {
+    if ((e.target as SVGElement).classList.contains('clickable-slice')) return;
     
     isDraggingRef.current = true;
-    const center = getCenter(svgRef.current);
+    const center = getCenter(svgRef.current!);
     startAngleRef.current = Math.atan2(e.clientY - center.y, e.clientX - center.x);
     startRotationRef.current = rotation;
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>): void => {
     if (!isDraggingRef.current) return;
-    const center = getCenter(svgRef.current);
+    const center = getCenter(svgRef.current!);
     const currentAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
     let angleDiff = currentAngle - startAngleRef.current;
     if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
@@ -505,28 +511,26 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     setRotation(startRotationRef.current + (angleDiff * (180 / Math.PI)));
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (): void => {
     isDraggingRef.current = false;
   };
 
   // Touch event handlers for mobile support
-  const isPinchingRef = useRef(false);
-  const pinchStartDistRef = useRef(0);
-  const startScaleRef = useRef(1);
-  const startOffsetXRef = useRef(0);
-  const startOffsetYRef = useRef(0);
-  const pinchMidStartRef = useRef({ x: 200, y: 200 });
+  const isPinchingRef = useRef<boolean>(false);
+  const pinchStartDistRef = useRef<number>(0);
+  const startScaleRef = useRef<number>(1);
+  const startOffsetXRef = useRef<number>(0);
+  const startOffsetYRef = useRef<number>(0);
+  const pinchMidStartRef = useRef<{ x: number; y: number }>({ x: 200, y: 200 });
 
-  const clientToSvg = (svg, clientX, clientY) => {
+  const clientToSvg = (svg: SVGSVGElement, clientX: number, clientY: number): SVGPoint => {
     const pt = svg.createSVGPoint();
     pt.x = clientX;
     pt.y = clientY;
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
+    return pt.matrixTransform(svg.getScreenCTM()!.inverse());
   };
 
-
-
-  const handleTouchStart = (e) => {
+  const handleTouchStart = (e: React.TouchEvent<SVGSVGElement>): void => {
     e.preventDefault();
     if (e.touches.length === 2) {
       // Two finger pinch
@@ -537,7 +541,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
         e.touches[0].clientY - e.touches[1].clientY
       );
       startScaleRef.current = scale;
-      const svg = svgRef.current;
+      const svg = svgRef.current!;
       const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       const midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       pinchMidStartRef.current = clientToSvg(svg, midClientX, midClientY);
@@ -551,14 +555,14 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
       
       isDraggingRef.current = true;
       isPinchingRef.current = false;
-      const center = getCenter(svgRef.current);
+      const center = getCenter(svgRef.current!);
       startAngleRef.current = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
       startRotationRef.current = rotation;
     }
     document.body.style.userSelect = 'none';
   };
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>): void => {
     e.preventDefault();
     if (isPinchingRef.current && e.touches.length === 2) {
       // Handle pinch zoom
@@ -583,7 +587,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     } else if (isDraggingRef.current && e.touches.length === 1) {
       // Handle rotation
       const touch = e.touches[0];
-      const center = getCenter(svgRef.current);
+      const center = getCenter(svgRef.current!);
       const currentAngle = Math.atan2(touch.clientY - center.y, touch.clientX - center.x);
       let angleDiff = currentAngle - startAngleRef.current;
       if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
@@ -592,7 +596,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     }
   };
 
-  const handleTouchEnd = (e) => {
+  const handleTouchEnd = (e: React.TouchEvent<SVGSVGElement>): void => {
     if (e.touches.length === 0) {
       isDraggingRef.current = false;
       isPinchingRef.current = false;
@@ -601,37 +605,38 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Touch handlers for slice clicks
-  const handleSliceTouchStart = (e, pairIndex) => {
+  const handleSliceTouchStart = (e: React.TouchEvent<SVGElement>, pairIndex: number): void => {
     e.stopPropagation();
     const touch = e.touches[0];
     const touchStartTime = Date.now();
     const touchStartPos = { x: touch.clientX, y: touch.clientY };
     
-    e.target._touchData = { startTime: touchStartTime, startPos: touchStartPos, pairIndex };
+    // Store touch data on the target element for tracking
+    (e.target as any)._touchData = { startTime: touchStartTime, startPos: touchStartPos, pairIndex };
   };
 
-  const handleSliceTouchEnd = (e, pairIndex) => {
+  const handleSliceTouchEnd = (e: React.TouchEvent<SVGElement>, pairIndex: number): void => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!e.target._touchData) return;
+    if (!(e.target as any)._touchData) return;
     
-    const touchDuration = Date.now() - e.target._touchData.startTime;
+    const touchDuration = Date.now() - (e.target as any)._touchData.startTime;
     const touch = e.changedTouches[0];
     const touchEndPos = { x: touch.clientX, y: touch.clientY };
     
     const distance = Math.sqrt(
-      Math.pow(touchEndPos.x - e.target._touchData.startPos.x, 2) + 
-      Math.pow(touchEndPos.y - e.target._touchData.startPos.y, 2)
+      Math.pow(touchEndPos.x - (e.target as any)._touchData.startPos.x, 2) + 
+      Math.pow(touchEndPos.y - (e.target as any)._touchData.startPos.y, 2)
     );
 
     // If it's a quick tap with minimal movement, treat as click
     if (touchDuration < 300 && distance < 20) {
-      console.log(`Touch clicked ${e.target._touchData.pairIndex}`);
-      handleSliceClick(e.target._touchData.pairIndex);
+      console.log(`Touch clicked ${(e.target as any)._touchData.pairIndex}`);
+      handleSliceClick((e.target as any)._touchData.pairIndex);
     }
     
-    delete e.target._touchData;
+    delete (e.target as any)._touchData;
   };
 
   // Helper functions for layer node management and arrow connections
@@ -639,32 +644,32 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     return document.querySelectorAll('.layer-node');
   };
 
-  const getLayerNodeById = (nodeId) => {
+  const getLayerNodeById = (nodeId: string): Element | null => {
     return document.querySelector(`[data-node-id="${nodeId}"]`);
   };
 
-  const getLayerNodesForPair = (pairIndex) => {
+  const getLayerNodesForPair = (pairIndex: number): NodeListOf<Element> => {
     return document.querySelectorAll(`[data-pair-index="${pairIndex}"].layer-node`);
   };
 
-  const getLayerNodesByType = (layerType) => {
+  const getLayerNodesByType = (layerType: string): NodeListOf<Element> => {
     return document.querySelectorAll(`[data-layer-type="${layerType}"].layer-node`);
   };
 
-  const getLayerNodeInfo = (nodeElement) => {
+  const getLayerNodeInfo = (nodeElement: HTMLElement | null) => {
     if (!nodeElement || !nodeElement.dataset) return null;
     
     return {
-      nodeId: nodeElement.dataset.nodeId,
-      sliceId: nodeElement.dataset.sliceId,
-      pairIndex: parseInt(nodeElement.dataset.pairIndex),
-      sliceType: nodeElement.dataset.sliceType, // thesis or antithesis
-      layerIndex: parseInt(nodeElement.dataset.layerIndex),
-      layerType: nodeElement.dataset.layerType // green, white, or pink
+      nodeId: nodeElement.dataset.nodeId!,
+      sliceId: nodeElement.dataset.sliceId!,
+      pairIndex: parseInt(nodeElement.dataset.pairIndex!),
+      sliceType: nodeElement.dataset.sliceType!, // thesis or antithesis
+      layerIndex: parseInt(nodeElement.dataset.layerIndex!),
+      layerType: nodeElement.dataset.layerType! // green, white, or pink
     };
   };
 
-  const getNodeCenter = (nodeElement) => {
+  const getNodeCenter = (nodeElement: HTMLElement | null) => {
     if (!nodeElement) return null;
     
     // Get the node's data attributes to calculate position geometrically
@@ -686,7 +691,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     }
     
     // Validate layer index
-    if (layerIndex < 0 || layerIndex > 2) {
+    if (isNaN(layerIndex) || layerIndex < 0 || layerIndex > 2) {
       console.warn('Invalid layer index:', layerIndex);
       return null;
     }
@@ -709,9 +714,9 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
 
   // Example function to demonstrate connecting two nodes
-  const connectNodes = (fromId, toId, color = '#0074d9', strokeWidth = 2) => {
-    const fromNode = getLayerNodeById(fromId);
-    const toNode = getLayerNodeById(toId);
+  const connectNodes = (fromId: string, toId: string, color = '#0074d9', strokeWidth = 2) => {
+    const fromNode = getLayerNodeById(fromId) as HTMLElement | null;
+    const toNode = getLayerNodeById(toId) as HTMLElement | null;
     
     if (!fromNode || !toNode) {
       console.warn(`Cannot connect nodes: ${fromId} or ${toId} not found`);
@@ -801,7 +806,14 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   console.log('Layer Node API:', nodeAPI);
 
   // Store demo connections to recreate them when slices move
-  const [demoConnections, setDemoConnections] = useState([]);
+  interface DemoConnection {
+    fromId: string;
+    toId: string;
+    color: string;
+    strokeWidth: number;
+    label: string;
+  }
+  const [demoConnections, setDemoConnections] = useState<DemoConnection[]>([]);
   const [isZoomedToQ2, setIsZoomedToQ2] = useState(false);
   
     // Function to toggle zoom on top half of wheel
@@ -837,7 +849,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   };
   
   // Helper function for smooth animation
-  const animateToTransform = (targetScale, targetOffsetX, targetOffsetY) => {
+  const animateToTransform = (targetScale: number, targetOffsetX: number, targetOffsetY: number) => {
     const startTime = Date.now();
     const startScale = scale;
     const startOffsetX = offsetX;
@@ -1154,28 +1166,49 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
                 {dynamicSlices.map((slice) => {
                   console.log('Rendering slice:', slice.id, 'type:', slice.type, 'detailed:', slice.detailed, 'angle:', slice.angle);
                   
-                  // Handle detailed slices differently
-                  if (slice.detailed && slice.svgContent) {
+                  // Handle detailed slices differently - use React component directly
+                  if (slice.detailed) {
                     console.log('Detailed slice transform:', `rotate(${slice.angle} 200 200)`);
-                    console.log('Detailed slice SVG length:', slice.svgContent.length);
                     console.log('Detailed slice pair:', slice.pair, 'type:', slice.type);
-                    console.log('First 200 chars of SVG:', slice.svgContent.substring(0, 200));
                     
-                    return (
-                      <g 
-                        key={slice.id} 
-                        className={`slice-component ${slice.type}-slice focused-pair`}
-                        onClick={() => handleSliceClick(slice.pair)}
-                        onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
-                        onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
-                        style={{ cursor: 'pointer' }}
-                        dangerouslySetInnerHTML={{ __html: slice.svgContent }}
-                      />
-                    );
+                    // Extract text data from defaultPairTexts for this slice
+                    const usePairTexts = pairTexts || defaultPairTexts;
+                    const sliceTexts = usePairTexts[slice.pair as keyof typeof usePairTexts];
+                    
+                    if (sliceTexts) {
+                      const labels = slice.type === 'thesis' ? sliceTexts.thesis : sliceTexts.antithesis;
+                      
+                      return (
+                        <g 
+                          key={slice.id} 
+                          className={`slice-component ${slice.type}-slice focused-pair`}
+                          onClick={() => handleSliceClick(slice.pair)}
+                          onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
+                          onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <SliceAtAngle
+                            sliceData={{ labels: labels as [string, string][] }}
+                            sliceId={slice.id}
+                            angle={slice.angle}
+                            sliceAngle={slice.width}
+                            pairIndex={slice.pair}
+                            sliceType={slice.type}
+                            originalSliceIndex={slice.originalIndex}
+                          />
+                        </g>
+                      );
+                    }
                   }
                   
-                  // Handle simple slices (now with layered rings)
-                  const sliceData = createClickableSlice(slice.angle, slice.width, slice.label, slice.pair, slice.type);
+                  // Handle simple slices (now with layered rings) - use memoized data
+                  console.log(`📋 RENDER: Using memoized data for slice ${slice.id} (${slice.label})`);
+                  const sliceData = memoizedSliceData.get(slice.id);
+                  
+                  if (!sliceData) {
+                    console.warn('No memoized slice data found for slice:', slice.id);
+                    return null;
+                  }
                   
                   // Text color based on slice type (thesis = green, antithesis = red)
                   const textColor = slice.type === 'thesis' ? '#4CAF50' : '#F44336';

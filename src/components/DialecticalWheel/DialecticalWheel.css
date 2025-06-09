@@ -193,13 +193,13 @@
 }
 
 /* Different hover colors for thesis vs antithesis */
-.thesis-slice .clickable-slice:hover {
+/*.thesis-slice .clickable-slice:hover {
   stroke: rgba(76, 175, 80, 0.3);
 }
 
 .antithesis-slice .clickable-slice:hover {
   stroke: rgba(244, 67, 54, 0.3);
-}
+}*/
 
 .slice-boundary {
 }
