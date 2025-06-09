@@ -557,11 +557,15 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     }
 
     // Insert before the dynamic slice container so connections appear behind slices
-    const dynamicContainer = svgRef.current.querySelector('#dynamic-slice-container');
-    if (dynamicContainer) {
-      svgRef.current.insertBefore(line, dynamicContainer);
+    // Note: dynamicContainer is inside recordRef, not svgRef
+    const recordElement = recordRef.current;
+    const dynamicContainer = recordElement?.querySelector('#dynamic-slice-container');
+    if (recordElement && dynamicContainer) {
+      recordElement.insertBefore(line, dynamicContainer);
+    } else if (recordElement) {
+      recordElement.appendChild(line);
     } else {
-      svgRef.current.appendChild(line);
+      console.warn('Could not insert connection line: recordRef not available');
     }
   };
 
