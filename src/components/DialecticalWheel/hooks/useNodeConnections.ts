@@ -9,6 +9,18 @@ interface DemoConnection {
   label: string;
 }
 
+// New types for slice layer mapping
+type SliceLayerCode = string; // e.g., "T1", "T1+", "T1-", "A1", "A1+", "A1-"
+type LayerType = 'green' | 'white' | 'pink';
+type SliceType = 'thesis' | 'antithesis';
+
+interface SliceLayerMapping {
+  pairIndex: number;
+  sliceType: SliceType;
+  layerType: LayerType;
+  layerIndex: number;
+}
+
 export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
@@ -327,6 +339,161 @@ export const useNodeConnections = (
     createDemoConnections();
   }, [createDemoConnections]);
 
+  // NEW: Slice layer mapping functions
+  const parseSliceLayerCode = useCallback((code: SliceLayerCode): SliceLayerMapping | null => {
+    // Examples: "T1" -> Thesis pair 1, green layer
+    //          "T1+" -> Thesis pair 1, pink layer  
+    //          "T1-" -> Thesis pair 1, white layer
+    //          "A2" -> Antithesis pair 2, green layer
+    //          "A2+" -> Antithesis pair 2, pink layer
+    //          "A2-" -> Antithesis pair 2, white layer
+    
+    const match = code.match(/^([TA])(\d+)([+\-]?)$/);
+    if (!match) {
+      console.warn(`Invalid slice layer code: ${code}`);
+      return null;
+    }
+    
+    const [, typeChar, pairNum, modifier] = match;
+    const sliceType: SliceType = typeChar === 'T' ? 'thesis' : 'antithesis';
+    const pairIndex = parseInt(pairNum) - 1; // Convert 1-based to 0-based indexing
+    
+    // Determine layer type and index based on modifier
+    let layerType: LayerType;
+    let layerIndex: number;
+    
+    if (modifier === '+') {
+      layerType = 'pink';
+      layerIndex = 2;
+    } else if (modifier === '-') {
+      layerType = 'white';
+      layerIndex = 1;
+    } else {
+      layerType = 'green';
+      layerIndex = 0;
+    }
+    
+    return {
+      pairIndex,
+      sliceType,
+      layerType,
+      layerIndex
+    };
+  }, []);
+
+  const getNodeIdFromSliceLayerCode = useCallback((code: SliceLayerCode): string | null => {
+    const mapping = parseSliceLayerCode(code);
+    if (!mapping) return null;
+    
+    // Find the slice that matches the pair and type
+    const slice = dynamicSlices.find(s => 
+      s.pair === mapping.pairIndex && s.type === mapping.sliceType
+    );
+    
+    if (!slice) {
+      console.warn(`No slice found for pair ${mapping.pairIndex} type ${mapping.sliceType}`);
+      return null;
+    }
+    
+    // Construct the node ID based on the slice ID and layer index
+    // Format: slice-{originalIndex}-layer-{layerIndex} or {sliceId}-layer-{layerIndex}
+    const baseId = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
+    return `${baseId}-layer-${mapping.layerIndex}`;
+  }, [dynamicSlices, parseSliceLayerCode]);
+
+  const connectNodesBySliceLayerCode = useCallback((
+    fromCode: SliceLayerCode, 
+    toCode: SliceLayerCode, 
+    color = '#0074d9', 
+    strokeWidth = 2
+  ) => {
+    const fromNodeId = getNodeIdFromSliceLayerCode(fromCode);
+    const toNodeId = getNodeIdFromSliceLayerCode(toCode);
+    
+    if (!fromNodeId || !toNodeId) {
+      console.warn(`Cannot create connection ${fromCode} -> ${toCode}: node IDs not found`);
+      console.warn(`From: ${fromCode} -> ${fromNodeId}, To: ${toCode} -> ${toNodeId}`);
+      return null;
+    }
+    
+    console.log(`Creating connection: ${fromCode} (${fromNodeId}) -> ${toCode} (${toNodeId})`);
+    return connectNodes(fromNodeId, toNodeId, color, strokeWidth);
+  }, [getNodeIdFromSliceLayerCode, connectNodes]);
+
+  const getAvailableSliceLayerCodes = useCallback((): SliceLayerCode[] => {
+    const codes: SliceLayerCode[] = [];
+    
+    // Group slices by pair to ensure we have complete pairs
+    const pairGroups: { [pairIndex: number]: { thesis?: DynamicSlice, antithesis?: DynamicSlice } } = {};
+    
+    dynamicSlices.forEach(slice => {
+      if (!pairGroups[slice.pair]) {
+        pairGroups[slice.pair] = {};
+      }
+      pairGroups[slice.pair][slice.type] = slice;
+    });
+    
+    // Generate codes for each complete pair
+    Object.entries(pairGroups).forEach(([pairIndexStr, pair]) => {
+      const pairIndex = parseInt(pairIndexStr);
+      const pairNumber = pairIndex + 1; // Convert to 1-based for codes
+      
+      if (pair.thesis) {
+        codes.push(`T${pairNumber}`);   // Green layer
+        codes.push(`T${pairNumber}-`);  // White layer
+        codes.push(`T${pairNumber}+`);  // Pink layer
+      }
+      
+      if (pair.antithesis) {
+        codes.push(`A${pairNumber}`);   // Green layer
+        codes.push(`A${pairNumber}-`);  // White layer
+        codes.push(`A${pairNumber}+`);  // Pink layer
+      }
+    });
+    
+    return codes.sort();
+  }, [dynamicSlices]);
+
+  // Demo function to show slice layer mapping in action
+  const createSliceLayerMappingDemo = useCallback(() => {
+    // Give the DOM a moment to render the nodes
+    setTimeout(() => {
+      console.log('=== Slice Layer Mapping Demo ===');
+      
+      const availableCodes = getAvailableSliceLayerCodes();
+      console.log('Available slice layer codes:', availableCodes);
+      
+      // Example connections using the new mapping system
+      const exampleConnections = [
+        { from: 'T1', to: 'A1+', color: '#FF6B35', label: 'T1 Green → A1 Pink' },
+        { from: 'T1-', to: 'T2', color: '#2196F3', label: 'T1 White → T2 Green' },
+        { from: 'A1', to: 'T2+', color: '#9C27B0', label: 'A1 Green → T2 Pink' }
+      ];
+      
+      // Clear existing demo connections
+      const existingConnections = document.querySelectorAll('.slice-layer-demo-connection');
+      existingConnections.forEach(conn => conn.remove());
+      
+      // Create example connections
+      exampleConnections.forEach(conn => {
+        if (availableCodes.includes(conn.from) && availableCodes.includes(conn.to)) {
+          const arrow = connectNodesBySliceLayerCode(conn.from, conn.to, conn.color, 2);
+          if (arrow) {
+            arrow.classList.add('slice-layer-demo-connection');
+            arrow.setAttribute('data-demo-label', conn.label);
+            console.log(`✅ Created: ${conn.label}`);
+          } else {
+            console.warn(`❌ Failed to create: ${conn.label}`);
+          }
+        } else {
+          console.warn(`❌ Skipped ${conn.label}: codes not available`);
+        }
+      });
+      
+      console.log('=== Demo Complete ===');
+    }, 1000);
+  }, [getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+
   // Expose helper functions for external use (if needed)
   const nodeAPI = {
     getAllLayerNodes,
@@ -348,8 +515,17 @@ export const useNodeConnections = (
     createDemoConnections,
     
     // Node API
-    nodeAPI
+    nodeAPI,
+    
+    // NEW: Slice layer mapping API
+    sliceLayerAPI: {
+      parseSliceLayerCode,
+      getNodeIdFromSliceLayerCode,
+      connectNodesBySliceLayerCode,
+      getAvailableSliceLayerCodes,
+      createSliceLayerMappingDemo
+    }
   };
 };
 
-export type { DemoConnection }; 
+export type { DemoConnection, SliceLayerCode, SliceLayerMapping, LayerType, SliceType }; 
