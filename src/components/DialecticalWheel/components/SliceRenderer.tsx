@@ -1,5 +1,6 @@
 import React from 'react';
 import { SliceAtAngle, defaultPairTexts } from '../../../utils/SliceGenerator';
+import { COLORS, DIMENSIONS, STROKES } from '../config/wheelConfig';
 import type { PairTexts } from '../hooks';
 
 interface SliceRendererProps {
@@ -78,7 +79,7 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
           }
           
           // Text color based on slice type (thesis = green, antithesis = red)
-          const textColor = slice.type === 'thesis' ? '#4CAF50' : '#F44336';
+          const textColor = slice.type === 'thesis' ? COLORS.THESIS : COLORS.ANTITHESIS;
           
           return (
             <g key={slice.id} className={`equal-slice ${slice.type}-slice`}>
@@ -109,21 +110,21 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
               })}
               {/* Slice boundary lines */}
               <line 
-                x1="200" 
-                y1="200" 
-                x2={200 + 150 * Math.cos((slice.angle - slice.width/2) * Math.PI / 180)} 
-                y2={200 + 150 * Math.sin((slice.angle - slice.width/2) * Math.PI / 180)} 
-                stroke="#888" 
-                strokeWidth="1"
+                x1={DIMENSIONS.CENTER_X} 
+                y1={DIMENSIONS.CENTER_Y} 
+                x2={DIMENSIONS.CENTER_X + DIMENSIONS.RADIUS * Math.cos((slice.angle - slice.width/2) * Math.PI / 180)} 
+                y2={DIMENSIONS.CENTER_Y + DIMENSIONS.RADIUS * Math.sin((slice.angle - slice.width/2) * Math.PI / 180)} 
+                stroke={COLORS.BOUNDARY_LINES} 
+                strokeWidth={STROKES.BOUNDARY_WIDTH}
                 pointerEvents="none"
               />
               <line 
-                x1="200" 
-                y1="200" 
-                x2={200 + 150 * Math.cos((slice.angle + slice.width/2) * Math.PI / 180)} 
-                y2={200 + 150 * Math.sin((slice.angle + slice.width/2) * Math.PI / 180)} 
-                stroke="#888" 
-                strokeWidth="1"
+                x1={DIMENSIONS.CENTER_X} 
+                y1={DIMENSIONS.CENTER_Y} 
+                x2={DIMENSIONS.CENTER_X + DIMENSIONS.RADIUS * Math.cos((slice.angle + slice.width/2) * Math.PI / 180)} 
+                y2={DIMENSIONS.CENTER_Y + DIMENSIONS.RADIUS * Math.sin((slice.angle + slice.width/2) * Math.PI / 180)} 
+                stroke={COLORS.BOUNDARY_LINES} 
+                strokeWidth={STROKES.BOUNDARY_WIDTH}
                 pointerEvents="none"
               />
               {/* Text label with thesis/antithesis color */}

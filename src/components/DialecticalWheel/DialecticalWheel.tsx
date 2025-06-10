@@ -11,6 +11,7 @@ import {
   PairTexts 
 } from './hooks';
 import { WheelControls, WheelOverlays, RotationHints, SvgMarkers, SliceRenderer } from './components';
+import { DIMENSIONS, COLORS, TYPOGRAPHY, LAYOUT, DEFAULTS } from './config/wheelConfig';
 
 // Type definitions
 interface DialecticalWheelProps {
@@ -24,9 +25,9 @@ interface DialecticalWheelProps {
 }
 
 const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
-  numPairs = 4, 
-  title = "Win-Win",
-  centerLabel = "Core",
+  numPairs = DEFAULTS.NUM_PAIRS, 
+  title = DEFAULTS.TITLE,
+  centerLabel = DEFAULTS.CENTER_LABEL,
   sliceSequence = null,
   fullSequence = null,
   detailedSlices = {},
@@ -74,7 +75,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
         <div className="wheel-container">
           <svg 
             className="wheel-svg" 
-            viewBox="0 0 400 400"
+            viewBox={LAYOUT.SVG_VIEWBOX}
             {...interaction.svgProps}
           >
             <g ref={interaction.recordRef} className="record">
@@ -94,11 +95,11 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
               <RotationHints />
 
               {/* Center circle */}
-              <circle cx="200" cy="200" r="30" fill="#FFC107"/>
+              <circle cx={DIMENSIONS.CENTER_X} cy={DIMENSIONS.CENTER_Y} r={DIMENSIONS.CENTER_CIRCLE_RADIUS} fill={COLORS.CENTER_CIRCLE}/>
               <text 
-                x="200" 
-                y="200" 
-                fontSize="16" 
+                x={DIMENSIONS.CENTER_X} 
+                y={DIMENSIONS.CENTER_Y} 
+                fontSize={TYPOGRAPHY.CENTER_LABEL} 
                 fontWeight="bold" 
                 textAnchor="middle" 
                 dominantBaseline="middle"

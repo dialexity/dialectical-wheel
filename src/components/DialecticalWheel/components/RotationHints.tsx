@@ -1,14 +1,8 @@
 import React from 'react';
+import { ANIMATION, DIMENSIONS, COLORS } from '../config/wheelConfig';
 
 const RotationHints: React.FC = () => {
-  const ripples = [
-    { radius: 160, opacity: 0.7, strokeWidth: 2, dashArray: "8 4", duration: "6s", direction: 1 },
-    { radius: 170, opacity: 0.6, strokeWidth: 1.5, dashArray: "4 8", duration: "8s", direction: 1 },
-    { radius: 180, opacity: 0.5, strokeWidth: 2, dashArray: "2 4", duration: "12s", direction: -1 },
-    { radius: 190, opacity: 0.4, strokeWidth: 1, dashArray: "6 3", duration: "10s", direction: 1 },
-    { radius: 200, opacity: 0.3, strokeWidth: 1.5, dashArray: "3 6", duration: "15s", direction: -1 },
-    { radius: 210, opacity: 0.2, strokeWidth: 1, dashArray: "5 2", duration: "18s", direction: 1 }
-  ];
+  const ripples = ANIMATION.ROTATION_HINTS;
 
   return (
     <g className="rotation-hints" opacity="0.8">
@@ -16,11 +10,11 @@ const RotationHints: React.FC = () => {
       {ripples.map((ripple, index) => (
         <circle 
           key={index}
-          cx="200" 
-          cy="200" 
+          cx={DIMENSIONS.CENTER_X} 
+          cy={DIMENSIONS.CENTER_Y} 
           r={ripple.radius} 
           fill="none" 
-          stroke="#007AFF" 
+          stroke={COLORS.PRIMARY_BLUE} 
           strokeWidth={ripple.strokeWidth} 
           strokeDasharray={ripple.dashArray}
           opacity={ripple.opacity}
@@ -29,8 +23,8 @@ const RotationHints: React.FC = () => {
             attributeName="transform"
             attributeType="XML"
             type="rotate"
-            from="0 200 200"
-            to={`${ripple.direction * 360} 200 200`}
+            from={`0 ${DIMENSIONS.CENTER_X} ${DIMENSIONS.CENTER_Y}`}
+            to={`${ripple.direction * 360} ${DIMENSIONS.CENTER_X} ${DIMENSIONS.CENTER_Y}`}
             dur={ripple.duration}
             repeatCount="indefinite"
           />

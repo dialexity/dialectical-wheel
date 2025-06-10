@@ -1,89 +1,44 @@
 import React from 'react';
+import { MARKERS } from '../config/wheelConfig';
 
 const SvgMarkers: React.FC = () => {
+  const { ROTATION_ARROW, ARROWHEADS, ARROWHEAD_DIMENSIONS } = MARKERS;
+  
   return (
     <defs>
       {/* Rotation hint arrowheads */}
       <marker
-        id="rotation-arrow"
-        markerWidth="8"
-        markerHeight="6"
-        refX="8"
-        refY="3"
+        id={ROTATION_ARROW.id}
+        markerWidth={ROTATION_ARROW.width}
+        markerHeight={ROTATION_ARROW.height}
+        refX={ROTATION_ARROW.refX}
+        refY={ROTATION_ARROW.refY}
         orient="auto"
       >
         <polygon
-          points="0 0, 8 3, 0 6"
-          fill="#007AFF"
-          fillOpacity="0.6"
+          points={`0 0, ${ROTATION_ARROW.width} ${ROTATION_ARROW.refY}, 0 ${ROTATION_ARROW.height}`}
+          fill={ROTATION_ARROW.color}
+          fillOpacity={ROTATION_ARROW.opacity}
         />
       </marker>
       
-      <marker
-        id="arrowhead"
-        markerWidth="6"
-        markerHeight="4"
-        refX="6"
-        refY="2"
-        orient="auto"
-      >
-        <polygon
-          points="0 0, 6 2, 0 4"
-          fill="#0074d9"
-        />
-      </marker>
-      <marker
-        id="arrowhead-orange"
-        markerWidth="6"
-        markerHeight="4"
-        refX="6"
-        refY="2"
-        orient="auto"
-      >
-        <polygon
-          points="0 0, 6 2, 0 4"
-          fill="#FF6B35"
-        />
-      </marker>
-      <marker
-        id="arrowhead-blue"
-        markerWidth="6"
-        markerHeight="4"
-        refX="6"
-        refY="2"
-        orient="auto"
-      >
-        <polygon
-          points="0 0, 6 2, 0 4"
-          fill="#2196F3"
-        />
-      </marker>
-      <marker
-        id="arrowhead-purple"
-        markerWidth="6"
-        markerHeight="4"
-        refX="6"
-        refY="2"
-        orient="auto"
-      >
-        <polygon
-          points="0 0, 6 2, 0 4"
-          fill="#9C27B0"
-        />
-      </marker>
-      <marker
-        id="arrowhead-green"
-        markerWidth="6"
-        markerHeight="4"
-        refX="6"
-        refY="2"
-        orient="auto"
-      >
-        <polygon
-          points="0 0, 6 2, 0 4"
-          fill="#4CAF50"
-        />
-      </marker>
+      {/* Dynamic arrowhead markers */}
+      {ARROWHEADS.map((arrow) => (
+        <marker
+          key={arrow.id}
+          id={arrow.id}
+          markerWidth={ARROWHEAD_DIMENSIONS.width}
+          markerHeight={ARROWHEAD_DIMENSIONS.height}
+          refX={ARROWHEAD_DIMENSIONS.refX}
+          refY={ARROWHEAD_DIMENSIONS.refY}
+          orient="auto"
+        >
+          <polygon
+            points={`0 0, ${ARROWHEAD_DIMENSIONS.width} ${ARROWHEAD_DIMENSIONS.refY}, 0 ${ARROWHEAD_DIMENSIONS.height}`}
+            fill={arrow.color}
+          />
+        </marker>
+      ))}
     </defs>
   );
 };

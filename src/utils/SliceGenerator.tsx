@@ -1,4 +1,5 @@
 import React from 'react';
+import { COLORS, DIMENSIONS, SLICES, TYPOGRAPHY, STROKES } from '../components/DialecticalWheel/config/wheelConfig';
 
 // Type definitions
 interface LayerNode {
@@ -95,10 +96,10 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
   sliceData,
   sliceId,
   angle = 0,
-  cx = 200,
-  cy = 200,
-  radius = 150,
-  sliceAngle = 120,
+  cx = DIMENSIONS.CENTER_X,
+  cy = DIMENSIONS.CENTER_Y,
+  radius = DIMENSIONS.RADIUS,
+  sliceAngle = SLICES.DEFAULT_ANGLE,
   layerColors = null,
   fontSizes = null,
   showBoundaries = true,
@@ -109,19 +110,17 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
   const { labels } = sliceData;
   const nLabels = labels.length;
   
-  const defaultLayerColors = ['#C6E5B3', '#FFFFFF', '#F9C6CC']; // green, white, pink
-  const defaultFontSizes = [8, 10, 14];
-  const colors = layerColors || defaultLayerColors;
-  const fonts = fontSizes || defaultFontSizes;
+  const colors = layerColors || COLORS.LAYER_COLORS;
+  const fonts = fontSizes || TYPOGRAPHY.SLICE_LAYERS;
   
   const halfAngle = sliceAngle / 2;
   
   // Generate layer elements (rings)
   const layerElements: JSX.Element[] = [];
   
-  for (let layer = 0; layer < nLabels; layer++) {
-    const innerRadius = radius * (0.3 + 0.7 * layer / nLabels);
-    const outerRadius = radius * (0.3 + 0.7 * (layer + 1) / nLabels);
+      for (let layer = 0; layer < nLabels; layer++) {
+    const innerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * layer / nLabels);
+    const outerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * (layer + 1) / nLabels);
     const color = colors[layer % colors.length];
     
     const startAngleRad = toRadians(angle - halfAngle);
@@ -251,8 +250,8 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
         y1={cy}
         x2={boundaryX1}
         y2={boundaryY1}
-        stroke="#888"
-        strokeWidth="1"
+        stroke={COLORS.BOUNDARY_LINES}
+        strokeWidth={STROKES.BOUNDARY_WIDTH}
       />,
       <line
         key={`${sliceId}-boundary-2`}
@@ -260,8 +259,8 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
         y1={cy}
         x2={boundaryX2}
         y2={boundaryY2}
-        stroke="#888"
-        strokeWidth="1"
+        stroke={COLORS.BOUNDARY_LINES}
+        strokeWidth={STROKES.BOUNDARY_WIDTH}
       />
     );
   }
@@ -280,8 +279,8 @@ export const DetailedSlice: React.FC<{
   texts: string[];
   sliceId: string;
   debugColor?: string;
-}> = ({ texts, sliceId, debugColor = '#888' }) => {
-  const centerX = 200, centerY = 200;
+}> = ({ texts, sliceId, debugColor = COLORS.BOUNDARY_LINES }) => {
+  const centerX = DIMENSIONS.CENTER_X, centerY = DIMENSIONS.CENTER_Y;
   const startAngle = -60;
   const endAngle = 60;
   
@@ -289,9 +288,9 @@ export const DetailedSlice: React.FC<{
   const endRad = toRadians(endAngle);
   
   const ringRadii = [
-    { inner: 45, outer: 80, fill: '#C6E5B3' },   // Inner ring - green
-    { inner: 80, outer: 115, fill: '#FFFFFF' },  // Middle ring - white  
-    { inner: 115, outer: 150, fill: '#F9C6CC' }  // Outer ring - pink
+    { inner: 45, outer: 80, fill: COLORS.LAYER_COLORS[0] },   // Inner ring - green
+    { inner: 80, outer: 115, fill: COLORS.LAYER_COLORS[1] },  // Middle ring - white  
+    { inner: 115, outer: 150, fill: COLORS.LAYER_COLORS[2] }  // Outer ring - pink
   ];
   
   const pathElements: JSX.Element[] = [];
