@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import './DialecticalWheel.css';
-import { defaultPairTexts, SliceAtAngle } from '../../utils/SliceGenerator';
+import { defaultPairTexts } from '../../utils/SliceGenerator';
 import { 
   useWheelSequence, 
   useWheelInteraction, 
@@ -10,7 +10,7 @@ import {
   DetailedSlices,
   PairTexts 
 } from './hooks';
-import { WheelControls, WheelOverlays, RotationHints } from './components';
+import { WheelControls, WheelOverlays, RotationHints, SvgMarkers, SliceRenderer } from './components';
 
 // Type definitions
 interface DialecticalWheelProps {
@@ -78,211 +78,17 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
             {...interaction.svgProps}
           >
             <g ref={interaction.recordRef} className="record">
-              <defs>
-                {/* Rotation hint arrowheads */}
-                <marker
-                  id="rotation-arrow"
-                  markerWidth="8"
-                  markerHeight="6"
-                  refX="8"
-                  refY="3"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 8 3, 0 6"
-                    fill="#007AFF"
-                    fillOpacity="0.6"
-                  />
-                </marker>
-                
-                <marker
-                  id="arrowhead"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="6"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="#0074d9"
-                  />
-                </marker>
-                <marker
-                  id="arrowhead-orange"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="6"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="#FF6B35"
-                  />
-                </marker>
-                <marker
-                  id="arrowhead-blue"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="6"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="#2196F3"
-                  />
-                </marker>
-                <marker
-                  id="arrowhead-purple"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="6"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="#9C27B0"
-                  />
-                </marker>
-                <marker
-                  id="arrowhead-green"
-                  markerWidth="6"
-                  markerHeight="4"
-                  refX="6"
-                  refY="2"
-                  orient="auto"
-                >
-                  <polygon
-                    points="0 0, 6 2, 0 4"
-                    fill="#4CAF50"
-                  />
-                </marker>
-              </defs>
+              <SvgMarkers />
               
-              {/* Static slice components from Python-generated SVG (hidden when dynamic slices active) */}
-              <g id="slice-container" style={{ display: 'none' }}>
-                {/* These would be the detailed slices from the Python SVG output */}
-              </g>
-              
-              {/* Dynamic slices (like the JavaScript createClickableSlice output) */}
-              <g id="dynamic-slice-container">
-                {slices.dynamicSlices.map((slice) => {
-                  console.log('Rendering slice:', slice.id, 'type:', slice.type, 'detailed:', slice.detailed, 'angle:', slice.angle);
-                  
-                  // Handle detailed slices differently - use React component directly
-                  if (slice.detailed) {
-                    console.log('Detailed slice transform:', `rotate(${slice.angle} 200 200)`);
-                    console.log('Detailed slice pair:', slice.pair, 'type:', slice.type);
-                    
-                    // Extract text data from defaultPairTexts for this slice
-                    const usePairTexts = pairTexts || defaultPairTexts;
-                    const sliceTexts = usePairTexts[slice.pair as keyof typeof usePairTexts];
-                    
-                    if (sliceTexts) {
-                      const labels = slice.type === 'thesis' ? sliceTexts.thesis : sliceTexts.antithesis;
-                      
-                      return (
-                        <g 
-                          key={slice.id} 
-                          className={`slice-component ${slice.type}-slice focused-pair`}
-                          onClick={() => slices.handleSliceClick(slice.pair)}
-                          onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
-                          onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <SliceAtAngle
-                            sliceData={{ labels: labels as [string, string][] }}
-                            sliceId={slice.id}
-                            angle={slice.angle}
-                            sliceAngle={slice.width}
-                            pairIndex={slice.pair}
-                            sliceType={slice.type}
-                            originalSliceIndex={slice.originalIndex}
-                          />
-                        </g>
-                      );
-                    }
-                  }
-                  
-                  // Handle simple slices (now with layered rings) - use memoized data
-                  console.log(`📋 RENDER: Using memoized data for slice ${slice.id} (${slice.label})`);
-                  const sliceData = slices.memoizedSliceData.get(slice.id);
-                  
-                  if (!sliceData) {
-                    console.warn('No memoized slice data found for slice:', slice.id);
-                    return null;
-                  }
-                  
-                  // Text color based on slice type (thesis = green, antithesis = red)
-                  const textColor = slice.type === 'thesis' ? '#4CAF50' : '#F44336';
-                  
-                  return (
-                    <g key={slice.id} className={`equal-slice ${slice.type}-slice`}>
-                      {/* Render layered rings */}
-                                             {sliceData.layers.map((layer: { pathD: string; fill: string }, layerIndex: number) => {
-                        // Use original index for node IDs if available, otherwise use current slice ID
-                        const nodeIdBase = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
-                        const nodeId = `${nodeIdBase}-layer-${layerIndex}`;
-                        
-                        return (
-                          <path
-                            key={`${slice.id}-layer-${layerIndex}`}
-                            d={layer.pathD}
-                            fill={layer.fill}
-                            className="clickable-slice layer-node"
-                            data-node-id={nodeId}
-                            data-slice-id={nodeIdBase}
-                            data-pair-index={slice.pair}
-                            data-slice-type={slice.type}
-                            data-layer-index={layerIndex}
-                            data-layer-type={layerIndex === 0 ? 'green' : layerIndex === 1 ? 'white' : 'pink'}
-                            onClick={() => slices.handleSliceClick(slice.pair)}
-                            onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
-                            onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                        );
-                      })}
-                      {/* Slice boundary lines */}
-                      <line 
-                        x1="200" 
-                        y1="200" 
-                        x2={200 + 150 * Math.cos((slice.angle - slice.width/2) * Math.PI / 180)} 
-                        y2={200 + 150 * Math.sin((slice.angle - slice.width/2) * Math.PI / 180)} 
-                        stroke="#888" 
-                        strokeWidth="1"
-                        pointerEvents="none"
-                      />
-                      <line 
-                        x1="200" 
-                        y1="200" 
-                        x2={200 + 150 * Math.cos((slice.angle + slice.width/2) * Math.PI / 180)} 
-                        y2={200 + 150 * Math.sin((slice.angle + slice.width/2) * Math.PI / 180)} 
-                        stroke="#888" 
-                        strokeWidth="1"
-                        pointerEvents="none"
-                      />
-                      {/* Text label with thesis/antithesis color */}
-                      <text
-                        x={sliceData.textX}
-                        y={sliceData.textY}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize={sliceData.fontSize}
-                        fontWeight="bold"
-                        fill={textColor}
-                        pointerEvents="none"
-                        transform={`rotate(${-interaction.rotation} ${sliceData.textX} ${sliceData.textY})`}
-                      >
-                        {sliceData.label}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
+              <SliceRenderer
+                dynamicSlices={slices.dynamicSlices}
+                memoizedSliceData={slices.memoizedSliceData}
+                handleSliceClick={slices.handleSliceClick}
+                handleSliceTouchStart={handleSliceTouchStart}
+                handleSliceTouchEnd={handleSliceTouchEnd}
+                rotation={interaction.rotation}
+                pairTexts={pairTexts}
+              />
               
               {/* Rotation hint ripples */}
               <RotationHints />
