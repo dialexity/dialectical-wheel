@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   generatePairTextsFromWisdomUnits 
-} from '../utils/sliceGenerator';
+} from '../utils/SliceGenerator';
 
 // API service for the dialectical wheel API
 export class WisdomService {

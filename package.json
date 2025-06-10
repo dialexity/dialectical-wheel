@@ -17,7 +17,9 @@
     "dev": "rollup -c -w",
     "postinstall": "npm run build",
     "test": "jest",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist"
   },
   "keywords": [
     "react",
@@ -41,11 +43,14 @@
     "react-dom": ">=16.8.0"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^7.27.1",
+    "@rollup/plugin-typescript": "^12.1.2",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "eslint": "^8.50.0",
     "eslint-plugin-react": "^7.33.0",
     "jest": "^29.0.0",
+    "tslib": "^2.8.1",
     "typescript": "^5.0.0"
   },
   "dependencies": {
@@ -59,4 +64,4 @@
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-postcss": "^4.0.2"
   }
-} 
+}

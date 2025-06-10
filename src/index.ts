@@ -13,15 +13,13 @@ export {
 
 // Export all utilities
 export { 
-  createSliceAtAngle,
-  generateWheelFromWisdomUnits,
-  createThesisAntithesisWheel,
-  createWisdomUnit,
-  createComponent,
+  SliceAtAngle,
   generatePairTextsFromWisdomUnits,
-  generateDetailedSlice,
   defaultPairTexts
 } from './utils';
+
+// Export types
+export * from './types';
 
 // Default export for convenience
 export { DialecticalWheel as default } from './components'; 
