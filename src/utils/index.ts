@@ -1,2 +1,2 @@
 // Export all utility functions
-export * from './sliceGenerator'; 
+export * from './SliceGenerator'; 

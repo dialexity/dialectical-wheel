@@ -393,5 +393,83 @@ export const DetailedSlice: React.FC<{
   );
 };
 
-// Export the same data structures for compatibility
-export { defaultPairTexts } from './sliceGenerator.js'; 
+// Function to generate pair texts from WisdomUnits (for compatibility with existing code)
+export const generatePairTextsFromWisdomUnits = (wisdomUnits: any[]) => {
+  const pairTexts: Record<number, any> = {};
+  
+  wisdomUnits.forEach((wu, index) => {
+    // Generate thesis labels
+    const thesisLabels = [];
+    if (wu.tPlus && wu.tPlus.statement) thesisLabels.push([wu.tPlus.statement, 'green']);
+    if (wu.t && wu.t.statement) thesisLabels.push([wu.t.statement, 'black']);
+    if (wu.tMinus && wu.tMinus.statement) thesisLabels.push([wu.tMinus.statement, 'red']);
+    
+    // Generate antithesis labels
+    const antithesisLabels = [];
+    if (wu.aPlus && wu.aPlus.statement) antithesisLabels.push([wu.aPlus.statement, 'green']);
+    if (wu.a && wu.a.statement) antithesisLabels.push([wu.a.statement, 'black']);
+    if (wu.aMinus && wu.aMinus.statement) antithesisLabels.push([wu.aMinus.statement, 'red']);
+    
+    // Only add if we have both sides
+    if (thesisLabels.length > 0 && antithesisLabels.length > 0) {
+      pairTexts[index] = {
+        thesis: thesisLabels,
+        antithesis: antithesisLabels
+      };
+    }
+  });
+  
+  return pairTexts;
+};
+
+// Default pair texts data (moved here to avoid circular dependencies)
+export const defaultPairTexts = {
+  0: {
+    thesis: [
+      ['Strategic power projection', 'green'],
+      ['Putin initiates war', 'black'], 
+      ['Destructive aggression', 'red']
+    ],
+    antithesis: [
+      ['Mutual understanding', 'green'],
+      ['Peace negotiations', 'black'],
+      ['Passive submission', 'red']
+    ]
+  },
+  1: {
+    thesis: [
+      ['Liberation and sovereignty protected', 'green'],
+      ['Ukraine resists invasion', 'black'],
+      ['Endless conflict and destruction', 'red']
+    ],
+    antithesis: [
+      ['Immediate peace achieved', 'green'],
+      ['Ukraine surrenders to invasion', 'black'],
+      ['Freedom and independence lost', 'red']
+    ]
+  },
+  2: {
+    thesis: [
+      ['Ukrainian victory approaches', 'green'],
+      ['Russian offensive weakens', 'black'],
+      ['Military resources drain rapidly', 'red']
+    ],
+    antithesis: [
+      ['Strategic military strength maintained', 'green'],
+      ['Russian military dominance persists', 'black'],
+      ['Total defeat inevitable', 'red']
+    ]
+  },
+  3: {
+    thesis: [
+      ['Freedom restored', 'green'],
+      ['Ukrainian victory approaches', 'black'],
+      ['Vengeance intensifies', 'red']
+    ],
+    antithesis: [
+      ['Stability maintained', 'green'],
+      ['Russian dominance persists', 'black'],
+      ['Oppression deepens', 'red']
+    ]
+  }
+}; 
