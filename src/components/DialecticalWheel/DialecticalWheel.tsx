@@ -10,6 +10,7 @@ import {
   DetailedSlices,
   PairTexts 
 } from './hooks';
+import { WheelControls, WheelOverlays, RotationHints } from './components';
 
 // Type definitions
 interface DialecticalWheelProps {
@@ -65,26 +66,10 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   return (
     <div className="dialectical-wheel-container">
       <div className="main-content" style={{ paddingTop: '0' }}>
-        <div className="controls-overlay">
-          Drag to rotate • Pinch to zoom • Tap thesis/antithesis pairs to see opposition clearly
-        </div>
-        
-        {/* Floating top half zoom toggle button */}
-        <button 
-          className={`floating-q2-btn ${interaction.isZoomedToQ2 ? 'zoomed' : ''}`} 
-          onClick={interaction.toggleTopHalfZoom}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-            {interaction.isZoomedToQ2 ? (
-              <path d="M8 13l2-2-2-2"/>
-            ) : (
-              <path d="M8 9l-2 2 2 2"/>
-            )}
-          </svg>
-          {interaction.isZoomedToQ2 ? 'Out' : 'Top'}
-        </button>
+        <WheelOverlays
+          isZoomedToQ2={interaction.isZoomedToQ2}
+          onToggleTopHalfZoom={interaction.toggleTopHalfZoom}
+        />
         
         <div className="wheel-container">
           <svg 
@@ -300,39 +285,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
               </g>
               
               {/* Rotation hint ripples */}
-              <g className="rotation-hints" opacity="0.8">
-                {/* Multiple concentric ripples with different speeds and patterns */}
-                {[
-                  { radius: 160, opacity: 0.7, strokeWidth: 2, dashArray: "8 4", duration: "6s", direction: 1 },
-                  { radius: 170, opacity: 0.6, strokeWidth: 1.5, dashArray: "4 8", duration: "8s", direction: 1 },
-                  { radius: 180, opacity: 0.5, strokeWidth: 2, dashArray: "2 4", duration: "12s", direction: -1 },
-                  { radius: 190, opacity: 0.4, strokeWidth: 1, dashArray: "6 3", duration: "10s", direction: 1 },
-                  { radius: 200, opacity: 0.3, strokeWidth: 1.5, dashArray: "3 6", duration: "15s", direction: -1 },
-                  { radius: 210, opacity: 0.2, strokeWidth: 1, dashArray: "5 2", duration: "18s", direction: 1 }
-                ].map((ripple, index) => (
-                  <circle 
-                    key={index}
-                    cx="200" 
-                    cy="200" 
-                    r={ripple.radius} 
-                    fill="none" 
-                    stroke="#007AFF" 
-                    strokeWidth={ripple.strokeWidth} 
-                    strokeDasharray={ripple.dashArray}
-                    opacity={ripple.opacity}
-                  >
-                    <animateTransform
-                      attributeName="transform"
-                      attributeType="XML"
-                      type="rotate"
-                      from="0 200 200"
-                      to={`${ripple.direction * 360} 200 200`}
-                      dur={ripple.duration}
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                ))}
-              </g>
+              <RotationHints />
 
               {/* Center circle */}
               <circle cx="200" cy="200" r="30" fill="#FFC107"/>
@@ -351,32 +304,11 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
         </div>
       </div>
       
-      <div className="bottom-bar">
-        <button className="bottom-btn">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="16"/>
-            <line x1="8" y1="12" x2="16" y2="12"/>
-          </svg>
-          Enrich
-        </button>
-
-        <button className="bottom-btn" onClick={connections.toggleArrows}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={connections.showArrows ? "#0074d9" : "#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="7" y1="7" x2="17" y2="17"/>
-            <polyline points="17,7 17,17 7,17"/>
-          </svg>
-          {connections.showArrows ? 'Hide' : 'Show'} Arrows
-        </button>
-        
-        <button className="bottom-btn" onClick={slices.reset}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0074d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          Reset
-        </button>
-      </div>
+      <WheelControls
+        showArrows={connections.showArrows}
+        onToggleArrows={connections.toggleArrows}
+        onReset={slices.reset}
+      />
     </div>
   );
 };
