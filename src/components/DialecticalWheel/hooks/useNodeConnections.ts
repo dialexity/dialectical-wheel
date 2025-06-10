@@ -21,6 +21,26 @@ interface SliceLayerMapping {
   layerIndex: number;
 }
 
+// NEW: DOT Script types
+interface DotEdgeAttributes {
+  color?: string;
+  weight?: number;
+  strokeWidth?: number;
+  label?: string;
+  style?: 'solid' | 'dashed' | 'dotted';
+}
+
+interface DotEdge {
+  from: SliceLayerCode;
+  to: SliceLayerCode;
+  attributes: DotEdgeAttributes;
+}
+
+interface DotScriptParseResult {
+  edges: DotEdge[];
+  errors: string[];
+}
+
 export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
@@ -454,6 +474,162 @@ export const useNodeConnections = (
     return codes.sort();
   }, [dynamicSlices]);
 
+  // NEW: DOT Script parsing and execution
+  const parseDotScript = useCallback((dotScript: string): DotScriptParseResult => {
+    const edges: DotEdge[] = [];
+    const errors: string[] = [];
+    
+    // Remove comments and clean up the script
+    const cleanScript = dotScript
+      .split('\n')
+      .map(line => line.replace(/\/\/.*$/, '').trim()) // Remove // comments
+      .filter(line => line.length > 0) // Remove empty lines
+      .join('\n');
+    
+    // Regex to match edge definitions: nodeA -> nodeB [attributes]
+    const edgeRegex = /([A-Z]\d+[+\-]?)\s*->\s*([A-Z]\d+[+\-]?)(?:\s*\[(.*?)\])?/g;
+    
+    let match;
+    while ((match = edgeRegex.exec(cleanScript)) !== null) {
+      const [, fromNode, toNode, attributesStr] = match;
+      
+      // Validate node codes
+      const fromMapping = parseSliceLayerCode(fromNode);
+      const toMapping = parseSliceLayerCode(toNode);
+      
+      if (!fromMapping) {
+        errors.push(`Invalid from node: ${fromNode}`);
+        continue;
+      }
+      
+      if (!toMapping) {
+        errors.push(`Invalid to node: ${toNode}`);
+        continue;
+      }
+      
+      // Parse attributes
+      const attributes: DotEdgeAttributes = {};
+      if (attributesStr) {
+        // Parse attribute string: color=red, weight=3, label="my label"
+        const attrRegex = /(\w+)\s*=\s*([^,]+)/g;
+        let attrMatch;
+        while ((attrMatch = attrRegex.exec(attributesStr)) !== null) {
+          const [, key, value] = attrMatch;
+          const cleanValue = value.replace(/["']/g, '').trim();
+          
+          switch (key.toLowerCase()) {
+            case 'color':
+              attributes.color = cleanValue;
+              break;
+            case 'weight':
+            case 'strokewidth':
+              attributes.strokeWidth = parseInt(cleanValue) || 2;
+              break;
+            case 'label':
+              attributes.label = cleanValue;
+              break;
+            case 'style':
+              if (['solid', 'dashed', 'dotted'].includes(cleanValue)) {
+                attributes.style = cleanValue as 'solid' | 'dashed' | 'dotted';
+              }
+              break;
+            default:
+              console.warn(`Unknown attribute: ${key}`);
+          }
+        }
+      }
+      
+      edges.push({
+        from: fromNode,
+        to: toNode,
+        attributes
+      });
+    }
+    
+    return { edges, errors };
+  }, [parseSliceLayerCode]);
+  
+  const executeDotScript = useCallback((dotScript: string, clearExisting = true): { 
+    success: boolean; 
+    created: number; 
+    errors: string[];
+  } => {
+    console.log('=== Executing DOT Script ===');
+    console.log('Script:', dotScript);
+    
+    // Parse the script
+    const parseResult = parseDotScript(dotScript);
+    
+    if (parseResult.errors.length > 0) {
+      console.error('Parse errors:', parseResult.errors);
+      return { success: false, created: 0, errors: parseResult.errors };
+    }
+    
+    // Clear existing script-generated connections if requested
+    if (clearExisting) {
+      const existingConnections = document.querySelectorAll('.dot-script-connection');
+      existingConnections.forEach(conn => conn.remove());
+    }
+    
+    const availableCodes = getAvailableSliceLayerCodes();
+    let createdCount = 0;
+    const executionErrors: string[] = [];
+    
+    // Execute each edge
+    parseResult.edges.forEach((edge, index) => {
+      // Check if nodes are available
+      if (!availableCodes.includes(edge.from)) {
+        executionErrors.push(`Node not available: ${edge.from}`);
+        return;
+      }
+      
+      if (!availableCodes.includes(edge.to)) {
+        executionErrors.push(`Node not available: ${edge.to}`);
+        return;
+      }
+      
+      // Set default color based on edge index if not specified
+      const color = edge.attributes.color || [
+        '#FF6B35', '#2196F3', '#9C27B0', '#4CAF50', '#FF9800', '#E91E63'
+      ][index % 6];
+      
+      const strokeWidth = edge.attributes.strokeWidth || 2;
+      
+      // Create the connection
+      const arrow = connectNodesBySliceLayerCode(edge.from, edge.to, color, strokeWidth);
+      
+      if (arrow) {
+        arrow.classList.add('dot-script-connection');
+        
+        // Apply style attributes
+        if (edge.attributes.style === 'dashed') {
+          arrow.setAttribute('stroke-dasharray', '8 4');
+        } else if (edge.attributes.style === 'dotted') {
+          arrow.setAttribute('stroke-dasharray', '2 3');
+        } else {
+          arrow.setAttribute('stroke-dasharray', '4 3'); // default dotted
+        }
+        
+        if (edge.attributes.label) {
+          arrow.setAttribute('data-dot-label', edge.attributes.label);
+        }
+        
+        createdCount++;
+        console.log(`✅ Created edge: ${edge.from} -> ${edge.to}`, edge.attributes);
+      } else {
+        executionErrors.push(`Failed to create edge: ${edge.from} -> ${edge.to}`);
+      }
+    });
+    
+    console.log(`=== DOT Script Complete: ${createdCount} edges created ===`);
+    
+    return {
+      success: executionErrors.length === 0,
+      created: createdCount,
+      errors: executionErrors
+    };
+  }, [parseDotScript, getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+
   // Demo function to show slice layer mapping in action
   const createSliceLayerMappingDemo = useCallback(() => {
     // Give the DOM a moment to render the nodes
@@ -493,6 +669,24 @@ export const useNodeConnections = (
       console.log('=== Demo Complete ===');
     }, 1000);
   }, [getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+  
+  // Demo function to show DOT script in action
+  const createDotScriptDemo = useCallback(() => {
+    setTimeout(() => {
+      const sampleDotScript = `
+        // Dialectical flow example
+        T1 -> A1+ [color=#FF6B35, label="thesis to antithesis"]
+        T1- -> T2 [color=#2196F3, weight=3]
+        A1 -> T2+ [color=#9C27B0, style=dashed]
+        
+        // Cross connections
+        T2 -> A2- [color=#4CAF50]
+        A2 -> T1+ [color=#FF9800, style=dotted]
+      `;
+      
+      executeDotScript(sampleDotScript);
+    }, 1500);
+  }, [executeDotScript]);
 
   // Expose helper functions for external use (if needed)
   const nodeAPI = {
@@ -524,8 +718,24 @@ export const useNodeConnections = (
       connectNodesBySliceLayerCode,
       getAvailableSliceLayerCodes,
       createSliceLayerMappingDemo
+    },
+    
+    // NEW: DOT Script API
+    dotScriptAPI: {
+      parseDotScript,
+      executeDotScript,
+      createDotScriptDemo
     }
   };
 };
 
-export type { DemoConnection, SliceLayerCode, SliceLayerMapping, LayerType, SliceType }; 
+export type { 
+  DemoConnection, 
+  SliceLayerCode, 
+  SliceLayerMapping, 
+  LayerType, 
+  SliceType,
+  DotEdgeAttributes,
+  DotEdge,
+  DotScriptParseResult
+}; 
