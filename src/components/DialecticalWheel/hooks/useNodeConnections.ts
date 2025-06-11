@@ -383,14 +383,14 @@ export const useNodeConnections = (
     let layerIndex: number;
     
     if (modifier === '+') {
-      layerType = 'pink';
-      layerIndex = 2;
-    } else if (modifier === '-') {
-      layerType = 'white';
-      layerIndex = 1;
-    } else {
       layerType = 'green';
       layerIndex = 0;
+    } else if (modifier === '-') {
+      layerType = 'pink';
+      layerIndex = 2;
+    } else {
+      layerType = 'white';
+      layerIndex = 1;
     }
     
     return {
@@ -459,15 +459,15 @@ export const useNodeConnections = (
       const pairNumber = pairIndex + 1; // Convert to 1-based for codes
       
       if (pair.thesis) {
-        codes.push(`T${pairNumber}`);   // Green layer
-        codes.push(`T${pairNumber}-`);  // White layer
-        codes.push(`T${pairNumber}+`);  // Pink layer
+        codes.push(`T${pairNumber}`);   // White layer
+        codes.push(`T${pairNumber}+`);  // Green layer
+        codes.push(`T${pairNumber}-`);  // Pink layer
       }
       
       if (pair.antithesis) {
-        codes.push(`A${pairNumber}`);   // Green layer
-        codes.push(`A${pairNumber}-`);  // White layer
-        codes.push(`A${pairNumber}+`);  // Pink layer
+        codes.push(`A${pairNumber}`);   // White layer
+        codes.push(`A${pairNumber}+`);  // Green layer
+        codes.push(`A${pairNumber}-`);  // Pink layer
       }
     });
     

@@ -11,6 +11,10 @@ export {
   useManualWheel 
 } from './services';
 
+// Export specialized hooks
+export { useNodeConnections } from './components/DialecticalWheel/hooks/useNodeConnections';
+export { useWheelSlices } from './components/DialecticalWheel/hooks/useWheelSlices';
+
 // Export all utilities
 export { 
   SliceAtAngle,
