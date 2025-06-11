@@ -85,30 +85,30 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
             <g key={slice.id} className={`equal-slice ${slice.type}-slice`}>
               {/* Render layered rings with rotation transform */}
               <g transform={`rotate(${slice.angle} ${DIMENSIONS.CENTER_X} ${DIMENSIONS.CENTER_Y})`}>
-                {sliceData.layers.map((layer: { pathD: string; fill: string }, layerIndex: number) => {
-                  // Use original index for node IDs if available, otherwise use current slice ID
-                  const nodeIdBase = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
-                  const nodeId = `${nodeIdBase}-layer-${layerIndex}`;
-                  
-                  return (
-                    <path
-                      key={`${slice.id}-layer-${layerIndex}`}
-                      d={layer.pathD}
-                      fill={layer.fill}
-                      className="clickable-slice layer-node"
-                      data-node-id={nodeId}
-                      data-slice-id={nodeIdBase}
-                      data-pair-index={slice.pair}
-                      data-slice-type={slice.type}
-                      data-layer-index={layerIndex}
-                      data-layer-type={layerIndex === 0 ? 'green' : layerIndex === 1 ? 'white' : 'pink'}
-                      onClick={() => handleSliceClick(slice.pair)}
-                      onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
-                      onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  );
-                })}
+              {sliceData.layers.map((layer: { pathD: string; fill: string }, layerIndex: number) => {
+                // Use original index for node IDs if available, otherwise use current slice ID
+                const nodeIdBase = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
+                const nodeId = `${nodeIdBase}-layer-${layerIndex}`;
+                
+                return (
+                  <path
+                    key={`${slice.id}-layer-${layerIndex}`}
+                    d={layer.pathD}
+                    fill={layer.fill}
+                    className="clickable-slice layer-node"
+                    data-node-id={nodeId}
+                    data-slice-id={nodeIdBase}
+                    data-pair-index={slice.pair}
+                    data-slice-type={slice.type}
+                    data-layer-index={layerIndex}
+                    data-layer-type={layerIndex === 0 ? 'green' : layerIndex === 1 ? 'white' : 'pink'}
+                    onClick={() => handleSliceClick(slice.pair)}
+                    onTouchStart={(e) => handleSliceTouchStart(e, slice.pair)}
+                    onTouchEnd={(e) => handleSliceTouchEnd(e, slice.pair)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                );
+              })}
               </g>
               {/* Slice boundary lines */}
               <line 
