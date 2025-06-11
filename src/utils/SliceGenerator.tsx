@@ -118,7 +118,7 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
   // Generate layer elements (rings)
   const layerElements: JSX.Element[] = [];
   
-      for (let layer = 0; layer < nLabels; layer++) {
+  for (let layer = 0; layer < nLabels; layer++) {
     const innerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * layer / nLabels);
     const outerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * (layer + 1) / nLabels);
     const color = colors[layer % colors.length];

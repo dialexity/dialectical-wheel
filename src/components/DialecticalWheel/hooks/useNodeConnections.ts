@@ -44,7 +44,8 @@ interface DotScriptParseResult {
 export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
-  recordRef: React.RefObject<SVGGElement>
+  recordRef: React.RefObject<SVGGElement>,
+  rotation: number
 ) => {
   const [showArrows, setShowArrows] = useState<boolean>(true);
   const [demoConnections, setDemoConnections] = useState<DemoConnection[]>([]);

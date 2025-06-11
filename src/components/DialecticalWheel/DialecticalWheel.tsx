@@ -49,7 +49,8 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   const connections = useNodeConnections(
     slices.dynamicSlices,
     title,
-    interaction.recordRef
+    interaction.recordRef,
+    interaction.rotation
   );
 
   // Log the sequence for debugging (like the original HTML)
