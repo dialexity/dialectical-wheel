@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { defaultPairTexts } from '../../../utils/SliceGenerator';
 import { SequenceWithLabels } from './useWheelSequence';
 
@@ -56,19 +56,10 @@ export const useWheelSlices = (
   const [focusedPair, setFocusedPair] = useState<number | null>(null);
   const [dynamicSlices, setDynamicSlices] = useState<DynamicSlice[]>([]);
 
-  // Create clickable slice function (matches the JavaScript createClickableSlice)
-  const createClickableSlice = useCallback((
-    centerAngle: number, 
-    sliceWidth: number, 
-    label: string, 
-    pairIndex: number, 
-    sliceType: 'thesis' | 'antithesis'
-  ): SliceClickData => {
-    console.log(`🔥 EXPENSIVE: createClickableSlice called for ${label} (angle: ${centerAngle}°)`);
+  // Create slice layers (the expensive part) - memoized separately
+  const createSliceLayers = useCallback((sliceWidth: number) => {
     const cx = 200, cy = 200, radius = 150;
     const halfAngle = sliceWidth / 2;
-    const startAngle = centerAngle - halfAngle;
-    const endAngle = centerAngle + halfAngle;
     
     const toRadians = (deg: number): number => deg * Math.PI / 180;
     
@@ -76,13 +67,13 @@ export const useWheelSlices = (
     const layerColors = ["#C6E5B3", "#FFFFFF", "#F9C6CC"]; // green, white, pink
     const layers = [];
     
-    // Create three concentric ring layers
+    // Create three concentric ring layers at angle 0 (will be rotated later)
     for (let layer = 0; layer < 3; layer++) {
       const innerRadius = radius * (0.3 + 0.7 * layer / 3);
       const outerRadius = radius * (0.3 + 0.7 * (layer + 1) / 3);
       
-      const startAngleRad = toRadians(startAngle);
-      const endAngleRad = toRadians(endAngle);
+      const startAngleRad = toRadians(-halfAngle);
+      const endAngleRad = toRadians(halfAngle);
       
       const innerX1 = cx + innerRadius * Math.cos(startAngleRad);
       const innerY1 = cy + innerRadius * Math.sin(startAngleRad);
@@ -107,6 +98,23 @@ export const useWheelSlices = (
       });
     }
     
+    return layers;
+  }, []);
+
+  // Create clickable slice function (matches the JavaScript createClickableSlice)
+  const createClickableSlice = useCallback((
+    centerAngle: number, 
+    sliceWidth: number, 
+    label: string, 
+    pairIndex: number, 
+    sliceType: 'thesis' | 'antithesis'
+  ): SliceClickData => {
+    console.log(`🔥 EXPENSIVE: createClickableSlice called for ${label} (angle: ${centerAngle}°)`);
+    const cx = 200, cy = 200, radius = 150;
+    
+    // Get cached layers or create new ones
+    const layers = createSliceLayers(sliceWidth);
+    
     // Calculate text position (center of the layered slice)
     const textRadius = (radius * 0.3 + radius) / 2;
     const textAngle = centerAngle * Math.PI / 180;
@@ -125,23 +133,69 @@ export const useWheelSlices = (
       pairIndex,
       sliceType
     };
-  }, [normalSliceAngle]);
+  }, [normalSliceAngle, createSliceLayers]);
 
-  // Memoize slice data to prevent recalculation on every render
+  // Persistent cache for slice layers (the expensive computation)
+  const sliceLayersCacheRef = useRef(new Map<number, any>());
+
+  // Memoize slice layers
+  const memoizedCreateSliceLayers = useCallback((sliceWidth: number) => {
+    const cache = sliceLayersCacheRef.current;
+    
+    if (cache.has(sliceWidth)) {
+      return cache.get(sliceWidth);
+    }
+    
+    console.log(`🔥 EXPENSIVE: Computing slice layers for width ${sliceWidth}°`);
+    const layers = createSliceLayers(sliceWidth);
+    cache.set(sliceWidth, layers);
+    return layers;
+  }, [createSliceLayers]);
+
+  // Memoize slice data with intelligent caching
   const memoizedSliceData = useMemo(() => {
-    console.log(`🚀 MEMOIZATION: Recalculating slice data for ${dynamicSlices.length} slices`);
+    console.log(`🚀 MEMOIZATION: Processing ${dynamicSlices.length} slices`);
     const sliceDataMap = new Map();
+    let layerCacheHits = 0;
+    let layerCacheMisses = 0;
     
     dynamicSlices.forEach(slice => {
       if (!slice.detailed) {
-        const key = `${slice.angle}-${slice.width}-${slice.label}-${slice.pair}-${slice.type}`;
-        sliceDataMap.set(slice.id, createClickableSlice(slice.angle, slice.width, slice.label, slice.pair, slice.type));
+        // Get cached layers or create new ones
+        const layersWereCached = sliceLayersCacheRef.current.has(slice.width);
+        const layers = memoizedCreateSliceLayers(slice.width);
+        
+        if (layersWereCached) {
+          layerCacheHits++;
+        } else {
+          layerCacheMisses++;
+        }
+        
+        // Calculate position-dependent properties
+        const cx = 200, cy = 200, radius = 150;
+        const textRadius = (radius * 0.3 + radius) / 2;
+        const textAngle = slice.angle * Math.PI / 180;
+        const textX = cx + textRadius * Math.cos(textAngle);
+        const textY = cy + textRadius * Math.sin(textAngle);
+        
+        // Dynamic font sizing
+        const fontSize = slice.width >= normalSliceAngle ? Math.min(20, slice.width / 3) : Math.min(14, slice.width / 2);
+        
+        sliceDataMap.set(slice.id, {
+          layers,
+          textX,
+          textY,
+          fontSize,
+          label: slice.label,
+          pairIndex: slice.pair,
+          sliceType: slice.type
+        });
       }
     });
     
-    console.log(`✅ MEMOIZATION: Created ${sliceDataMap.size} memoized slice data entries`);
+    console.log(`✅ MEMOIZATION: Layer cache hits: ${layerCacheHits}, misses: ${layerCacheMisses}, total layer cache: ${sliceLayersCacheRef.current.size}`);
     return sliceDataMap;
-  }, [dynamicSlices, createClickableSlice]);
+  }, [dynamicSlices, memoizedCreateSliceLayers, normalSliceAngle]);
 
   // Create equal slices function (matches the JavaScript createEqualSlices)
   const createEqualSlices = useCallback((): void => {
