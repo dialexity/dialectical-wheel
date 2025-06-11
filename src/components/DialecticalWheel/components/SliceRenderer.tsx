@@ -83,7 +83,8 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
           
           return (
             <g key={slice.id} className={`equal-slice ${slice.type}-slice`}>
-              {/* Render layered rings */}
+              {/* Render layered rings with rotation transform */}
+              <g transform={`rotate(${slice.angle} ${DIMENSIONS.CENTER_X} ${DIMENSIONS.CENTER_Y})`}>
               {sliceData.layers.map((layer: { pathD: string; fill: string }, layerIndex: number) => {
                 // Use original index for node IDs if available, otherwise use current slice ID
                 const nodeIdBase = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
@@ -108,6 +109,7 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
                   />
                 );
               })}
+              </g>
               {/* Slice boundary lines */}
               <line 
                 x1={DIMENSIONS.CENTER_X} 

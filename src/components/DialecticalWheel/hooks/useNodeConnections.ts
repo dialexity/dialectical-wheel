@@ -9,6 +9,38 @@ interface DemoConnection {
   label: string;
 }
 
+// New types for slice layer mapping
+type SliceLayerCode = string; // e.g., "T1", "T1+", "T1-", "A1", "A1+", "A1-"
+type LayerType = 'green' | 'white' | 'pink';
+type SliceType = 'thesis' | 'antithesis';
+
+interface SliceLayerMapping {
+  pairIndex: number;
+  sliceType: SliceType;
+  layerType: LayerType;
+  layerIndex: number;
+}
+
+// NEW: DOT Script types
+interface DotEdgeAttributes {
+  color?: string;
+  weight?: number;
+  strokeWidth?: number;
+  label?: string;
+  style?: 'solid' | 'dashed' | 'dotted';
+}
+
+interface DotEdge {
+  from: SliceLayerCode;
+  to: SliceLayerCode;
+  attributes: DotEdgeAttributes;
+}
+
+interface DotScriptParseResult {
+  edges: DotEdge[];
+  errors: string[];
+}
+
 export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
@@ -327,6 +359,335 @@ export const useNodeConnections = (
     createDemoConnections();
   }, [createDemoConnections]);
 
+  // NEW: Slice layer mapping functions
+  const parseSliceLayerCode = useCallback((code: SliceLayerCode): SliceLayerMapping | null => {
+    // Examples: "T1" -> Thesis pair 1, green layer
+    //          "T1+" -> Thesis pair 1, pink layer  
+    //          "T1-" -> Thesis pair 1, white layer
+    //          "A2" -> Antithesis pair 2, green layer
+    //          "A2+" -> Antithesis pair 2, pink layer
+    //          "A2-" -> Antithesis pair 2, white layer
+    
+    const match = code.match(/^([TA])(\d+)([+\-]?)$/);
+    if (!match) {
+      console.warn(`Invalid slice layer code: ${code}`);
+      return null;
+    }
+    
+    const [, typeChar, pairNum, modifier] = match;
+    const sliceType: SliceType = typeChar === 'T' ? 'thesis' : 'antithesis';
+    const pairIndex = parseInt(pairNum) - 1; // Convert 1-based to 0-based indexing
+    
+    // Determine layer type and index based on modifier
+    let layerType: LayerType;
+    let layerIndex: number;
+    
+    if (modifier === '+') {
+      layerType = 'green';
+      layerIndex = 0;
+    } else if (modifier === '-') {
+      layerType = 'pink';
+      layerIndex = 2;
+    } else {
+      layerType = 'white';
+      layerIndex = 1;
+    }
+    
+    return {
+      pairIndex,
+      sliceType,
+      layerType,
+      layerIndex
+    };
+  }, []);
+
+  const getNodeIdFromSliceLayerCode = useCallback((code: SliceLayerCode): string | null => {
+    const mapping = parseSliceLayerCode(code);
+    if (!mapping) return null;
+    
+    // Find the slice that matches the pair and type
+    const slice = dynamicSlices.find(s => 
+      s.pair === mapping.pairIndex && s.type === mapping.sliceType
+    );
+    
+    if (!slice) {
+      console.warn(`No slice found for pair ${mapping.pairIndex} type ${mapping.sliceType}`);
+      return null;
+    }
+    
+    // Construct the node ID based on the slice ID and layer index
+    // Format: slice-{originalIndex}-layer-{layerIndex} or {sliceId}-layer-{layerIndex}
+    const baseId = slice.originalIndex !== undefined ? `slice-${slice.originalIndex}` : slice.id;
+    return `${baseId}-layer-${mapping.layerIndex}`;
+  }, [dynamicSlices, parseSliceLayerCode]);
+
+  const connectNodesBySliceLayerCode = useCallback((
+    fromCode: SliceLayerCode, 
+    toCode: SliceLayerCode, 
+    color = '#0074d9', 
+    strokeWidth = 2
+  ) => {
+    const fromNodeId = getNodeIdFromSliceLayerCode(fromCode);
+    const toNodeId = getNodeIdFromSliceLayerCode(toCode);
+    
+    if (!fromNodeId || !toNodeId) {
+      console.warn(`Cannot create connection ${fromCode} -> ${toCode}: node IDs not found`);
+      console.warn(`From: ${fromCode} -> ${fromNodeId}, To: ${toCode} -> ${toNodeId}`);
+      return null;
+    }
+    
+    console.log(`Creating connection: ${fromCode} (${fromNodeId}) -> ${toCode} (${toNodeId})`);
+    return connectNodes(fromNodeId, toNodeId, color, strokeWidth);
+  }, [getNodeIdFromSliceLayerCode, connectNodes]);
+
+  const getAvailableSliceLayerCodes = useCallback((): SliceLayerCode[] => {
+    const codes: SliceLayerCode[] = [];
+    
+    // Group slices by pair to ensure we have complete pairs
+    const pairGroups: { [pairIndex: number]: { thesis?: DynamicSlice, antithesis?: DynamicSlice } } = {};
+    
+    dynamicSlices.forEach(slice => {
+      if (!pairGroups[slice.pair]) {
+        pairGroups[slice.pair] = {};
+      }
+      pairGroups[slice.pair][slice.type] = slice;
+    });
+    
+    // Generate codes for each complete pair
+    Object.entries(pairGroups).forEach(([pairIndexStr, pair]) => {
+      const pairIndex = parseInt(pairIndexStr);
+      const pairNumber = pairIndex + 1; // Convert to 1-based for codes
+      
+      if (pair.thesis) {
+        codes.push(`T${pairNumber}`);   // White layer
+        codes.push(`T${pairNumber}+`);  // Green layer
+        codes.push(`T${pairNumber}-`);  // Pink layer
+      }
+      
+      if (pair.antithesis) {
+        codes.push(`A${pairNumber}`);   // White layer
+        codes.push(`A${pairNumber}+`);  // Green layer
+        codes.push(`A${pairNumber}-`);  // Pink layer
+      }
+    });
+    
+    return codes.sort();
+  }, [dynamicSlices]);
+
+  // NEW: DOT Script parsing and execution
+  const parseDotScript = useCallback((dotScript: string): DotScriptParseResult => {
+    const edges: DotEdge[] = [];
+    const errors: string[] = [];
+    
+    // Remove comments and clean up the script
+    const cleanScript = dotScript
+      .split('\n')
+      .map(line => line.replace(/\/\/.*$/, '').trim()) // Remove // comments
+      .filter(line => line.length > 0) // Remove empty lines
+      .join('\n');
+    
+    // Regex to match edge definitions: nodeA -> nodeB [attributes]
+    const edgeRegex = /([A-Z]\d+[+\-]?)\s*->\s*([A-Z]\d+[+\-]?)(?:\s*\[(.*?)\])?/g;
+    
+    let match;
+    while ((match = edgeRegex.exec(cleanScript)) !== null) {
+      const [, fromNode, toNode, attributesStr] = match;
+      
+      // Validate node codes
+      const fromMapping = parseSliceLayerCode(fromNode);
+      const toMapping = parseSliceLayerCode(toNode);
+      
+      if (!fromMapping) {
+        errors.push(`Invalid from node: ${fromNode}`);
+        continue;
+      }
+      
+      if (!toMapping) {
+        errors.push(`Invalid to node: ${toNode}`);
+        continue;
+      }
+      
+      // Parse attributes
+      const attributes: DotEdgeAttributes = {};
+      if (attributesStr) {
+        // Parse attribute string: color=red, weight=3, label="my label"
+        const attrRegex = /(\w+)\s*=\s*([^,]+)/g;
+        let attrMatch;
+        while ((attrMatch = attrRegex.exec(attributesStr)) !== null) {
+          const [, key, value] = attrMatch;
+          const cleanValue = value.replace(/["']/g, '').trim();
+          
+          switch (key.toLowerCase()) {
+            case 'color':
+              attributes.color = cleanValue;
+              break;
+            case 'weight':
+            case 'strokewidth':
+              attributes.strokeWidth = parseInt(cleanValue) || 2;
+              break;
+            case 'label':
+              attributes.label = cleanValue;
+              break;
+            case 'style':
+              if (['solid', 'dashed', 'dotted'].includes(cleanValue)) {
+                attributes.style = cleanValue as 'solid' | 'dashed' | 'dotted';
+              }
+              break;
+            default:
+              console.warn(`Unknown attribute: ${key}`);
+          }
+        }
+      }
+      
+      edges.push({
+        from: fromNode,
+        to: toNode,
+        attributes
+      });
+    }
+    
+    return { edges, errors };
+  }, [parseSliceLayerCode]);
+  
+  const executeDotScript = useCallback((dotScript: string, clearExisting = true): { 
+    success: boolean; 
+    created: number; 
+    errors: string[];
+  } => {
+    console.log('=== Executing DOT Script ===');
+    console.log('Script:', dotScript);
+    
+    // Parse the script
+    const parseResult = parseDotScript(dotScript);
+    
+    if (parseResult.errors.length > 0) {
+      console.error('Parse errors:', parseResult.errors);
+      return { success: false, created: 0, errors: parseResult.errors };
+    }
+    
+    // Clear existing script-generated connections if requested
+    if (clearExisting) {
+      const existingConnections = document.querySelectorAll('.dot-script-connection');
+      existingConnections.forEach(conn => conn.remove());
+    }
+    
+    const availableCodes = getAvailableSliceLayerCodes();
+    let createdCount = 0;
+    const executionErrors: string[] = [];
+    
+    // Execute each edge
+    parseResult.edges.forEach((edge, index) => {
+      // Check if nodes are available
+      if (!availableCodes.includes(edge.from)) {
+        executionErrors.push(`Node not available: ${edge.from}`);
+        return;
+      }
+      
+      if (!availableCodes.includes(edge.to)) {
+        executionErrors.push(`Node not available: ${edge.to}`);
+        return;
+      }
+      
+      // Set default color based on edge index if not specified
+      const color = edge.attributes.color || [
+        '#FF6B35', '#2196F3', '#9C27B0', '#4CAF50', '#FF9800', '#E91E63'
+      ][index % 6];
+      
+      const strokeWidth = edge.attributes.strokeWidth || 2;
+      
+      // Create the connection
+      const arrow = connectNodesBySliceLayerCode(edge.from, edge.to, color, strokeWidth);
+      
+      if (arrow) {
+        arrow.classList.add('dot-script-connection');
+        
+        // Apply style attributes
+        if (edge.attributes.style === 'dashed') {
+          arrow.setAttribute('stroke-dasharray', '8 4');
+        } else if (edge.attributes.style === 'dotted') {
+          arrow.setAttribute('stroke-dasharray', '2 3');
+        } else {
+          arrow.setAttribute('stroke-dasharray', '4 3'); // default dotted
+        }
+        
+        if (edge.attributes.label) {
+          arrow.setAttribute('data-dot-label', edge.attributes.label);
+        }
+        
+        createdCount++;
+        console.log(`✅ Created edge: ${edge.from} -> ${edge.to}`, edge.attributes);
+      } else {
+        executionErrors.push(`Failed to create edge: ${edge.from} -> ${edge.to}`);
+      }
+    });
+    
+    console.log(`=== DOT Script Complete: ${createdCount} edges created ===`);
+    
+    return {
+      success: executionErrors.length === 0,
+      created: createdCount,
+      errors: executionErrors
+    };
+  }, [parseDotScript, getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+
+  // Demo function to show slice layer mapping in action
+  const createSliceLayerMappingDemo = useCallback(() => {
+    // Give the DOM a moment to render the nodes
+    setTimeout(() => {
+      console.log('=== Slice Layer Mapping Demo ===');
+      
+      const availableCodes = getAvailableSliceLayerCodes();
+      console.log('Available slice layer codes:', availableCodes);
+      
+      // Example connections using the new mapping system
+      const exampleConnections = [
+        { from: 'T1', to: 'A1+', color: '#FF6B35', label: 'T1 Green → A1 Pink' },
+        { from: 'T1-', to: 'T2', color: '#2196F3', label: 'T1 White → T2 Green' },
+        { from: 'A1', to: 'T2+', color: '#9C27B0', label: 'A1 Green → T2 Pink' }
+      ];
+      
+      // Clear existing demo connections
+      const existingConnections = document.querySelectorAll('.slice-layer-demo-connection');
+      existingConnections.forEach(conn => conn.remove());
+      
+      // Create example connections
+      exampleConnections.forEach(conn => {
+        if (availableCodes.includes(conn.from) && availableCodes.includes(conn.to)) {
+          const arrow = connectNodesBySliceLayerCode(conn.from, conn.to, conn.color, 2);
+          if (arrow) {
+            arrow.classList.add('slice-layer-demo-connection');
+            arrow.setAttribute('data-demo-label', conn.label);
+            console.log(`✅ Created: ${conn.label}`);
+          } else {
+            console.warn(`❌ Failed to create: ${conn.label}`);
+          }
+        } else {
+          console.warn(`❌ Skipped ${conn.label}: codes not available`);
+        }
+      });
+      
+      console.log('=== Demo Complete ===');
+    }, 1000);
+  }, [getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+  
+  // Demo function to show DOT script in action
+  const createDotScriptDemo = useCallback(() => {
+    setTimeout(() => {
+      const sampleDotScript = `
+        // Dialectical flow example
+        T1 -> A1+ [color=#FF6B35, label="thesis to antithesis"]
+        T1- -> T2 [color=#2196F3, weight=3]
+        A1 -> T2+ [color=#9C27B0, style=dashed]
+        
+        // Cross connections
+        T2 -> A2- [color=#4CAF50]
+        A2 -> T1+ [color=#FF9800, style=dotted]
+      `;
+      
+      executeDotScript(sampleDotScript);
+    }, 1500);
+  }, [executeDotScript]);
+
   // Expose helper functions for external use (if needed)
   const nodeAPI = {
     getAllLayerNodes,
@@ -348,8 +709,33 @@ export const useNodeConnections = (
     createDemoConnections,
     
     // Node API
-    nodeAPI
+    nodeAPI,
+    
+    // NEW: Slice layer mapping API
+    sliceLayerAPI: {
+      parseSliceLayerCode,
+      getNodeIdFromSliceLayerCode,
+      connectNodesBySliceLayerCode,
+      getAvailableSliceLayerCodes,
+      createSliceLayerMappingDemo
+    },
+    
+    // NEW: DOT Script API
+    dotScriptAPI: {
+      parseDotScript,
+      executeDotScript,
+      createDotScriptDemo
+    }
   };
 };
 
-export type { DemoConnection }; 
+export type { 
+  DemoConnection, 
+  SliceLayerCode, 
+  SliceLayerMapping, 
+  LayerType, 
+  SliceType,
+  DotEdgeAttributes,
+  DotEdge,
+  DotScriptParseResult
+}; 
