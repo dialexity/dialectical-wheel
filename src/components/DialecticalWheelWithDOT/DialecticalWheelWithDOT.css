@@ -5,6 +5,8 @@
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .wheel-section {
@@ -13,6 +15,10 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .controls-section {
@@ -23,6 +29,8 @@
   background: #f8f9fa;
   border-radius: 8px;
   border: 1px solid #e9ecef;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .script-input {
@@ -155,6 +163,7 @@
 @media (max-width: 768px) {
   .dialectical-wheel-with-dot {
     padding: 10px;
+    height: auto;
   }
   
   .controls-section {
@@ -168,6 +177,19 @@
   .script-input textarea {
     min-height: 100px;
     font-size: 13px;
+  }
+  
+  .script-editor--left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    height: 100vh;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+  }
+  
+  .script-editor--left:not(.script-editor--visible) {
+    transform: translateX(-100%);
   }
 }
 
@@ -203,4 +225,38 @@
 /* Smooth transitions for all arrows */
 .dot-script-connection {
   transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+/* Script Editor Positioning Styles */
+.script-editor--left {
+  min-width: 40px;
+  box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+}
+
+.script-editor--left .script-content {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.script-editor--left.script-editor--hidden .script-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Improved layout for side-by-side view */
+.dialectical-wheel-with-dot {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.wheel-section {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.controls-section {
+  max-height: 300px;
+  overflow-y: auto;
 } 

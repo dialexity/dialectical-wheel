@@ -239,6 +239,7 @@ const DialecticalWheelWithDOT: React.FC<DialecticalWheelWithDOTProps> = ({
   const [dotScript, setDotScript] = useState(defaultDotScript);
   const [executionResult, setExecutionResult] = useState<any>(null);
   const [shouldCreateInitialArrows, setShouldCreateInitialArrows] = useState(false);
+  const [isScriptEditorVisible, setIsScriptEditorVisible] = useState(true);
   
   const wheelRef = useRef<any>(null);
   
@@ -356,51 +357,79 @@ A4 -> T1+ [color=#4CAF50, weight=2, label="pragmatism supports sustainability"]`
 
   return (
     <div className={`dialectical-wheel-with-dot ${className}`}>
-      <div className="wheel-section">
-        <WheelWithArrows
-          ref={wheelRef}
-          pairTexts={pairTexts}
-          numPairs={numPairs}
-          title={title}
-          centerLabel={centerLabel}
-          shouldCreateInitialArrows={shouldCreateInitialArrows}
-          setShouldCreateInitialArrows={setShouldCreateInitialArrows}
-        />
-      </div>
-      
       {showControls && (
-        <div className="controls-section">
-          <SampleScripts 
-            sampleScripts={sampleScripts}
-            isAnimating={animatedExecution.state.isAnimating}
-            onLoadScript={setDotScript}
-          />
-          
+        <div style={{ display: 'flex', height: '100vh' }}>
+          {/* Left Side - Script Editor */}
           <ScriptEditor 
             dotScript={dotScript}
             setDotScript={setDotScript}
             currentLine={animatedExecution.state.currentLine}
             isAnimating={animatedExecution.state.isAnimating}
+            isVisible={isScriptEditorVisible}
+            onToggleVisibility={() => setIsScriptEditorVisible(!isScriptEditorVisible)}
+            position="left"
           />
           
-          <AnimationControls 
-            isAnimating={animatedExecution.state.isAnimating}
-            isPaused={animatedExecution.state.isPaused}
-            currentLine={animatedExecution.state.currentLine}
-            animationSpeed={animatedExecution.state.animationSpeed}
-            enableAnimation={enableAnimation}
-            setIsPaused={animatedExecution.setIsPaused}
-            setAnimationSpeed={animatedExecution.setAnimationSpeed}
-            onStop={animatedExecution.stopAnimation}
-          />
-          
-          <ExecutionControls 
-            isAnimating={animatedExecution.state.isAnimating}
-            executionResult={executionResult}
-            onExecuteAnimated={executeScriptAnimated}
-            onExecuteInstant={handleExecuteScript}
-            onForceRedraw={handleForceRedraw}
-            onClearArrows={() => wheelRef.current?.clearDotScriptConnections()}
+          {/* Right Side - Wheel and Controls */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="wheel-section" style={{ flex: 1 }}>
+              <WheelWithArrows
+                ref={wheelRef}
+                pairTexts={pairTexts}
+                numPairs={numPairs}
+                title={title}
+                centerLabel={centerLabel}
+                shouldCreateInitialArrows={shouldCreateInitialArrows}
+                setShouldCreateInitialArrows={setShouldCreateInitialArrows}
+              />
+            </div>
+            
+            <div className="controls-section" style={{ 
+              padding: '15px',
+              borderTop: '1px solid #ddd',
+              backgroundColor: '#f8f9fa'
+            }}>
+              <SampleScripts 
+                sampleScripts={sampleScripts}
+                isAnimating={animatedExecution.state.isAnimating}
+                onLoadScript={setDotScript}
+              />
+              
+              <AnimationControls 
+                isAnimating={animatedExecution.state.isAnimating}
+                isPaused={animatedExecution.state.isPaused}
+                currentLine={animatedExecution.state.currentLine}
+                animationSpeed={animatedExecution.state.animationSpeed}
+                enableAnimation={enableAnimation}
+                setIsPaused={animatedExecution.setIsPaused}
+                setAnimationSpeed={animatedExecution.setAnimationSpeed}
+                onStop={animatedExecution.stopAnimation}
+              />
+              
+              <ExecutionControls 
+                isAnimating={animatedExecution.state.isAnimating}
+                executionResult={executionResult}
+                onExecuteAnimated={executeScriptAnimated}
+                onExecuteInstant={handleExecuteScript}
+                onForceRedraw={handleForceRedraw}
+                onClearArrows={() => wheelRef.current?.clearDotScriptConnections()}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Fallback for when controls are disabled */}
+      {!showControls && (
+        <div className="wheel-section">
+          <WheelWithArrows
+            ref={wheelRef}
+            pairTexts={pairTexts}
+            numPairs={numPairs}
+            title={title}
+            centerLabel={centerLabel}
+            shouldCreateInitialArrows={shouldCreateInitialArrows}
+            setShouldCreateInitialArrows={setShouldCreateInitialArrows}
           />
         </div>
       )}
