@@ -45,7 +45,8 @@ export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
   recordRef: React.RefObject<SVGGElement>,
-  rotation: number
+  rotation: number,
+  autoCreateDemo: boolean = true
 ) => {
   const [showArrows, setShowArrows] = useState<boolean>(true);
   const [demoConnections, setDemoConnections] = useState<DemoConnection[]>([]);
@@ -355,10 +356,12 @@ export const useNodeConnections = (
     getNodeCenter
   ]);
 
-  // Create demo connections when component mounts or when slices change
+  // Create demo connections when component mounts or when slices change (if enabled)
   useEffect(() => {
+    if (autoCreateDemo) {
     createDemoConnections();
-  }, [createDemoConnections]);
+    }
+  }, [createDemoConnections, autoCreateDemo]);
 
   // NEW: Slice layer mapping functions
   const parseSliceLayerCode = useCallback((code: SliceLayerCode): SliceLayerMapping | null => {

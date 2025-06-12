@@ -24,6 +24,7 @@ interface DialecticalWheelProps {
   pairTexts?: PairTexts | null;
   onDynamicSlicesChange?: (slices: any[]) => void; // Callback to notify parent of slice changes
   onSliceClick?: (pairIndex: number) => void; // Callback when any slice is clicked
+  recordRef?: React.RefObject<SVGGElement>; // Optional external ref for the record group
 }
 
 const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
@@ -35,11 +36,12 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   detailedSlices = {},
   pairTexts = null,
   onDynamicSlicesChange = undefined,
-  onSliceClick = undefined
+  onSliceClick = undefined,
+  recordRef = undefined
 }) => {
   // Use our custom hooks
   const sequence = useWheelSequence(numPairs, sliceSequence);
-  const interaction = useWheelInteraction();
+  const interaction = useWheelInteraction(recordRef);
   const slices = useWheelSlices(
     sequence.sequenceWithLabels,
     sequence.normalSliceAngle,
@@ -56,7 +58,8 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     slices.dynamicSlices,
     title,
     interaction.recordRef,
-    interaction.rotation
+    interaction.rotation,
+    false // Don't auto-create demo arrows
   );
 
   // Log the sequence for debugging (like the original HTML)

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-export const useWheelInteraction = () => {
+export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElement>) => {
   // State for wheel transformation
   const [rotation, setRotation] = useState<number>(270); // Start with first slice at top center
   const [scale, setScale] = useState<number>(1);
@@ -9,7 +9,8 @@ export const useWheelInteraction = () => {
   const [isZoomedToQ2, setIsZoomedToQ2] = useState<boolean>(false);
 
   // Refs for interaction handling
-  const recordRef = useRef<SVGGElement>(null);
+  const internalRecordRef = useRef<SVGGElement>(null);
+  const recordRef = externalRecordRef || internalRecordRef;
   const svgRef = useRef<SVGSVGElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const startAngleRef = useRef<number>(0);

@@ -1,0 +1,206 @@
+.dialectical-wheel-with-dot {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.wheel-section {
+  flex: 1;
+  min-height: 500px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.script-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.script-input label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.script-input textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+  background: #fff;
+}
+
+.script-input textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.control-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.control-buttons button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.control-buttons button:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.control-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.control-buttons button:disabled:hover {
+  background: #fff;
+  border-color: #ddd;
+}
+
+/* Special styling for force redraw button */
+.control-buttons button:nth-child(2) {
+  background: #ff1493;
+  color: white;
+  border-color: #ff1493;
+  font-weight: bold;
+}
+
+.control-buttons button:nth-child(2):hover {
+  background: #dc1477;
+  border-color: #dc1477;
+}
+
+.sample-scripts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sample-scripts label {
+  font-weight: 600;
+  color: #333;
+}
+
+.sample-scripts .sample-script-button {
+  padding: 6px 12px;
+  margin-right: 8px;
+  margin-bottom: 4px;
+  border: 1px solid #6c757d;
+  border-radius: 4px;
+  background: #6c757d;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.sample-scripts .sample-script-button:hover {
+  background: #5a6268;
+  border-color: #5a6268;
+}
+
+.execution-result {
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.execution-result:has-text("✅") {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.execution-result:has-text("❌") {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dialectical-wheel-with-dot {
+    padding: 10px;
+  }
+  
+  .controls-section {
+    padding: 15px;
+  }
+  
+  .control-buttons {
+    justify-content: center;
+  }
+  
+  .script-input textarea {
+    min-height: 100px;
+    font-size: 13px;
+  }
+}
+
+/* Arrow and connection styling */
+.dot-script-connection {
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.dot-script-connection.animated {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shooting-star {
+  z-index: 200;
+  pointer-events: none;
+}
+
+.shooting-star-trail {
+  z-index: 150;
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.layer-node:hover {
+  opacity: 0.8;
+  stroke-width: 2;
+}
+
+/* Smooth transitions for all arrows */
+.dot-script-connection {
+  transition: opacity 0.5s ease, filter 0.5s ease;
+} 
