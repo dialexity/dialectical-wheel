@@ -199,7 +199,7 @@ const WheelWithArrows = React.forwardRef<any, {
       }
     },
     showArrows: nodeConnectionsAPI?.showArrows ?? true,
-    connectNodes: nodeConnectionsAPI?.sliceLayerAPI?.connectNodesBySliceLayerCode
+    connectNodes: nodeConnectionsAPI?.sliceLayerAPI?.connectNodes
   }));
 
   return (
@@ -212,6 +212,10 @@ const WheelWithArrows = React.forwardRef<any, {
         onDynamicSlicesChange={handleDynamicSlicesChange}
         recordRef={recordRef}
         onSliceClick={handleSliceClick}
+        enableArrows={true}
+        enableInteraction={true}
+        initialFocusId={null}
+        overrideLayerKeys={null}
       />
     </div>
   );
