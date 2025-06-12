@@ -602,6 +602,10 @@ export const useNodeConnections = (
       if (arrow) {
         arrow.classList.add('dot-script-connection');
         
+        // Store connection metadata for redrawing
+        arrow.setAttribute('data-from-code', edge.from);
+        arrow.setAttribute('data-to-code', edge.to);
+        
         // Apply style attributes
         if (edge.attributes.style === 'dashed') {
           arrow.setAttribute('stroke-dasharray', '8 4');

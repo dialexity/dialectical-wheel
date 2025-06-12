@@ -22,6 +22,8 @@ interface DialecticalWheelProps {
   fullSequence?: any[] | null; // Complete sequence from API (overrides sliceSequence)
   detailedSlices?: DetailedSlices;
   pairTexts?: PairTexts | null;
+  onDynamicSlicesChange?: (slices: any[]) => void; // Callback to notify parent of slice changes
+  onSliceClick?: (pairIndex: number) => void; // Callback when any slice is clicked
 }
 
 const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
@@ -31,7 +33,9 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   sliceSequence = null,
   fullSequence = null,
   detailedSlices = {},
-  pairTexts = null
+  pairTexts = null,
+  onDynamicSlicesChange = undefined,
+  onSliceClick = undefined
 }) => {
   // Use our custom hooks
   const sequence = useWheelSequence(numPairs, sliceSequence);
@@ -44,7 +48,9 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     interaction.rotation,
     interaction.setRotation,
     pairTexts,
-    detailedSlices
+    detailedSlices,
+    onDynamicSlicesChange,
+    onSliceClick
   );
   const connections = useNodeConnections(
     slices.dynamicSlices,

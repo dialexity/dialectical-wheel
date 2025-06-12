@@ -51,10 +51,28 @@ export const useWheelSlices = (
   rotation: number,
   setRotation: (rotation: number) => void,
   pairTexts: PairTexts | null = null,
-  detailedSlices: DetailedSlices = {}
+  detailedSlices: DetailedSlices = {},
+  onDynamicSlicesChange?: (slices: DynamicSlice[]) => void,
+  onSliceClick?: (pairIndex: number) => void
 ) => {
   const [focusedPair, setFocusedPair] = useState<number | null>(null);
   const [dynamicSlices, setDynamicSlices] = useState<DynamicSlice[]>([]);
+
+  // Notify parent when dynamicSlices change
+  useEffect(() => {
+    console.log('🔧 DialecticalWheel useEffect running - dynamicSlices changed');
+    console.log('🔧 dynamicSlices.length:', dynamicSlices.length);
+    console.log('🔧 onDynamicSlicesChange exists?', !!onDynamicSlicesChange);
+    
+    if (onDynamicSlicesChange && dynamicSlices.length > 0) {
+      console.log('📡 Notifying parent of dynamicSlices change:', dynamicSlices.length, 'slices');
+      onDynamicSlicesChange(dynamicSlices);
+    } else if (!onDynamicSlicesChange) {
+      console.log('⚠️ onDynamicSlicesChange callback not provided');
+    } else {
+      console.log('⚠️ dynamicSlices array is empty, not notifying parent');
+    }
+  }, [dynamicSlices, onDynamicSlicesChange]);
 
   // Create slice layers (the expensive part) - memoized separately
   const createSliceLayers = useCallback((sliceWidth: number) => {
@@ -408,6 +426,11 @@ export const useWheelSlices = (
   // Handle slice click (matches the JavaScript click handlers)
   const handleSliceClick = useCallback((pairIndex: number): void => {
     console.log(`Clicked pair ${pairIndex}`);
+    
+    // Notify parent that a slice was clicked
+    if (onSliceClick) {
+      onSliceClick(pairIndex);
+    }
     if (focusedPair === pairIndex) {
       // Unfocus: find the clicked focused slice and preserve its visual position
       const clickedFocusedSlice = dynamicSlices.find(s => s.pair === pairIndex);
@@ -452,7 +475,7 @@ export const useWheelSlices = (
         focusOnPair(pairIndex);
       }
     }
-  }, [focusedPair, dynamicSlices, rotation, createEqualSlices, sequenceWithLabels, normalSliceAngle, setRotation, focusOnPair]);
+  }, [focusedPair, dynamicSlices, rotation, createEqualSlices, sequenceWithLabels, normalSliceAngle, setRotation, focusOnPair, onSliceClick]);
 
   // Touch handlers for slice clicks
   const handleSliceTouchStart = useCallback((e: React.TouchEvent<SVGElement>, pairIndex: number): void => {
