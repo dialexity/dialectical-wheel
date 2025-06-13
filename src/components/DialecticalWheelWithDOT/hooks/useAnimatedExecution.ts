@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { createShootingStarAnimation } from '../utils/ShootingStarAnimation';
-import { parseScriptLines, parseScriptCommand, ScriptCommand, ParsedLine, getNodeIdFromSliceLayerCode } from '../utils/ScriptParser';
+import { parseScriptLines, parseScriptCommand, ScriptCommand, ParsedLine, getNodeIdFromSliceLayerCode, getRotationAngleForSlice } from '../utils/ScriptParser';
 
 interface AnimatedExecutionState {
   isAnimating: boolean;
@@ -100,21 +100,39 @@ export const useAnimatedExecution = (): AnimatedExecutionControls => {
     }
     
     const currentRotation = wheelRef.current.rotation || 270;
-    let targetRotation = command.angle;
+    let targetRotation: number;
     
-    // Handle relative vs absolute rotation
-    if (command.direction === 'cw' || command.direction === 'ccw') {
-      // Relative rotation
-      if (command.direction === 'cw') {
-        targetRotation = currentRotation + command.angle;
-      } else {
-        targetRotation = currentRotation - command.angle;
+    // Handle semantic slice codes vs numeric angles
+    if (command.targetSlice) {
+      // Semantic slice code (e.g., "rotate A1")
+      const dynamicSlices = wheelRef.current?.getDynamicSlices?.() || [];
+      const calculatedAngle = getRotationAngleForSlice(command.targetSlice, dynamicSlices);
+      
+      if (calculatedAngle === null) {
+        console.warn(`Could not calculate rotation angle for slice: ${command.targetSlice}`);
+        return;
       }
-    } else if (command.direction === 'shortest') {
-      // Find shortest path to target angle (this is handled in setRotation)
+      
+      targetRotation = calculatedAngle;
+      console.log(`🎯 Rotating to bring ${command.targetSlice} to top center (${targetRotation}°)`);
+    } else {
+      // Numeric angle
       targetRotation = command.angle;
+      
+      // Handle relative vs absolute rotation
+      if (command.direction === 'cw' || command.direction === 'ccw') {
+        // Relative rotation
+        if (command.direction === 'cw') {
+          targetRotation = currentRotation + command.angle;
+        } else {
+          targetRotation = currentRotation - command.angle;
+        }
+      } else if (command.direction === 'shortest') {
+        // Find shortest path to target angle (this is handled in setRotation)
+        targetRotation = command.angle;
+      }
+      // else: absolute rotation (use targetRotation as-is)
     }
-    // else: absolute rotation (use targetRotation as-is)
     
     // Execute rotation with duration
     wheelRef.current.setRotation(targetRotation, command.duration || 400);

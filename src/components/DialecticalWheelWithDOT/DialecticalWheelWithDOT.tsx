@@ -518,14 +518,14 @@ wait 800
 zoom reset duration=600
 T1 -> A1+ [color=#FF6B35, weight=3, label="primary tension"]
 wait 800
-rotate 90 duration=1000 // Rotate to show different angle
+rotate A2 duration=1000 // Rotate to focus on A2
 click T2+ // Show rotated perspective
 zoom top duration=600
 wait 700
 zoom reset duration=600
 T2 -> A2+ [color=#4CAF50, weight=2, label="secondary flow"]
 wait 800
-rotate 0 direction=shortest duration=1200 // Return to original position
+rotate T1 duration=1200 // Rotate to focus on T1
 click T3- // Interactive element
 zoom top duration=600
 wait 600
@@ -542,7 +542,7 @@ T1 -> A1+ [color=#FF6B35, weight=3, label="core conflict"]
 wait 600
 
 // === PHASE 2: Rotation & Layer Exploration ===
-rotate 45 duration=800 direction=cw
+rotate A2+ duration=800 // Semantic rotation to A2+
 click T2 // White layer interaction
 zoom top duration=600
 wait 700
@@ -553,7 +553,7 @@ click A2- // Pink layer click
 zoom top duration=600
 wait 500
 zoom reset duration=600
-rotate 90 duration=1000 direction=cw
+rotate T3 duration=1000 // Focus on T3
 wait 500
 
 // === PHASE 3: Zoom Out & Complex Connections ===
@@ -571,7 +571,7 @@ T4+ -> A4+ [color=#FFA726, weight=1, label="integration"]
 wait 400
 
 // === PHASE 4: Return & Feedback Loops ===
-rotate 270 direction=shortest duration=1500
+rotate A4- duration=1500 // Semantic rotation to A4-
 click A4 // Show circular reasoning
 zoom top duration=600
 wait 700
@@ -616,7 +616,44 @@ click A2+ // Jump to different pair
 zoom top duration=400
 wait 500
 zoom reset duration=400
-T2 -> A2+ [color=#4CAF50, weight=2, label="secondary link"]`
+T2 -> A2+ [color=#4CAF50, weight=2, label="secondary link"]`,
+
+    'Semantic Rotation Demo': `// Showcase semantic rotation commands
+// Tour around the wheel using slice codes instead of angles
+rotate T1 duration=800 // Focus on Thesis 1
+wait 600
+click T1+
+zoom top duration=500
+wait 500
+zoom reset duration=500
+T1 -> A1+ [color=#FF6B35, weight=3, label="T1 connection"]
+wait 800
+
+rotate A2 duration=800 // Focus on Antithesis 2  
+wait 600
+click A2-
+zoom top duration=500
+wait 500
+zoom reset duration=500
+A2 -> T2+ [color=#4CAF50, weight=2, label="A2 connection"]
+wait 800
+
+rotate T3+ duration=800 // Focus on Thesis 3 green layer
+wait 600
+click T3+
+zoom top duration=500
+wait 500
+zoom reset duration=500
+T3 -> A3- [color=#9C27B0, weight=2, label="T3+ connection"]
+wait 800
+
+rotate A4- duration=800 // Focus on Antithesis 4 pink layer
+wait 600
+click A4-
+zoom top duration=500
+wait 500
+zoom reset duration=500
+A4 -> T1 [color=#FFA726, weight=1, label="completing the cycle"]`
   };
 
   return (

@@ -24,7 +24,8 @@ export interface ZoomCommand {
 
 export interface RotateCommand {
   type: 'rotate';
-  angle: number;
+  angle?: number;
+  targetSlice?: string;
   duration?: number;
   direction?: 'cw' | 'ccw' | 'shortest';
 }
@@ -151,6 +152,18 @@ export const parseScriptCommand = (line: string): ScriptCommand | null => {
       direction: direction as 'cw' | 'ccw' | 'shortest' || 'shortest'
     };
   }
+
+  // Parse rotate commands with semantic slice codes
+  const rotateSliceMatch = cleaned.match(/^rotate\s+([a-z]\d+[+\-]?)(?:\s+duration\s*=\s*(\d+))?(?:\s+direction\s*=\s*(cw|ccw|shortest))?/i);
+  if (rotateSliceMatch) {
+    const [, sliceCode, durationStr, direction] = rotateSliceMatch;
+    return {
+      type: 'rotate',
+      targetSlice: sliceCode,
+      duration: durationStr ? parseInt(durationStr) : 400,
+      direction: direction as 'cw' | 'ccw' | 'shortest' || 'shortest'
+    };
+  }
   
   // Parse wait commands
   const waitMatch = cleaned.match(/^wait\s+(\d+)/);
@@ -247,4 +260,23 @@ export function getNodeIdFromSliceLayerCode(code: string, dynamicSlices: any[]):
   const nodeId = `${slice.id}-layer-${mapping.layerIndex}`;
   console.log("HERE: Generated nodeId:", nodeId);
   return nodeId;
+}
+
+export function getRotationAngleForSlice(sliceCode: string, dynamicSlices: any[]): number | null {
+  const mapping = parseSliceLayerCode(sliceCode);
+  if (!mapping) return null;
+  
+  // Construct the expected label from the mapping
+  const expectedLabel = (mapping.sliceType === 'thesis' ? 'T' : 'A') + (mapping.pairIndex + 1);
+  
+  // Find the slice by matching the label
+  const slice = dynamicSlices.find(s => s.label === expectedLabel);
+  if (!slice) return null;
+  
+  // Calculate the angle needed to bring this slice to the top center (270°)
+  // The slice's current angle is slice.angle, we want it at 270°
+  const targetAngle = 270 - slice.angle;
+  
+  // Normalize to 0-360 range
+  return ((targetAngle % 360) + 360) % 360;
 } 
