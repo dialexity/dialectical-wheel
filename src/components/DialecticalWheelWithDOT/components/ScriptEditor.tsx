@@ -21,6 +21,49 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
 }) => {
   const isLeftSide = position === 'left';
   
+  const highlightSyntax = (text: string) => {
+    // Handle comments
+    text = text.replace(/(\/\/.*$)/gm, '<span class="comment">$1</span>');
+    
+    // Handle DOT arrow syntax with attributes
+    text = text.replace(
+      /([A-Z]\d+[+\-]?)\s*->\s*([A-Z]\d+[+\-]?)\s*(\[[^\]]*\])?/g, 
+      '<span class="node">$1</span> <span class="arrow">-></span> <span class="node">$2</span><span class="attributes">$3</span>'
+    );
+    
+    // Handle zoom commands
+    text = text.replace(
+      /^(\s*)(zoom)\s+(top|in|out|reset)(\s+.*)?$/gm,
+      '$1<span class="zoom-command">$2</span> <span class="zoom-action">$3</span><span class="command-params">$4</span>'
+    );
+    
+    // Handle rotate commands
+    text = text.replace(
+      /^(\s*)(rotate)\s+(-?\d+(?:\.\d+)?)(\s+.*)?$/gm,
+      '$1<span class="rotate-command">$2</span> <span class="rotate-angle">$3</span><span class="command-params">$4</span>'
+    );
+    
+    // Handle wait commands
+    text = text.replace(
+      /^(\s*)(wait)\s+(\d+)$/gm,
+      '$1<span class="wait-command">$2</span> <span class="wait-duration">$3</span>'
+    );
+    
+    // Handle attribute keywords within brackets
+    text = text.replace(
+      /\[((?:[^=\]]+=[^=\]]+(?:,\s*)?)*)\]/g,
+      (match, attributes) => {
+        const highlighted = attributes.replace(
+          /(color|weight|label|style|duration|direction|scale)(\s*=\s*)([^,\]]+)/g,
+          '<span class="attr-name">$1</span><span class="attr-equals">$2</span><span class="attr-value">$3</span>'
+        );
+        return `[${highlighted}]`;
+      }
+    );
+    
+    return text;
+  };
+  
   return (
     <div className={`script-editor script-editor--${position}`} style={{
       position: isLeftSide ? 'relative' : 'static',
@@ -117,7 +160,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                     color: line.trim().startsWith('//') ? '#22863a' : '#333',
                     fontWeight: currentLine === index ? 'bold' : 'normal'
                   }}>
-                    {line || ' '}
+                                         <span dangerouslySetInnerHTML={{ __html: highlightSyntax(line) || ' ' }} />
                   </span>
                   {currentLine === index && isAnimating && (
                     <span style={{ 

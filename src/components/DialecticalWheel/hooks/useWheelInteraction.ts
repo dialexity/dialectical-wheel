@@ -1,16 +1,22 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, RefObject, Dispatch, SetStateAction } from 'react';
 
-export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElement>) => {
+export function useWheelInteraction(
+  recordRef: RefObject<SVGGElement>,
+  externalRotation?: number,
+  externalSetRotation?: Dispatch<SetStateAction<number>>
+) {
   // State for wheel transformation
-  const [rotation, setRotation] = useState<number>(270); // Start with first slice at top center
+  const [internalRotation, setInternalRotation] = useState<number>(270); // Start with first slice at top center
   const [scale, setScale] = useState<number>(1);
   const [offsetX, setOffsetX] = useState<number>(0);
   const [offsetY, setOffsetY] = useState<number>(0);
   const [isZoomedToQ2, setIsZoomedToQ2] = useState<boolean>(false);
 
+  // Use external rotation/setRotation if provided
+  const rotation = externalRotation !== undefined ? externalRotation : internalRotation;
+  const setRotation = externalSetRotation || setInternalRotation;
+
   // Refs for interaction handling
-  const internalRecordRef = useRef<SVGGElement>(null);
-  const recordRef = externalRecordRef || internalRecordRef;
   const svgRef = useRef<SVGSVGElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const startAngleRef = useRef<number>(0);
@@ -31,7 +37,7 @@ export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElem
         `translate(${offsetX} ${offsetY}) translate(200 200) scale(${scale}) rotate(${rotation}) translate(-200 -200)`
       );
     }
-  }, [rotation, scale, offsetX, offsetY]);
+  }, [rotation, scale, offsetX, offsetY, recordRef]);
 
   useEffect(() => {
     setTransform();
@@ -56,17 +62,16 @@ export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElem
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>): void => {
     if ((e.target as SVGElement).classList.contains('clickable-slice')) return;
-    
     isDraggingRef.current = true;
-    const center = getCenter(svgRef.current!);
-    startAngleRef.current = Math.atan2(e.clientY - center.y, e.clientX - center.x);
+    const center = svgRef.current!.getBoundingClientRect();
+    startAngleRef.current = Math.atan2(e.clientY - (center.top + center.height / 2), e.clientX - (center.left + center.width / 2));
     startRotationRef.current = rotation;
   };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>): void => {
     if (!isDraggingRef.current) return;
-    const center = getCenter(svgRef.current!);
-    const currentAngle = Math.atan2(e.clientY - center.y, e.clientX - center.x);
+    const center = svgRef.current!.getBoundingClientRect();
+    const currentAngle = Math.atan2(e.clientY - (center.top + center.height / 2), e.clientX - (center.left + center.width / 2));
     let angleDiff = currentAngle - startAngleRef.current;
     if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
     if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
@@ -212,30 +217,21 @@ export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElem
   };
 
   return {
-    // State
     rotation,
+    setRotation,
     scale,
     offsetX,
     offsetY,
     isZoomedToQ2,
-    
-    // Refs
     recordRef,
     svgRef,
-    
-    // Event handlers
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-    
-    // Functions
-    setRotation,
     toggleTopHalfZoom,
-    
-    // SVG props object for easy spreading
     svgProps: {
       ref: svgRef,
       onMouseDown: handleMouseDown,
@@ -247,4 +243,4 @@ export const useWheelInteraction = (externalRecordRef?: React.RefObject<SVGGElem
       style: { touchAction: 'none' }
     }
   };
-}; 
+} 

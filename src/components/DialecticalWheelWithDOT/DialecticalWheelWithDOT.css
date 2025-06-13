@@ -259,4 +259,77 @@
 .controls-section {
   max-height: 300px;
   overflow-y: auto;
+}
+
+/* Enhanced syntax highlighting for DOT Script editor */
+.script-line .comment {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.script-line .node {
+  color: #0074d9;
+  font-weight: bold;
+}
+
+.script-line .arrow {
+  color: #ff6b35;
+  font-weight: bold;
+}
+
+.script-line .attributes {
+  color: #666;
+}
+
+.script-line .attr-name {
+  color: #e83e8c;
+  font-weight: 500;
+}
+
+.script-line .attr-equals {
+  color: #666;
+}
+
+.script-line .attr-value {
+  color: #28a745;
+}
+
+/* New command types */
+.script-line .zoom-command {
+  color: #17a2b8;
+  font-weight: bold;
+}
+
+.script-line .zoom-action {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.script-line .rotate-command {
+  color: #fd7e14;
+  font-weight: bold;
+}
+
+.script-line .rotate-angle {
+  color: #6f42c1;
+  font-weight: 500;
+}
+
+.script-line .wait-command {
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.script-line .wait-duration {
+  color: #20c997;
+  font-weight: 500;
+}
+
+.script-line .command-params {
+  color: #6f42c1;
+}
+
+.dot-script-clicked {
+  filter: drop-shadow(0 0 8px #0074d9) brightness(1.2);
+  transition: filter 0.2s;
 } 

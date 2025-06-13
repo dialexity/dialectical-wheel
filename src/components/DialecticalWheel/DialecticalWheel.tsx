@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, Dispatch, SetStateAction } from 'react';
 import './DialecticalWheel.css';
 import { defaultPairTexts } from '../../utils/SliceGenerator';
 import { 
@@ -25,6 +25,8 @@ interface DialecticalWheelProps {
   onDynamicSlicesChange?: (slices: any[]) => void; // Callback to notify parent of slice changes
   onSliceClick?: (pairIndex: number) => void; // Callback when any slice is clicked
   recordRef?: React.RefObject<SVGGElement>; // Optional external ref for the record group
+  rotation?: number;
+  setRotation?: Dispatch<SetStateAction<number>>;
 }
 
 const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
@@ -37,17 +39,23 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
   pairTexts = null,
   onDynamicSlicesChange = undefined,
   onSliceClick = undefined,
-  recordRef = undefined
+  recordRef: externalRecordRef,
+  rotation,
+  setRotation
 }) => {
+  // Use a local ref if not provided
+  const internalRecordRef = useRef<SVGGElement>(null);
+  const recordRef = externalRecordRef || internalRecordRef;
+
   // Use our custom hooks
   const sequence = useWheelSequence(numPairs, sliceSequence);
-  const interaction = useWheelInteraction(recordRef);
+  const interaction = useWheelInteraction(recordRef, rotation, setRotation);
   const slices = useWheelSlices(
     sequence.sequenceWithLabels,
     sequence.normalSliceAngle,
     sequence.focusedSliceAngle,
     sequence.unfocusedSliceAngle,
-    interaction.rotation,
+    rotation !== undefined ? rotation : interaction.rotation,
     interaction.setRotation,
     pairTexts,
     detailedSlices,
@@ -58,7 +66,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     slices.dynamicSlices,
     title,
     interaction.recordRef,
-    interaction.rotation,
+    rotation !== undefined ? rotation : interaction.rotation,
     false // Don't auto-create demo arrows
   );
 
@@ -97,7 +105,7 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
                 handleSliceClick={slices.handleSliceClick}
                 handleSliceTouchStart={handleSliceTouchStart}
                 handleSliceTouchEnd={handleSliceTouchEnd}
-                rotation={interaction.rotation}
+                rotation={rotation !== undefined ? rotation : interaction.rotation}
                 pairTexts={pairTexts}
               />
               

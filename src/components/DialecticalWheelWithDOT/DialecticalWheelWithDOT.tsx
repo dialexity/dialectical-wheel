@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
 import DialecticalWheel from '../DialecticalWheel/DialecticalWheel';
 import { useNodeConnections } from '../DialecticalWheel/hooks/useNodeConnections';
 import { ScriptEditor, AnimationControls, SampleScripts, ExecutionControls } from './components';
@@ -48,6 +48,20 @@ interface DialecticalWheelWithDOTProps {
   enableAnimation?: boolean;
   onScriptExecution?: (result: any) => void;
   className?: string;
+}
+
+export interface WheelWithArrowsRef {
+  executeDotScript: (script: string) => { success: boolean; created: number; errors: string[] };
+  getAvailableSliceLayerCodes: () => string[];
+  clearDotScriptConnections: () => void;
+  createDemoConnections: () => void;
+  toggleArrows: () => void;
+  showArrows: boolean;
+  connectNodes?: (fromCode: string, toCode: string, color?: string, strokeWidth?: number, label?: string) => void;
+  toggleTopHalfZoom: () => void;
+  setRotation: (angle: number) => void;
+  rotation: number;
+  getDynamicSlices: () => any[];
 }
 
 // Utility functions
@@ -104,12 +118,125 @@ const WheelWithArrows = React.forwardRef<any, {
   const wheelContainerRef = useRef<HTMLDivElement>(null);
   const recordRef = useRef<SVGGElement>(null);
   
+  // Create our own interaction hooks to have access to zoom and rotation functions
+  const [wheelRotation, setWheelRotation] = useState<number>(270);
+  const [wheelScale, setWheelScale] = useState<number>(1);
+  const [wheelOffsetX, setWheelOffsetX] = useState<number>(0);
+  const [wheelOffsetY, setWheelOffsetY] = useState<number>(0);
+  const [isZoomedToTop, setIsZoomedToTop] = useState<boolean>(false);
+
+  // Custom zoom function that matches the wheel's zoom behavior
+  const customToggleTopHalfZoom = () => {
+    if (isZoomedToTop) {
+      // Zoom out to full view
+      const targetScale = 1;
+      const targetOffsetX = 0;
+      const targetOffsetY = 0;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToTop(false);
+    } else {
+      // Zoom into top half of wheel
+      const targetScale = 1.6;
+      const topCenterAngle = 270; // 270° is straight up (top center)
+      const topRadius = 90;
+      
+      const angleRad = topCenterAngle * Math.PI / 180;
+      const cx = 200, cy = 200; // Wheel center
+      const focusX = cx + topRadius * Math.cos(angleRad);
+      const focusY = cy + topRadius * Math.sin(angleRad);
+      
+      const viewCenterX = 200, viewCenterY = 200;
+      const targetOffsetX = (viewCenterX - focusX) * targetScale;
+      const targetOffsetY = (viewCenterY - focusY) * targetScale;
+      
+      animateToTransform(targetScale, targetOffsetX, targetOffsetY);
+      setIsZoomedToTop(true);
+    }
+  };
+
+  // Animation helper for smooth transforms
+  const animateToTransform = (targetScale: number, targetOffsetX: number, targetOffsetY: number) => {
+    const startTime = Date.now();
+    const startScale = wheelScale;
+    const startOffsetX = wheelOffsetX;
+    const startOffsetY = wheelOffsetY;
+    const duration = 400;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeOutCubic for smooth animation
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      const currentScale = startScale + (targetScale - startScale) * eased;
+      const currentOffsetX = startOffsetX + (targetOffsetX - startOffsetX) * eased;
+      const currentOffsetY = startOffsetY + (targetOffsetY - startOffsetY) * eased;
+      
+      setWheelScale(currentScale);
+      setWheelOffsetX(currentOffsetX);
+      setWheelOffsetY(currentOffsetY);
+      
+      // Apply transform to the record group
+      if (recordRef.current) {
+        recordRef.current.setAttribute('transform', 
+          `translate(${currentOffsetX} ${currentOffsetY}) translate(200 200) scale(${currentScale}) rotate(${wheelRotation}) translate(-200 -200)`
+        );
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
+
+  // Custom rotation function with smooth animation
+  const customSetRotation = (targetAngle: number, duration: number = 400) => {
+    const startTime = Date.now();
+    const startRotation = wheelRotation;
+    
+    // Find shortest path
+    let diff = targetAngle - startRotation;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    const finalTarget = startRotation + diff;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeOutCubic for smooth animation
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      const currentRotation = startRotation + (finalTarget - startRotation) * eased;
+      setWheelRotation(currentRotation);
+      // Do NOT set the SVG transform directly here; let React handle it
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  };
+
+  // Apply transform whenever state changes
+  React.useEffect(() => {
+    if (recordRef.current) {
+      recordRef.current.setAttribute('transform', 
+        `translate(${wheelOffsetX} ${wheelOffsetY}) translate(200 200) scale(${wheelScale}) rotate(${wheelRotation}) translate(-200 -200)`
+      );
+    }
+  }, [wheelScale, wheelOffsetX, wheelOffsetY, wheelRotation]);
+
   // Node connections API
   const nodeConnectionsAPI = useNodeConnections(
     dynamicSlices,
     title,
     recordRef,
-    0 // rotation
+    wheelRotation // Use our managed rotation
   );
 
   // Initialize wheel data
@@ -199,7 +326,20 @@ const WheelWithArrows = React.forwardRef<any, {
       }
     },
     showArrows: nodeConnectionsAPI?.showArrows ?? true,
-    connectNodes: nodeConnectionsAPI?.sliceLayerAPI?.connectNodesBySliceLayerCode
+    connectNodes: nodeConnectionsAPI?.sliceLayerAPI?.connectNodesBySliceLayerCode,
+    // Expose zoom and rotation functions
+    toggleTopHalfZoom: customToggleTopHalfZoom,
+    setRotation: customSetRotation,
+    get rotation() {
+      return wheelRotation;
+    },
+    get isZoomedToTop() {
+      return isZoomedToTop;
+    },
+    getDynamicSlices: () => {
+      console.log('HERE: dynamicSlices', dynamicSlices);
+      return dynamicSlices;
+    }
   }));
 
   return (
@@ -212,6 +352,8 @@ const WheelWithArrows = React.forwardRef<any, {
         onDynamicSlicesChange={handleDynamicSlicesChange}
         recordRef={recordRef}
         onSliceClick={handleSliceClick}
+        rotation={wheelRotation}
+        setRotation={setWheelRotation}
       />
     </div>
   );
@@ -352,7 +494,39 @@ T1 -> A1+ [color=#FF6B35, weight=3, label="sustainability vs practicality"]
 T2- -> A2 [color=#2196F3, style=dashed, label="paralysis to reliance"]
 T3 -> A3+ [color=#9C27B0, style=dotted, weight=2, label="limitations drive innovation"]
 T4+ -> A4+ [color=#4CAF50, weight=2, label="adaptability meets pragmatism"]
-A4 -> T1+ [color=#4CAF50, weight=2, label="pragmatism supports sustainability"]`
+A4 -> T1+ [color=#4CAF50, weight=2, label="pragmatism supports sustainability"]`,
+
+    'Advanced with Zoom & Rotation': `// Dynamic presentation with camera movements
+zoom top // Focus on top half of wheel
+wait 1000 // Pause for emphasis
+T1 -> A1+ [color=#FF6B35, weight=3, label="primary tension"]
+wait 500
+rotate 90 duration=1000 // Rotate to show different angle
+T2 -> A2+ [color=#4CAF50, weight=2, label="secondary flow"]
+wait 800
+zoom reset // Return to full view
+rotate 0 direction=shortest duration=1200 // Return to original position
+T3 -> A3+ [color=#9C27B0, weight=2, label="synthesis"]`,
+
+    'Camera Showcase': `// Demonstrate zoom and rotation capabilities
+// Initial zoom to focus area
+zoom top duration=800
+wait 1000
+// Show some connections in zoomed view
+T1 -> A1+ [color=#FF6B35, weight=3]
+wait 600
+// Rotate wheel while zoomed
+rotate 45 duration=1000 direction=cw
+T2 -> A2+ [color=#4CAF50, weight=2]
+wait 800
+// Return to normal view with smooth transition
+zoom reset duration=1000
+wait 500
+rotate 270 direction=shortest duration=1500
+wait 500
+// Final connections in normal view
+T3 -> A3+ [color=#9C27B0, weight=2]
+A3 -> T1+ [color=#FFA726, weight=1]`
   };
 
   return (
