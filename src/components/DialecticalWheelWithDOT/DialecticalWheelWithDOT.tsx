@@ -23,14 +23,7 @@ interface WisdomData {
   }>;
 }
 
-interface TransformedWisdomUnit {
-  tPlus: { statement: string };
-  t: { statement: string };
-  tMinus: { statement: string };
-  aPlus: { statement: string };
-  a: { statement: string };
-  aMinus: { statement: string };
-}
+
 
 interface PairTexts {
   [key: number]: {
@@ -65,32 +58,21 @@ export interface WheelWithArrowsRef {
 }
 
 // Utility functions
-const transformWisdomUnits = (apiWisdomUnits: WisdomUnit[]): TransformedWisdomUnit[] => {
-  return apiWisdomUnits.map((unit) => ({
-    tPlus: { statement: unit.t_plus.statement },
-    t: { statement: unit.t.statement },
-    tMinus: { statement: unit.t_minus.statement },
-    aPlus: { statement: unit.a_plus.statement },
-    a: { statement: unit.a.statement },
-    aMinus: { statement: unit.a_minus.statement }
-  }));
-};
-
-const generatePairTextsFromWisdomUnits = (wisdomUnits: TransformedWisdomUnit[]): PairTexts => {
+const generatePairTextsFromWisdomUnits = (wisdomUnits: WisdomUnit[]): PairTexts => {
   const pairTexts: PairTexts = {};
   
   wisdomUnits.forEach((wu, index) => {
     // Generate thesis labels
     const thesisLabels: string[][] = [];
-    if (wu.tPlus?.statement) thesisLabels.push([wu.tPlus.statement, 'green']);
+    if (wu.t_plus?.statement) thesisLabels.push([wu.t_plus.statement, 'green']);
     if (wu.t?.statement) thesisLabels.push([wu.t.statement, 'black']);
-    if (wu.tMinus?.statement) thesisLabels.push([wu.tMinus.statement, 'red']);
+    if (wu.t_minus?.statement) thesisLabels.push([wu.t_minus.statement, 'red']);
     
     // Generate antithesis labels
     const antithesisLabels: string[][] = [];
-    if (wu.aPlus?.statement) antithesisLabels.push([wu.aPlus.statement, 'green']);
+    if (wu.a_plus?.statement) antithesisLabels.push([wu.a_plus.statement, 'green']);
     if (wu.a?.statement) antithesisLabels.push([wu.a.statement, 'black']);
-    if (wu.aMinus?.statement) antithesisLabels.push([wu.aMinus.statement, 'red']);
+    if (wu.a_minus?.statement) antithesisLabels.push([wu.a_minus.statement, 'red']);
     
     // Only add if we have both sides
     if (thesisLabels.length > 0 && antithesisLabels.length > 0) {
@@ -372,8 +354,8 @@ const DialecticalWheelWithDOT: React.FC<DialecticalWheelWithDOTProps> = ({
   onScriptExecution,
   className = ""
 }) => {
-  // Transform wisdom data
-  const wisdomUnits = transformWisdomUnits(wisdomData.wheels[0].wisdom_units);
+  // Generate pair texts directly from wisdom units
+  const wisdomUnits = wisdomData.wheels[0].wisdom_units;
   const pairTexts = generatePairTextsFromWisdomUnits(wisdomUnits);
   const numPairs = wisdomUnits.length;
 
@@ -486,47 +468,155 @@ const DialecticalWheelWithDOT: React.FC<DialecticalWheelWithDOTProps> = ({
   // Sample DOT scripts based on wisdom data
   const sampleScripts = {
     'Basic Flow': `// ${wisdomData.user_message.substring(0, 50)}...
+click T1+
+zoom top duration=600
+wait 800
+zoom reset duration=600
 T1 -> A1+ [color=#FF6B35, weight=3, label="core decision tension"]
-T2 -> A2+ [color=#FF6B35, weight=3, label="analysis informing optimism"]`,
+wait 800
+click T2+
+zoom top duration=600
+wait 600
+zoom reset duration=600
+T2 -> A2+ [color=#4CAF50, weight=3, label="analysis informing optimism"]`,
     
-    'Complex Analysis': `// Multi-factor decision analysis
+    'Interactive Analysis': `// Multi-factor decision analysis with interactions
+click T1+ // Highlight thesis starting point
+zoom top duration=500
+wait 700
+zoom reset duration=500
 T1 -> A1+ [color=#FF6B35, weight=3, label="sustainability vs practicality"]
-T2- -> A2 [color=#2196F3, style=dashed, label="paralysis to reliance"]
-T3 -> A3+ [color=#9C27B0, style=dotted, weight=2, label="limitations drive innovation"]
-T4+ -> A4+ [color=#4CAF50, weight=2, label="adaptability meets pragmatism"]
-A4 -> T1+ [color=#4CAF50, weight=2, label="pragmatism supports sustainability"]`,
-
-    'Advanced with Zoom & Rotation': `// Dynamic presentation with camera movements
-zoom top // Focus on top half of wheel
-wait 1000 // Pause for emphasis
-T1 -> A1+ [color=#FF6B35, weight=3, label="primary tension"]
+wait 800
+click A1+ // Show the connection target
+zoom top duration=500
+wait 600
+zoom reset duration=500
+T2- -> A2 [color=#2196F3, weight=2, label="paralysis to reliance"]
+wait 800
+click T3 // Interactive exploration
+zoom top duration=500
 wait 500
+zoom reset duration=500
+T3 -> A3+ [color=#9C27B0, weight=2, label="limitations drive innovation"]
+wait 600
+click T4+
+zoom top duration=500
+wait 500
+zoom reset duration=500
+T4+ -> A4+ [color=#4CAF50, weight=2, label="adaptability meets pragmatism"]
+wait 500
+click A4+ // Final emphasis
+zoom top duration=500
+wait 600
+zoom reset duration=500
+A4 -> T1+ [color=#4CAF50, weight=1, label="feedback loop"]`,
+
+    'Camera + Clicks Demo': `// Dynamic presentation with camera movements and clicks
+click T1 // Highlight starting point
+zoom top duration=600
+wait 800
+zoom reset duration=600
+T1 -> A1+ [color=#FF6B35, weight=3, label="primary tension"]
+wait 800
 rotate 90 duration=1000 // Rotate to show different angle
+click T2+ // Show rotated perspective
+zoom top duration=600
+wait 700
+zoom reset duration=600
 T2 -> A2+ [color=#4CAF50, weight=2, label="secondary flow"]
 wait 800
-zoom reset // Return to full view
 rotate 0 direction=shortest duration=1200 // Return to original position
+click T3- // Interactive element
+zoom top duration=600
+wait 600
+zoom reset duration=600
 T3 -> A3+ [color=#9C27B0, weight=2, label="synthesis"]`,
 
-    'Camera Showcase': `// Demonstrate zoom and rotation capabilities
-// Initial zoom to focus area
+    'Full Feature Showcase': `// Complete demonstration of all DOT Script capabilities
+// === PHASE 1: Setup & Initial Connections ===
+click T1+ // Highlight green thesis layer
 zoom top duration=800
 wait 1000
-// Show some connections in zoomed view
-T1 -> A1+ [color=#FF6B35, weight=3]
+zoom reset duration=800
+T1 -> A1+ [color=#FF6B35, weight=3, label="core conflict"]
 wait 600
-// Rotate wheel while zoomed
-rotate 45 duration=1000 direction=cw
-T2 -> A2+ [color=#4CAF50, weight=2]
-wait 800
-// Return to normal view with smooth transition
-zoom reset duration=1000
+
+// === PHASE 2: Rotation & Layer Exploration ===
+rotate 45 duration=800 direction=cw
+click T2 // White layer interaction
+zoom top duration=600
+wait 700
+zoom reset duration=600
+T2 -> A2+ [color=#4CAF50, weight=2, label="development path"]
 wait 500
+click A2- // Pink layer click
+zoom top duration=600
+wait 500
+zoom reset duration=600
+rotate 90 duration=1000 direction=cw
+wait 500
+
+// === PHASE 3: Zoom Out & Complex Connections ===
+click T3- // Multi-layer interaction
+zoom top duration=600
+wait 600
+zoom reset duration=800
+T3 -> A3+ [color=#9C27B0, weight=2, label="synthesis emerging"]
+wait 600
+click T4+
+zoom top duration=600
+wait 500
+zoom reset duration=600
+T4+ -> A4+ [color=#FFA726, weight=1, label="integration"]
+wait 400
+
+// === PHASE 4: Return & Feedback Loops ===
 rotate 270 direction=shortest duration=1500
+click A4 // Show circular reasoning
+zoom top duration=600
+wait 700
+zoom reset duration=600
+A4 -> T1+ [color=#4CAF50, weight=1, label="feedback"]
+wait 600
+click T1+ // Final emphasis
+zoom top duration=600
 wait 500
-// Final connections in normal view
-T3 -> A3+ [color=#9C27B0, weight=2]
-A3 -> T1+ [color=#FFA726, weight=1]`
+zoom reset duration=600
+wait 1000`,
+
+    'Quick Click Tour': `// Rapid interactive exploration of the wheel
+click T1+ // Green thesis
+zoom top duration=400
+wait 400
+zoom reset duration=400
+click T1 // White thesis  
+zoom top duration=400
+wait 400
+zoom reset duration=400
+click T1- // Pink thesis
+zoom top duration=400
+wait 500
+zoom reset duration=400
+click A1+ // Green antithesis
+zoom top duration=400
+wait 400
+zoom reset duration=400
+click A1 // White antithesis
+zoom top duration=400
+wait 400
+zoom reset duration=400
+click A1- // Pink antithesis
+zoom top duration=400
+wait 600
+zoom reset duration=600
+// Show the connections after exploration
+T1 -> A1+ [color=#FF6B35, weight=2, label="explored connection"]
+wait 400
+click A2+ // Jump to different pair
+zoom top duration=400
+wait 500
+zoom reset duration=400
+T2 -> A2+ [color=#4CAF50, weight=2, label="secondary link"]`
   };
 
   return (
