@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { SLICES } from '../config/wheelConfig';
 
 // Type definitions
 interface SliceConfig {
@@ -62,7 +63,7 @@ export const useWheelSequence = (
 
   // Constants from the JavaScript class
   const normalSliceAngle = 360 / (2 * numPairs);
-  const focusedSliceAngle = 120;
+  const focusedSliceAngle = SLICES.DEFAULT_ANGLE;
   const unfocusedSliceAngle = (360 - 2 * focusedSliceAngle) / (2 * numPairs - 2);
 
   return {

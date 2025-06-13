@@ -47,9 +47,9 @@ export const WHEEL_CONFIG = {
     DEFAULT_FONT_FAMILY: "'Arial Rounded MT Bold', Arial, sans-serif",
   },
 
-  // Slice configuration
+  // Focused Slice configuration
   SLICES: {
-    DEFAULT_ANGLE: 120,
+    DEFAULT_ANGLE: 60,
     LAYER_COUNT: 3,
     // Layer distribution within slice (as ratios)
     LAYER_RATIOS: [

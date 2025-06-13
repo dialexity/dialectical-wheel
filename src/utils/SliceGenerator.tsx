@@ -281,8 +281,9 @@ export const DetailedSlice: React.FC<{
   debugColor?: string;
 }> = ({ texts, sliceId, debugColor = COLORS.BOUNDARY_LINES }) => {
   const centerX = DIMENSIONS.CENTER_X, centerY = DIMENSIONS.CENTER_Y;
-  const startAngle = -60;
-  const endAngle = 60;
+  const halfAngle = SLICES.DEFAULT_ANGLE / 2;
+  const startAngle = -halfAngle;
+  const endAngle = halfAngle;
   
   const startRad = toRadians(startAngle);
   const endRad = toRadians(endAngle);
@@ -308,7 +309,7 @@ export const DetailedSlice: React.FC<{
     const outer2X = centerX + ring.outer * Math.cos(endRad);
     const outer2Y = centerY + ring.outer * Math.sin(endRad);
     
-    const largeArc = 0; // 120° is less than 180°
+    const largeArc = SLICES.DEFAULT_ANGLE > 180 ? 1 : 0;
     
     const pathD = `M ${outer1X},${outer1Y} 
                    A ${ring.outer},${ring.outer} 0 ${largeArc},1 ${outer2X},${outer2Y} 
@@ -339,7 +340,7 @@ export const DetailedSlice: React.FC<{
       const textArcPath = `M ${textStartX},${textStartY} A ${textRadius},${textRadius} 0 ${largeArc},1 ${textEndX},${textEndY}`;
       
       const maxFontSize = index === 0 ? 8 : index === 1 ? 10 : 14;
-      const arcLengthRadians = (120 * Math.PI) / 180;
+      const arcLengthRadians = (SLICES.DEFAULT_ANGLE * Math.PI) / 180;
       const arcLength = textRadius * arcLengthRadians;
       const optimalFontSize = calculateOptimalFontSize(texts[index], arcLength, maxFontSize);
       
