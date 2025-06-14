@@ -54,14 +54,15 @@
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
     "@babel/preset-react": "^7.23.0",
+    "@babel/preset-typescript": "^7.27.1",
     "@rollup/plugin-babel": "^6.0.0",
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "motion": "^12.18.1",
     "rollup": "^4.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-postcss": "^4.0.2",
-    "@babel/preset-typescript": "^7.27.1",
-    "@rollup/plugin-typescript": "^12.1.2",
     "tslib": "^2.8.1",
     "typescript": "^5.0.0"
   }
