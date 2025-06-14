@@ -276,7 +276,8 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
           strokeWidth={outerRadius - innerRadius}
           opacity={0.7}
           style={{
-            animation: isPulsing ? 'pulse 0.8s ease-in-out infinite' : 'none',
+            animation: isPulsing ? `pulse 0.8s ease-in-out infinite` : 'none',
+            animationDelay: isPulsing ? `${layer * 0.15}s` : '0s',
             transformOrigin: `${cx}px ${cy}px`
           }}
         />
@@ -356,6 +357,7 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
           fill={COLORS.CENTER_CIRCLE}
           style={{
             animation: isPulsing ? 'pulse 0.8s ease-in-out infinite' : 'none',
+            animationDelay: isPulsing ? '0s' : '0s', // Center starts first
             transformOrigin: `${cx}px ${cy}px`
           }}
         />
