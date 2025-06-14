@@ -35,8 +35,8 @@ interface SliceProps {
 const wrapTextForArc = (text: string, arcLength: number, fontSize: number): string[] => {
   if (!text) return [''];
   
-  const avgCharWidth = fontSize * 0.6;
-  const maxCharsPerLine = Math.floor(arcLength / avgCharWidth);
+  const avgCharWidth = fontSize * 0.65; // Slightly more conservative character width
+  const maxCharsPerLine = Math.max(1, Math.floor(arcLength / avgCharWidth * 0.9)); // Add 10% safety margin
   
   if (text.length <= maxCharsPerLine) {
     return [text];
@@ -55,8 +55,13 @@ const wrapTextForArc = (text: string, arcLength: number, fontSize: number): stri
         lines.push(currentLine);
         currentLine = word;
       } else {
-        lines.push(word.substring(0, maxCharsPerLine));
-        currentLine = word.substring(maxCharsPerLine);
+        // If single word is too long, truncate it
+        if (word.length > maxCharsPerLine) {
+          lines.push(word.substring(0, maxCharsPerLine - 3) + '...');
+          currentLine = '';
+        } else {
+          currentLine = word;
+        }
       }
     }
   }
@@ -65,21 +70,29 @@ const wrapTextForArc = (text: string, arcLength: number, fontSize: number): stri
     lines.push(currentLine);
   }
   
-  return lines.slice(0, 3); // Max 3 lines
+  return lines.slice(0, 3); // Allow up to 3 lines but with better boundary checking
 };
 
 const calculateOptimalFontSize = (text: string, arcLength: number, maxFontSize: number, minFontSize: number = 4): number => {
   if (!text) return maxFontSize;
   
+  // For very small arcs, start with a much smaller font size
+  if (arcLength < 50) {
+    maxFontSize = Math.min(maxFontSize, 8);
+  } else if (arcLength < 100) {
+    maxFontSize = Math.min(maxFontSize, 10);
+  }
+  
   let fontSize = maxFontSize;
   while (fontSize >= minFontSize) {
-    const avgCharWidth = fontSize * 0.6;
-    const maxCharsPerLine = Math.floor(arcLength / avgCharWidth);
+    const avgCharWidth = fontSize * 0.65;
+    const maxCharsPerLine = Math.max(1, Math.floor(arcLength / avgCharWidth * 0.9)); // Safety margin
     
     const lines = wrapTextForArc(text, arcLength, fontSize);
     const longestLine = Math.max(...lines.map(line => line.length));
     
-    if (longestLine <= maxCharsPerLine) {
+    // More strict checking - ensure text fits comfortably
+    if (longestLine <= maxCharsPerLine && lines.length <= 2) {
       return fontSize;
     }
     
@@ -169,12 +182,12 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
   for (let j = 0; j < labels.length; j++) {
     const [label, color] = labels[j];
     
-    // Calculate radius for this layer with better clearance from edges
-    const innerRadius = radius * (0.3 + 0.7 * j / nLabels);
-    const outerRadius = radius * (0.3 + 0.7 * (j + 1) / nLabels);
+    // Calculate precise layer boundaries using the same logic as the background layers
+    const innerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * j / nLabels);
+    const outerRadius = radius * (DIMENSIONS.SLICE_INNER_RADIUS_RATIO + (DIMENSIONS.SLICE_OUTER_RADIUS_RATIO - DIMENSIONS.SLICE_INNER_RADIUS_RATIO) * (j + 1) / nLabels);
     
-    // Use weighted average closer to inner edge for outer layers to avoid edge proximity
-    const clearanceFactor = j === (nLabels - 1) ? 0.3 : 0.5; // 30% from inner for outermost, 50% for others
+    // Use smaller clearance to keep text well within layer boundaries
+    const clearanceFactor = 0.5; // Center text in the middle of each layer
     const textRadius = innerRadius + (outerRadius - innerRadius) * clearanceFactor;
     const maxFontSize = fonts[j % fonts.length];
     
@@ -182,28 +195,34 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
     const arcLengthRadians = (sliceAngle * Math.PI) / 180;
     const arcLength = textRadius * arcLengthRadians;
     
-    // Calculate optimal font size
-    const optimalFontSize = calculateOptimalFontSize(label, arcLength, maxFontSize);
+    // Calculate optimal font size with more aggressive sizing for small arcs
+    const optimalFontSize = calculateOptimalFontSize(label, arcLength, maxFontSize, 6); // Higher minimum font size
     
-    // Wrap text if needed
+    // Wrap text with stricter constraints
     const wrappedLines = wrapTextForArc(label, arcLength, optimalFontSize);
     
     // Create arc path for text
     const startAngleRad = toRadians(angle - halfAngle);
     const endAngleRad = toRadians(angle + halfAngle);
     
-    // For multiple lines, adjust radius for each line
-    const lineSpacing = optimalFontSize * 1.2;
-    const totalHeight = (wrappedLines.length - 1) * lineSpacing;
-    const startRadius = textRadius - totalHeight / 2;
+    // Calculate available radial space within this layer
+    const layerHeight = outerRadius - innerRadius;
+    const lineSpacing = optimalFontSize * 1.1; // Reduced line spacing
+    const maxLines = Math.floor(layerHeight / lineSpacing);
+    const linesToRender = Math.min(wrappedLines.length, maxLines, 3); // Allow up to 3 lines if layer is big enough
     
-    wrappedLines.forEach((line, lineIndex) => {
-      // Reverse line order: first line gets largest radius (farthest from center)
-      const currentRadius = startRadius + ((wrappedLines.length - 1 - lineIndex) * lineSpacing);
+    // Center the text vertically within the layer
+    const totalTextHeight = (linesToRender - 1) * lineSpacing;
+    const startRadius = textRadius - totalTextHeight / 2;
+    
+    for (let lineIndex = 0; lineIndex < linesToRender; lineIndex++) {
+      const line = wrappedLines[lineIndex];
+      // Restore proper line ordering: first line gets largest radius (farthest from center)
+      const currentRadius = startRadius + ((linesToRender - 1 - lineIndex) * lineSpacing);
       
-      // Skip if radius is out of bounds
-      if (currentRadius < radius * 0.3 || currentRadius > radius) {
-        return;
+      // More lenient boundary checking - only skip if clearly outside layer
+      if (currentRadius < innerRadius + 1 || currentRadius > outerRadius - 1) {
+        continue; // Skip this line if it would go outside layer boundaries
       }
       
       const arcStartX = cx + currentRadius * Math.cos(startAngleRad);
@@ -228,7 +247,7 @@ export const SliceAtAngle: React.FC<SliceProps> = ({
           </textPath>
         </text>
       );
-    });
+    }
   }
   
   // Generate boundary lines

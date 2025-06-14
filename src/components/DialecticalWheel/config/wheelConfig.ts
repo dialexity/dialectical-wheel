@@ -49,7 +49,7 @@ export const WHEEL_CONFIG = {
 
   // Focused Slice configuration
   SLICES: {
-    DEFAULT_ANGLE: 60,
+    DEFAULT_ANGLE: 120,
     LAYER_COUNT: 3,
     // Layer distribution within slice (as ratios)
     LAYER_RATIOS: [
