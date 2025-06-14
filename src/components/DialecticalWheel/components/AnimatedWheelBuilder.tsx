@@ -147,8 +147,16 @@ const transformWisdomUnitsToPairTexts = (wisdomUnits: any[]) => {
   
   wisdomUnits.forEach((unit, index) => {
     pairTexts[index] = {
-      thesis: [unit.t.statement, unit.t_plus.statement, unit.t_minus.statement],
-      antithesis: [unit.a.statement, unit.a_plus.statement, unit.a_minus.statement]
+      thesis: [
+        [unit.t_plus.statement, 'green'],
+        [unit.t.statement, 'black'], 
+        [unit.t_minus.statement, 'red']
+      ],
+      antithesis: [
+        [unit.a_plus.statement, 'green'],
+        [unit.a.statement, 'black'],
+        [unit.a_minus.statement, 'red']
+      ]
     };
   });
   
@@ -366,7 +374,7 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
             transformOrigin: `${cx}px ${cy}px`
           }}
         >
-          Car Decision
+          🚗 GAS vs ELECTRIC 🔋
         </text>
         
         {/* All pairs with smooth transformation */}
