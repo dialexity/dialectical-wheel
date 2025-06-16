@@ -183,6 +183,40 @@
   touch-action: none;
 }
 
+/* Styles for animated arrows */
+.animated-arrows {
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.animated-arrows g {
+  pointer-events: auto;
+}
+
+/* Ensure arrows and labels render above center circle */
+.record > .animated-arrows {
+  z-index: 100;
+}
+
+.arrows-paths {
+  pointer-events: auto;
+}
+
+.arrows-labels {
+  pointer-events: auto;
+}
+
+.arrows-labels g {
+  pointer-events: auto;
+}
+
+.arrows-labels rect,
+.arrows-labels text,
+.arrows-labels circle,
+.arrows-labels line {
+  pointer-events: auto;
+}
+
 /* Styles for clickable slices with thesis/antithesis distinction */
 .clickable-slice {
   cursor: pointer;
@@ -200,9 +234,6 @@
 .antithesis-slice .clickable-slice:hover {
   stroke: rgba(244, 67, 54, 0.3);
 }*/
-
-.slice-boundary {
-}
 
 .slice-component {
   transform-origin: 200px 200px;

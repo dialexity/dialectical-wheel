@@ -32,12 +32,9 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
       {/* Dynamic slices (like the JavaScript createClickableSlice output) */}
       <g id="dynamic-slice-container">
         {dynamicSlices.map((slice) => {
-          console.log('Rendering slice:', slice.id, 'type:', slice.type, 'detailed:', slice.detailed, 'angle:', slice.angle);
           
           // Handle detailed slices differently - use React component directly
           if (slice.detailed) {
-            console.log('Detailed slice transform:', `rotate(${slice.angle} 200 200)`);
-            console.log('Detailed slice pair:', slice.pair, 'type:', slice.type);
             
             // Extract text data from defaultPairTexts for this slice
             const usePairTexts = pairTexts || defaultPairTexts;
@@ -70,7 +67,6 @@ const SliceRenderer: React.FC<SliceRendererProps> = ({
           }
           
           // Handle simple slices (now with layered rings) - use memoized data
-          console.log(`📋 RENDER: Using memoized data for slice ${slice.id} (${slice.label})`);
           const sliceData = memoizedSliceData.get(slice.id);
           
           if (!sliceData) {

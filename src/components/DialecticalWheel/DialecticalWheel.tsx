@@ -1,19 +1,32 @@
-import React, { useMemo, useRef, Dispatch, SetStateAction } from 'react';
+import React, { useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
 import './DialecticalWheel.css';
-import { defaultPairTexts } from '../../utils/SliceGenerator';
-import { 
-  useWheelSequence, 
-  useWheelInteraction, 
-  useWheelSlices, 
-  useNodeConnections,
+import {
+  useWheelSequence,
+  useWheelInteraction,
+  useWheelSlices,
   SliceConfig,
   DetailedSlices,
-  PairTexts 
+  PairTexts
 } from './hooks';
-import { WheelControls, WheelOverlays, RotationHints, SvgMarkers, SliceRenderer } from './components';
+import {
+  WheelControls,
+  WheelOverlays,
+  SvgMarkers,
+  AnimatedSliceRenderer,
+  AnimatedArrows,
+  WheelBuildAnimation,
+  AnimationStage
+} from './components';
 import { DIMENSIONS, COLORS, TYPOGRAPHY, LAYOUT, DEFAULTS } from './config/wheelConfig';
 
 // Type definitions
+interface ArrowTransition {
+  from: string;
+  to: string;
+  label: string;
+  color: string;
+}
+
 interface DialecticalWheelProps {
   numPairs?: number;
   title?: string;
@@ -22,34 +35,47 @@ interface DialecticalWheelProps {
   fullSequence?: any[] | null; // Complete sequence from API (overrides sliceSequence)
   detailedSlices?: DetailedSlices;
   pairTexts?: PairTexts | null;
-  onDynamicSlicesChange?: (slices: any[]) => void; // Callback to notify parent of slice changes
-  onSliceClick?: (pairIndex: number) => void; // Callback when any slice is clicked
-  recordRef?: React.RefObject<SVGGElement>; // Optional external ref for the record group
+  enableBuildAnimation?: boolean;
+  onDynamicSlicesChange?: (slices: any[]) => void;
+  onSliceClick?: (pairIndex: number) => void;
+  recordRef?: React.RefObject<SVGGElement | null>;
   rotation?: number;
   setRotation?: Dispatch<SetStateAction<number>>;
+  onAnimationComplete?: () => void;
+  arrows?: ArrowTransition[];
 }
 
-const DialecticalWheel: React.FC<DialecticalWheelProps> = ({ 
-  numPairs = DEFAULTS.NUM_PAIRS, 
+const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
+  numPairs = DEFAULTS.NUM_PAIRS,
   title = DEFAULTS.TITLE,
   centerLabel = DEFAULTS.CENTER_LABEL,
   sliceSequence = null,
   fullSequence = null,
   detailedSlices = {},
   pairTexts = null,
+  enableBuildAnimation = true,
   onDynamicSlicesChange = undefined,
   onSliceClick = undefined,
   recordRef: externalRecordRef,
   rotation,
-  setRotation
+  setRotation,
+  onAnimationComplete,
+  arrows = [],
 }) => {
   // Use a local ref if not provided
-  const internalRecordRef = useRef<SVGGElement>(null);
-  const recordRef = externalRecordRef || internalRecordRef;
+  const localRecordRef = useRef<SVGGElement | null>(null);
+  const recordRef = externalRecordRef || localRecordRef;
 
-  // Use our custom hooks
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [currentAnimationStage, setCurrentAnimationStage] = useState<AnimationStage>('idle');
+  const [animationKey, setAnimationKey] = useState(0);
+  const [showCustomArrows, setShowCustomArrows] = useState(false);
+  const hasAnimationCompletedRef = useRef(false);
+
+  // Initialize wheel data
   const sequence = useWheelSequence(numPairs, sliceSequence);
-  const interaction = useWheelInteraction(recordRef, rotation, setRotation);
+  const interaction = useWheelInteraction(recordRef);
   const slices = useWheelSlices(
     sequence.sequenceWithLabels,
     sequence.normalSliceAngle,
@@ -62,16 +88,35 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     onDynamicSlicesChange,
     onSliceClick
   );
-  const connections = useNodeConnections(
-    slices.dynamicSlices,
-    title,
-    interaction.recordRef,
-    rotation !== undefined ? rotation : interaction.rotation,
-    false // Don't auto-create demo arrows
-  );
 
-  // Log the sequence for debugging (like the original HTML)
-  console.log(`Initialized ${title} wheel with sequence:`, sequence.sequenceWithLabels.map(s => s.label).join(', '));
+  const handleAnimationComplete = useCallback(() => {
+    setIsAnimating(false);
+    setCurrentAnimationStage('complete');
+    hasAnimationCompletedRef.current = true;
+    // Call parent callback if provided
+    if (onAnimationComplete) {
+      onAnimationComplete();
+    }
+  }, [onAnimationComplete]);
+
+  const handleStageChange = useCallback((stage: AnimationStage) => {
+    console.log(`🎭 Stage changed to: ${stage}`);
+    setCurrentAnimationStage(stage);
+
+    if (stage === 'arrows-draw' && arrows && arrows.length > 0) {
+      console.log('🎯 Enabling arrows for animation stage');
+      setShowCustomArrows(true);
+    }
+  }, [arrows]);
+
+  const handleReplayAnimation = useCallback(() => {
+    setIsAnimating(true);
+    setCurrentAnimationStage('idle');
+    setAnimationKey(prev => prev + 1);
+
+    setShowCustomArrows(false);
+    hasAnimationCompletedRef.current = false; 
+  }, []);
 
   // Touch handlers for slice clicks
   const handleSliceTouchStart = (e: React.TouchEvent<SVGElement>, pairIndex: number): void => {
@@ -82,6 +127,20 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
     slices.handleSliceTouchEnd(e, pairIndex);
   };
 
+  // Auto-start animation when component mounts
+  React.useEffect(() => {
+    if (enableBuildAnimation && !hasAnimationCompletedRef.current) {
+      console.log('🎭 Auto-starting animation (first time only)');
+      // Start animation after a short delay
+      const timer = setTimeout(() => {
+        setIsAnimating(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (hasAnimationCompletedRef.current) {
+      console.log('🎭 Animation already completed, skipping auto-start');
+    }
+  }, [enableBuildAnimation]);
+
   return (
     <div className="dialectical-wheel-container">
       <div className="main-content" style={{ paddingTop: '0' }}>
@@ -89,53 +148,81 @@ const DialecticalWheel: React.FC<DialecticalWheelProps> = ({
           isZoomedToQ2={interaction.isZoomedToQ2}
           onToggleTopHalfZoom={interaction.toggleTopHalfZoom}
         />
-        
-        <div className="wheel-container">
-          <svg 
-            className="wheel-svg" 
-            viewBox={LAYOUT.SVG_VIEWBOX}
-            {...interaction.svgProps}
-          >
-            <g ref={interaction.recordRef} className="record">
-              <SvgMarkers />
-              
-              <SliceRenderer
-                dynamicSlices={slices.dynamicSlices}
-                memoizedSliceData={slices.memoizedSliceData}
-                handleSliceClick={slices.handleSliceClick}
-                handleSliceTouchStart={handleSliceTouchStart}
-                handleSliceTouchEnd={handleSliceTouchEnd}
-                rotation={rotation !== undefined ? rotation : interaction.rotation}
-                pairTexts={pairTexts}
-              />
-              
-              {/* Rotation hint ripples */}
-              <RotationHints />
+        <WheelBuildAnimation
+          isAnimating={isAnimating}
+          onAnimationComplete={handleAnimationComplete}
+          onStageChange={handleStageChange}
+          numPairs={numPairs}
+        >
+          <div className="wheel-container">
+            <svg
+              className="wheel-svg"
+              viewBox={LAYOUT.SVG_VIEWBOX}
+              {...interaction.svgProps}
+              key={animationKey} // Force re-render on animation replay
+            >
+              <g ref={recordRef} className="record">
+                <SvgMarkers />
 
-              {/* Center circle */}
-              <circle cx={DIMENSIONS.CENTER_X} cy={DIMENSIONS.CENTER_Y} r={DIMENSIONS.CENTER_CIRCLE_RADIUS} fill={COLORS.CENTER_CIRCLE}/>
-              <text 
-                x={DIMENSIONS.CENTER_X} 
-                y={DIMENSIONS.CENTER_Y} 
-                fontSize={TYPOGRAPHY.CENTER_LABEL} 
-                fontWeight="bold" 
-                textAnchor="middle" 
-                dominantBaseline="middle"
-              >
-                {centerLabel}
-              </text>
-            </g>
-          </svg>
-        </div>
+                <AnimatedSliceRenderer
+                  dynamicSlices={slices.dynamicSlices}
+                  memoizedSliceData={slices.memoizedSliceData}
+                  handleSliceClick={slices.handleSliceClick}
+                  handleSliceTouchStart={handleSliceTouchStart}
+                  handleSliceTouchEnd={handleSliceTouchEnd}
+                  rotation={rotation !== undefined ? rotation : interaction.rotation}
+                  pairTexts={pairTexts}
+                  currentAnimationStage={currentAnimationStage}
+                  isAnimating={isAnimating}
+                />
+
+                <circle
+                  cx={DIMENSIONS.CENTER_X}
+                  cy={DIMENSIONS.CENTER_Y}
+                  r={DIMENSIONS.CENTER_CIRCLE_RADIUS}
+                  fill={COLORS.CENTER_CIRCLE}
+                  style={{
+                    opacity: isAnimating && ['idle', 'pairs-appear'].includes(currentAnimationStage) ? 0.3 : 1,
+                    transition: 'opacity 0.3s ease'
+                  }}
+                />
+                <text
+                  x={DIMENSIONS.CENTER_X}
+                  y={DIMENSIONS.CENTER_Y}
+                  fontSize={TYPOGRAPHY.CENTER_LABEL}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{
+                    opacity: isAnimating && ['idle', 'pairs-appear'].includes(currentAnimationStage) ? 0.3 : 1,
+                    transition: 'opacity 0.3s ease'
+                  }}
+                >
+                  {centerLabel}
+                </text>
+                <AnimatedArrows
+                  arrows={arrows}
+                  dynamicSlices={slices.dynamicSlices}
+                  currentAnimationStage={currentAnimationStage}
+                  showArrows={showCustomArrows}
+                  animationDelay={800}
+                />
+              </g>
+            </svg>
+          </div>
+        </WheelBuildAnimation>
       </div>
-      
+
       <WheelControls
-        showArrows={connections.showArrows}
-        onToggleArrows={connections.toggleArrows}
+        showArrows={showCustomArrows}
+        onToggleArrows={() => setShowCustomArrows(!showCustomArrows)}
         onReset={slices.reset}
+        onReplay={handleReplayAnimation}
+        isAnimating={isAnimating}
       />
     </div>
   );
 };
 
-export default DialecticalWheel; 
+export default DialecticalWheel;
+export type { ArrowTransition }; 

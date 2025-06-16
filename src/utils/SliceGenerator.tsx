@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { JSX } from 'react';
 import { COLORS, DIMENSIONS, SLICES, TYPOGRAPHY, STROKES } from '../components/DialecticalWheel/config/wheelConfig';
 
 // Type definitions

@@ -26,6 +26,7 @@ export {
 
 // Export types
 export * from './types';
+export type { ArrowTransition } from './components/DialecticalWheel/DialecticalWheel';
 
 // Default export for convenience
 export { DialecticalWheel as default } from './components'; 

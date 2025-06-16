@@ -6,6 +6,46 @@ const SvgMarkers: React.FC = () => {
   
   return (
     <defs>
+      <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(0,0,0,0.12)" />
+      </filter>
+      
+
+      <radialGradient id="arrowGradient-orange" cx="0%" cy="50%" r="100%">
+        <stop offset="0%" stopColor="#FF6B35" stopOpacity="0.15" />
+        <stop offset="30%" stopColor="#FF6B35" stopOpacity="0.5" />
+        <stop offset="70%" stopColor="#FF6B35" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#FF6B35" stopOpacity="1" />
+      </radialGradient>
+      
+      <radialGradient id="arrowGradient-blue" cx="0%" cy="50%" r="100%">
+        <stop offset="0%" stopColor="#2196F3" stopOpacity="0.15" />
+        <stop offset="30%" stopColor="#2196F3" stopOpacity="0.5" />
+        <stop offset="70%" stopColor="#2196F3" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#2196F3" stopOpacity="1" />
+      </radialGradient>
+      
+      <radialGradient id="arrowGradient-purple" cx="0%" cy="50%" r="100%">
+        <stop offset="0%" stopColor="#9C27B0" stopOpacity="0.15" />
+        <stop offset="30%" stopColor="#9C27B0" stopOpacity="0.5" />
+        <stop offset="70%" stopColor="#9C27B0" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#9C27B0" stopOpacity="1" />
+      </radialGradient>
+      
+      <radialGradient id="arrowGradient-green" cx="0%" cy="50%" r="100%">
+        <stop offset="0%" stopColor="#4CAF50" stopOpacity="0.15" />
+        <stop offset="30%" stopColor="#4CAF50" stopOpacity="0.5" />
+        <stop offset="70%" stopColor="#4CAF50" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#4CAF50" stopOpacity="1" />
+      </radialGradient>
+      
+      <radialGradient id="arrowGradient-default" cx="0%" cy="50%" r="100%">
+        <stop offset="0%" stopColor="#666" stopOpacity="0.15" />
+        <stop offset="30%" stopColor="#666" stopOpacity="0.5" />
+        <stop offset="70%" stopColor="#666" stopOpacity="0.85" />
+        <stop offset="100%" stopColor="#666" stopOpacity="1" />
+      </radialGradient>
+      
       {/* Rotation hint arrowheads */}
       <marker
         id={ROTATION_ARROW.id}

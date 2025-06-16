@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, RefObject, Dispatch, SetStateAction } from 'react';
 
 export function useWheelInteraction(
-  recordRef: RefObject<SVGGElement>,
+  recordRef: RefObject<SVGGElement | null>,
   externalRotation?: number,
   externalSetRotation?: Dispatch<SetStateAction<number>>
 ) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback,  useEffect } from 'react';
 import { DynamicSlice } from './useWheelSlices';
 
 interface DemoConnection {
@@ -44,7 +44,7 @@ interface DotScriptParseResult {
 export const useNodeConnections = (
   dynamicSlices: DynamicSlice[],
   title: string,
-  recordRef: React.RefObject<SVGGElement>,
+  recordRef: React.RefObject<SVGGElement | null>,
   rotation: number,
   autoCreateDemo: boolean = true
 ) => {
@@ -445,7 +445,7 @@ export const useNodeConnections = (
   }, [getNodeIdFromSliceLayerCode, connectNodes]);
 
   const getAvailableSliceLayerCodes = useCallback((): SliceLayerCode[] => {
-    const codes: SliceLayerCode[] = [];
+   const codes: SliceLayerCode[] = [];
     
     // Group slices by pair to ensure we have complete pairs
     const pairGroups: { [pairIndex: number]: { thesis?: DynamicSlice, antithesis?: DynamicSlice } } = {};
@@ -456,12 +456,12 @@ export const useNodeConnections = (
       }
       pairGroups[slice.pair][slice.type] = slice;
     });
-    
+        
     // Generate codes for each complete pair
     Object.entries(pairGroups).forEach(([pairIndexStr, pair]) => {
       const pairIndex = parseInt(pairIndexStr);
       const pairNumber = pairIndex + 1; // Convert to 1-based for codes
-      
+ 
       if (pair.thesis) {
         codes.push(`T${pairNumber}`);   // White layer
         codes.push(`T${pairNumber}+`);  // Green layer
@@ -638,6 +638,44 @@ export const useNodeConnections = (
     };
   }, [parseDotScript, getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
 
+  // Create a single arrow without clearing existing ones
+  const createSingleArrow = useCallback((fromCode: string, toCode: string, color: string = '#FF6B35', strokeWidth: number = 2, label?: string): SVGPathElement | null => {
+    console.log(`🎯 Creating single arrow: ${fromCode} -> ${toCode}`);
+    
+    const availableCodes = getAvailableSliceLayerCodes();
+    
+    // Check if nodes are available
+    if (!availableCodes.includes(fromCode)) {
+      console.warn(`Node not available: ${fromCode}`);
+      return null;
+    }
+    
+    if (!availableCodes.includes(toCode)) {
+      console.warn(`Node not available: ${toCode}`);
+      return null;
+    }
+    
+    // Create the connection
+    const arrow = connectNodesBySliceLayerCode(fromCode, toCode, color, strokeWidth);
+    
+    if (arrow) {
+      arrow.classList.add('dot-script-connection', 'single-arrow');
+      
+      // Store connection metadata for redrawing
+      arrow.setAttribute('data-from-code', fromCode);
+      arrow.setAttribute('data-to-code', toCode);
+      arrow.setAttribute('stroke-dasharray', '4 3'); // default dotted
+      
+      if (label) {
+        arrow.setAttribute('data-dot-label', label);
+      }
+      
+      return arrow;
+    } else {
+      return null;
+    }   
+  }, [getAvailableSliceLayerCodes, connectNodesBySliceLayerCode]);
+
   // Demo function to show slice layer mapping in action
   const createSliceLayerMappingDemo = useCallback(() => {
     // Give the DOM a moment to render the nodes
@@ -732,7 +770,8 @@ export const useNodeConnections = (
     dotScriptAPI: {
       parseDotScript,
       executeDotScript,
-      createDotScriptDemo
+      createDotScriptDemo,
+      createSingleArrow
     }
   };
 };
