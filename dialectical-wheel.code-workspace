@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../dialexity-frontend/wheel-app"
+		}
+	],
+	"settings": {}
+}

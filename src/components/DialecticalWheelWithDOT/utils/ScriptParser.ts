@@ -57,7 +57,7 @@ export const parseScriptLines = (script: string): ParsedLine[] => {
       
       if (!isComment && cleaned.length > 0) {
         // Check for arrow command
-        if (/([A-Z]\d+[+\-]?)\s*->\s*([A-Z]\d+[+\-]?)/.test(cleaned)) {
+        if (/([A-Z]\d+[+\-]?)\s*->\s*([A-Z]\d+[+\-]?)\s*(?:\[([^\]]*)\])?/.test(cleaned)) {
           commandType = 'arrow';
           isExecutable = true;
         }
@@ -215,12 +215,12 @@ export interface SliceLayerMapping {
 }
 
 export function parseSliceLayerCode(code: string): SliceLayerMapping | null {
-  // Examples: "T1" -> Thesis pair 1, green layer
-  //           "T1+" -> Thesis pair 1, pink layer  
-  //           "T1-" -> Thesis pair 1, white layer
-  //           "A2" -> Antithesis pair 2, green layer
-  //           "A2+" -> Antithesis pair 2, pink layer
-  //           "A2-" -> Antithesis pair 2, white layer
+  // Examples: "T1" -> Thesis pair 1, white layer
+  //           "T1+" -> Thesis pair 1, green layer  
+  //           "T1-" -> Thesis pair 1, pink layer
+  //           "A2" -> Antithesis pair 2, white layer
+  //           "A2+" -> Antithesis pair 2, green layer
+  //           "A2-" -> Antithesis pair 2, pink layer
   const match = code.match(/^([TA])(\d+)([+\-]?)$/i);
   if (!match) return null;
   const [, typeChar, pairNum, modifier] = match;

@@ -409,6 +409,8 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
               
               // Only mask the new pair being revealed
               const shouldMask = isAnimating && pairIndex === currentPairIndex;
+              // Show boundaries for all pairs except the one currently being revealed
+              const shouldShowBoundaries = !shouldMask;
               
               return (
                 <g key={`pair-${pairIndex}`} mask={shouldMask ? "url(#newPairRevealMask)" : undefined}>
@@ -423,7 +425,7 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
                     sliceAngle={currentSliceAngle}
                     pairIndex={pairIndex}
                     sliceType="thesis"
-                    showBoundaries={false}
+                    showBoundaries={shouldShowBoundaries}
                   />
                   
                   {/* Antithesis slice (bottom semicircle) */}
@@ -437,7 +439,7 @@ export const AnimatedWheelBuilder: React.FC<AnimatedWheelBuilderProps> = ({
                     sliceAngle={currentSliceAngle}
                     pairIndex={pairIndex}
                     sliceType="antithesis"
-                    showBoundaries={false}
+                    showBoundaries={shouldShowBoundaries}
                   />
                 </g>
               );

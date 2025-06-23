@@ -59,6 +59,8 @@
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@types/d3": "^7.4.3",
+    "d3": "^7.9.0",
     "motion": "^12.18.1",
     "rollup": "^4.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",

@@ -365,12 +365,12 @@ export const useNodeConnections = (
 
   // NEW: Slice layer mapping functions
   const parseSliceLayerCode = useCallback((code: SliceLayerCode): SliceLayerMapping | null => {
-    // Examples: "T1" -> Thesis pair 1, green layer
-    //          "T1+" -> Thesis pair 1, pink layer  
-    //          "T1-" -> Thesis pair 1, white layer
-    //          "A2" -> Antithesis pair 2, green layer
-    //          "A2+" -> Antithesis pair 2, pink layer
-    //          "A2-" -> Antithesis pair 2, white layer
+    // Examples: "T1" -> Thesis pair 1, white layer
+    //          "T1+" -> Thesis pair 1, green layer  
+    //          "T1-" -> Thesis pair 1, pink layer
+    //          "A2" -> Antithesis pair 2, white layer
+    //          "A2+" -> Antithesis pair 2, green layer
+    //          "A2-" -> Antithesis pair 2, pink layer
     
     const match = code.match(/^([TA])(\d+)([+\-]?)$/);
     if (!match) {

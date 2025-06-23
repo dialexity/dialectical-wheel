@@ -3,6 +3,8 @@
 // Export all components
 export { DialecticalWheel, DialecticalWheelWithDOT, ExploreComponent } from './components';
 export { AnimatedWheelBuilder } from './components/DialecticalWheel/components/AnimatedWheelBuilder';
+export { FramerMotionWheelBuilder } from './components/DialecticalWheel/components/FramerMotionWheelBuilder';
+export { FramerMotionDemo } from './examples/FramerMotionDemo';
 export type { DialecticalWheelWithDOTProps, WisdomData, WisdomUnit } from './components';
 
 // Export all services and hooks

@@ -9,19 +9,19 @@ The code format is: `{Type}{PairNumber}[Modifier]`
 - **Type**: `T` for Thesis, `A` for Antithesis
 - **PairNumber**: 1-based pair index (1, 2, 3, ...)
 - **Modifier** (optional):
-  - No modifier = Green layer (innermost)
-  - `-` = White layer (middle)  
-  - `+` = Pink layer (outermost)
+  - No modifier = White layer (middle)
+  - `-` =  Pink layer (outermost) 
+  - `+` =  Green layer (innermost)
 
 ## Examples
 
 ### Basic Codes
-- `T1` = Thesis pair 1, green layer
-- `T1-` = Thesis pair 1, white layer
-- `T1+` = Thesis pair 1, pink layer
-- `A2` = Antithesis pair 2, green layer
-- `A2-` = Antithesis pair 2, white layer
-- `A2+` = Antithesis pair 2, pink layer
+- `T1` = Thesis pair 1, white layer
+- `T1-` = Thesis pair 1, pink layer
+- `T1+` = Thesis pair 1, green layer
+- `A2` = Antithesis pair 2, white layer
+- `A2-` = Antithesis pair 2, pink layer
+- `A2+` = Antithesis pair 2, green layer
 
 ## 🆕 DOT Script System
 
@@ -54,7 +54,7 @@ function MyComponent() {
   
   const dialecticalFlowScript = `
     // Core dialectical flow
-    T1 -> A1+ [color=#FF6B35, label="thesis to synthesis"]
+    T1 -> A1 [color=#FF6B35, label="white to white dialectic"]
     T1- -> T2 [color=#2196F3, weight=3]
     A1 -> T2+ [color=#9C27B0, style=dashed]
     
@@ -79,22 +79,22 @@ function MyComponent() {
 
 ```dot
 // Complex dialectical wheel pattern
-// Thesis-Antithesis pairs
-T1 -> A1+ [color=#FF6B35, weight=3, label="primary dialectic"]
-T2 -> A2+ [color=#FF6B35, weight=3]
-T3 -> A3+ [color=#FF6B35, weight=3]
+// Thesis-Antithesis pairs - connecting white layers to white layers
+T1 -> A1 [color=#FF6B35, weight=3, label="primary dialectic"]
+T2 -> A2 [color=#FF6B35, weight=3]
+T3 -> A3 [color=#FF6B35, weight=3]
 
-// Cross-layer connections
+// Cross-layer pink connections (outermost layer flows)
 T1- -> T2 [color=#2196F3, style=dashed]
 T2- -> T3 [color=#2196F3, style=dashed]
 T3- -> T1 [color=#2196F3, style=dashed]
 
-// Synthesis flows
+// Synthesis flows from white to green
 A1 -> T2+ [color=#9C27B0, style=dotted, label="synthesis"]
 A2 -> T3+ [color=#9C27B0, style=dotted]
 A3 -> T1+ [color=#9C27B0, style=dotted]
 
-// Feedback loops
+// Feedback loops from green to white
 T1+ -> A3 [color=#4CAF50, weight=2]
 T2+ -> A1 [color=#4CAF50, weight=2]
 T3+ -> A2 [color=#4CAF50, weight=2]
@@ -115,13 +115,13 @@ function MyComponent() {
   
   // Create connections using semantic codes
   const createCustomConnections = () => {
-    // Connect thesis 1 green to antithesis 1 pink
+    // Connect thesis 1 white to antithesis 1 green
     sliceLayerAPI.connectNodesBySliceLayerCode('T1', 'A1+', '#FF6B35', 3);
     
-    // Connect thesis 1 white to thesis 2 green
+    // Connect thesis 1 pink to thesis 2 white
     sliceLayerAPI.connectNodesBySliceLayerCode('T1-', 'T2', '#2196F3', 2);
     
-    // Connect antithesis 1 green to thesis 2 pink
+    // Connect antithesis 1 white to thesis 2 green
     sliceLayerAPI.connectNodesBySliceLayerCode('A1', 'T2+', '#9C27B0', 2);
   };
   
@@ -131,13 +131,13 @@ function MyComponent() {
   // Output: {
   //   pairIndex: 0,        // 0-based internally
   //   sliceType: 'thesis',
-  //   layerType: 'pink',
-  //   layerIndex: 2
+  //   layerType: 'green',
+  //   layerIndex: 0
   // }
   
   // Get the actual DOM node ID for a semantic code
   const nodeId = sliceLayerAPI.getNodeIdFromSliceLayerCode('T1+');
-  console.log(nodeId); // 'slice-0-layer-2'
+  console.log(nodeId); // 'slice-0-layer-0'
 }
 ```
 
