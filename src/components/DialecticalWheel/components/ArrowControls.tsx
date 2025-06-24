@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { setArrowsVisible, updateArrowConnections } from '../store/dialecticalSlice';
+import { useAppSelector, useAppDispatch } from '../../../store/hooks';
+import { setArrowsVisible, updateArrowConnections } from '../../../store/dialecticalSlice';
 
 interface ArrowControlsProps {
   chart: any;

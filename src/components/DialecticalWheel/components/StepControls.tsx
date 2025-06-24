@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '../store/hooks';
-import { setStepMode, setRotation } from '../store/dialecticalSlice';
+import { useAppSelector, useAppDispatch } from '../../../store/hooks';
+import { setStepMode, setRotation } from '../../../store/dialecticalSlice';
 
 interface StepControlsProps {
   chart: any;
