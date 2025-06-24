@@ -8,4 +8,4 @@ export * from '../services';
 export * from '../utils'; 
 export * from '../store/hooks';
 export * from '../store/dialecticalSlice';
-export * from '../store/dialecticalSlice';
+export * from '../store/store';
