@@ -8,4 +8,6 @@ export * from '../services';
 export * from '../utils'; 
 export * from '../store/hooks';
 export * from '../store/dialecticalSlice';
-export * from '../store/store';
+
+// Export the store and types explicitly
+export { store, type RootState, type AppDispatch } from '../store/store';
