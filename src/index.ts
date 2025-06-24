@@ -26,4 +26,7 @@ export {
 export * from './types';
 
 // Default export for convenience
-export { DialecticalWheel as default } from './components'; 
+export { DialecticalWheel as default } from './components';
+
+// Export the store and types explicitly
+export { store, type RootState, type AppDispatch } from './store/store';

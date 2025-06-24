@@ -3284,7 +3284,7 @@ function useManualWheel(sessionId, wisdomUnitsData) {
   };
 }
 
-toolkit.configureStore({
+var store = toolkit.configureStore({
   reducer: {
     dialectical: dialecticalReducer
   },
@@ -4346,6 +4346,7 @@ exports.WisdomService = WisdomService;
 exports.default = DialecticalWheel;
 exports.defaultPairTexts = defaultPairTexts;
 exports.generatePairTextsFromWisdomUnits = generatePairTextsFromWisdomUnits;
+exports.store = store;
 exports.useDialecticalWheel = useDialecticalWheel;
 exports.useDialecticalWheelWithCycles = useDialecticalWheelWithCycles;
 exports.useManualWheel = useManualWheel;

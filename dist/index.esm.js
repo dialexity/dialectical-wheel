@@ -3280,7 +3280,7 @@ function useManualWheel(sessionId, wisdomUnitsData) {
   };
 }
 
-configureStore({
+var store = configureStore({
   reducer: {
     dialectical: dialecticalReducer
   },
@@ -4334,5 +4334,5 @@ var useWheelSlices = function useWheelSlices(sequenceWithLabels, normalSliceAngl
   };
 };
 
-export { DataEditor, DialecticalWheel, ExploreComponent, SliceAtAngle, WisdomService, DialecticalWheel as default, defaultPairTexts, generatePairTextsFromWisdomUnits, useDialecticalWheel, useDialecticalWheelWithCycles, useManualWheel, useNodeConnections, useWheelSlices };
+export { DataEditor, DialecticalWheel, ExploreComponent, SliceAtAngle, WisdomService, DialecticalWheel as default, defaultPairTexts, generatePairTextsFromWisdomUnits, store, useDialecticalWheel, useDialecticalWheelWithCycles, useManualWheel, useNodeConnections, useWheelSlices };
 //# sourceMappingURL=index.esm.js.map
