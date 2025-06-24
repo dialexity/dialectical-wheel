@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { setStepMode, setRotation } from '../store/dialecticalSlice';
 
 interface StepControlsProps {
   chart: any;
 }
 
 export default function StepControls({ chart }: StepControlsProps) {
-  const [stepInfo, setStepInfo] = useState<any>(null);
-  const [rotation, setRotation] = useState(0);
+  const dispatch = useAppDispatch();
+  const stepMode = useAppSelector(state => state.dialectical.stepMode);
+  const rotation = useAppSelector(state => state.dialectical.rotation);
 
   useEffect(() => {
     if (chart) {
@@ -19,7 +22,15 @@ export default function StepControls({ chart }: StepControlsProps) {
     if (chart && chart.getCurrentStepInfo) {
       try {
         const info = chart.getCurrentStepInfo();
-        setStepInfo(info);
+        if (info) {
+          dispatch(setStepMode({
+            isActive: true,
+            currentStep: info.current,
+            totalSteps: info.total
+          }));
+        } else {
+          dispatch(setStepMode({ isActive: false }));
+        }
       } catch (error) {
         console.error('Error getting step info:', error);
       }
@@ -62,7 +73,7 @@ export default function StepControls({ chart }: StepControlsProps) {
   const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const degrees = parseInt(e.target.value);
     const radians = (degrees * Math.PI) / 180;
-    setRotation(degrees);
+    dispatch(setRotation(degrees));
     if (chart && chart.rotate) {
       try {
         chart.rotate(radians);
@@ -73,7 +84,7 @@ export default function StepControls({ chart }: StepControlsProps) {
   };
 
   const handleRotationReset = () => {
-    setRotation(0);
+    dispatch(setRotation(0));
     if (chart && chart.rotate) {
       try {
         chart.rotate(0);
@@ -84,8 +95,8 @@ export default function StepControls({ chart }: StepControlsProps) {
   };
 
   const getCounterText = () => {
-    if (stepInfo) {
-      return `Step ${stepInfo.current} of ${stepInfo.total} (${stepInfo.unit} ${stepInfo.stepType})`;
+    if (stepMode.isActive) {
+      return `Step ${stepMode.currentStep} of ${stepMode.totalSteps}`;
     }
     return "Full View";
   };
@@ -113,14 +124,14 @@ export default function StepControls({ chart }: StepControlsProps) {
       }}>
         <button 
           onClick={handleStartStepMode}
-          disabled={stepInfo !== null}
+          disabled={stepMode.isActive}
           style={{
             padding: '8px 16px',
             border: '1px solid #ccc',
             borderRadius: '4px',
-            background: stepInfo !== null ? '#e9ecef' : '#007bff',
-            color: stepInfo !== null ? '#6c757d' : 'white',
-            cursor: stepInfo !== null ? 'not-allowed' : 'pointer'
+            background: stepMode.isActive ? '#e9ecef' : '#007bff',
+            color: stepMode.isActive ? '#6c757d' : 'white',
+            cursor: stepMode.isActive ? 'not-allowed' : 'pointer'
           }}
         >
           Start Step Mode
@@ -132,14 +143,14 @@ export default function StepControls({ chart }: StepControlsProps) {
         
         <button 
           onClick={handleStepForward}
-          disabled={!stepInfo || !stepInfo.canStepForward}
+          disabled={!stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps}
           style={{
             padding: '8px 16px',
             border: '1px solid #ccc',
             borderRadius: '4px',
-            background: (!stepInfo || !stepInfo.canStepForward) ? '#e9ecef' : '#28a745',
-            color: (!stepInfo || !stepInfo.canStepForward) ? '#6c757d' : 'white',
-            cursor: (!stepInfo || !stepInfo.canStepForward) ? 'not-allowed' : 'pointer'
+            background: (!stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps) ? '#e9ecef' : '#28a745',
+            color: (!stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps) ? '#6c757d' : 'white',
+            cursor: (!stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps) ? 'not-allowed' : 'pointer'
           }}
         >
           Next
@@ -147,14 +158,14 @@ export default function StepControls({ chart }: StepControlsProps) {
         
         <button 
           onClick={handleResetToFull}
-          disabled={stepInfo === null}
+          disabled={!stepMode.isActive}
           style={{
             padding: '8px 16px',
             border: '1px solid #ccc',
             borderRadius: '4px',
-            background: stepInfo === null ? '#e9ecef' : '#dc3545',
-            color: stepInfo === null ? '#6c757d' : 'white',
-            cursor: stepInfo === null ? 'not-allowed' : 'pointer'
+            background: !stepMode.isActive ? '#e9ecef' : '#dc3545',
+            color: !stepMode.isActive ? '#6c757d' : 'white',
+            cursor: !stepMode.isActive ? 'not-allowed' : 'pointer'
           }}
         >
           Show All
