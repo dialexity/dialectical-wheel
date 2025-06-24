@@ -5,8 +5,6 @@ Object.defineProperty(exports, '__esModule', { value: true });
 var jsxRuntime = require('react/jsx-runtime');
 var runtime = require('@observablehq/runtime');
 var React = require('react');
-var reactRedux = require('react-redux');
-var toolkit = require('@reduxjs/toolkit');
 var notebook = require('@dialexity/dialectical-wheel');
 
 function _arrayLikeToArray(r, a) {
@@ -114,14 +112,6 @@ function _createForOfIteratorHelper(r, e) {
     }
   };
 }
-function _defineProperty(e, r, t) {
-  return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
-    value: t,
-    enumerable: true,
-    configurable: true,
-    writable: true
-  }) : e[r] = t, e;
-}
 function _get() {
   return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) {
     var p = _superPropBase(e, t);
@@ -191,27 +181,6 @@ function _nonIterableRest() {
 }
 function _nonIterableSpread() {
   throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
-}
-function ownKeys(e, r) {
-  var t = Object.keys(e);
-  if (Object.getOwnPropertySymbols) {
-    var o = Object.getOwnPropertySymbols(e);
-    r && (o = o.filter(function (r) {
-      return Object.getOwnPropertyDescriptor(e, r).enumerable;
-    })), t.push.apply(t, o);
-  }
-  return t;
-}
-function _objectSpread2(e) {
-  for (var r = 1; r < arguments.length; r++) {
-    var t = null != arguments[r] ? arguments[r] : {};
-    r % 2 ? ownKeys(Object(t), true).forEach(function (r) {
-      _defineProperty(e, r, t[r]);
-    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
-      Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
-    });
-  }
-  return e;
 }
 function _possibleConstructorReturn(t, e) {
   if (e && ("object" == typeof e || "function" == typeof e)) return e;
@@ -357,7 +326,7 @@ function _toPrimitive(t, r) {
     if ("object" != typeof i) return i;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
-  return ("string" === r ? String : Number)(t);
+  return (String )(t);
 }
 function _toPropertyKey(t) {
   var i = _toPrimitive(t, "string");
@@ -371,885 +340,28 @@ function _unsupportedIterableToArray(r, a) {
   }
 }
 
-var useAppDispatch = function useAppDispatch() {
-  return reactRedux.useDispatch();
-};
-var useAppSelector = reactRedux.useSelector;
-
-var initialData = {
-  T1: {
-    statement: "AI will eliminate human jobs",
-    positive: "AI frees humans from repetitive tasks",
-    negative: "AI replaces human workers entirely"
-  },
-  T2: {
-    statement: "Automation reduces labor costs",
-    positive: "Lower costs benefit consumers",
-    negative: "Cost savings don't reach workers"
-  },
-  T3: {
-    statement: "AI improves workplace efficiency",
-    positive: "Faster decision-making processes",
-    negative: "Dehumanizes work environment"
-  },
-  T4: {
-    statement: "Remote work transforms society",
-    positive: "Greater work-life balance and flexibility",
-    negative: "Social isolation and reduced collaboration"
-  },
-  A1: {
-    statement: "Human creativity remains irreplaceable",
-    positive: "AI enhances human creative potential",
-    negative: "Over-reliance on AI reduces creativity"
-  },
-  A2: {
-    statement: "Education adapts to AI integration",
-    positive: "Skills training becomes more relevant",
-    negative: "Educational systems lag behind technology"
-  },
-  A3: {
-    statement: "AI democratizes access to information",
-    positive: "Levels playing field for learning",
-    negative: "Information overload reduces comprehension"
-  },
-  A4: {
-    statement: "Physical presence builds stronger teams",
-    positive: "Face-to-face interaction fosters trust",
-    negative: "Rigid office culture stifles innovation"
-  }
-};
-var initialState = {
-  data: initialData,
-  stepMode: {
-    isActive: false,
-    currentStep: 0,
-    totalSteps: 0
-  },
-  arrows: {
-    visible: true,
-    connections: "# Basic dialectical connections\nT1 -> A1\nT2 -> A2  \nT3 -> A3\nT4 -> A4\n\n# Opposition arrows (thesis to antithesis)\nT1 -> T2\nA1 -> A2\n\n# Ring-specific connections (examples)\nT1+ -> A1-\nT2- -> A2+"
-  },
-  rotation: 0,
-  history: [initialData],
-  historyIndex: 0
-};
-var dialecticalSlice = toolkit.createSlice({
-  name: 'dialectical',
-  initialState: initialState,
-  reducers: {
-    // Data management
-    updateEntry: function updateEntry(state, action) {
-      var _action$payload = action.payload,
-        id = _action$payload.id,
-        entry = _action$payload.entry;
-      state.data[id] = entry;
-      // Add to history
-      state.history = state.history.slice(0, state.historyIndex + 1);
-      state.history.push(_objectSpread2({}, state.data));
-      state.historyIndex = state.history.length - 1;
-    },
-    addEntry: function addEntry(state, action) {
-      var _action$payload2 = action.payload,
-        id = _action$payload2.id,
-        entry = _action$payload2.entry;
-      state.data[id] = entry;
-      // Add to history
-      state.history = state.history.slice(0, state.historyIndex + 1);
-      state.history.push(_objectSpread2({}, state.data));
-      state.historyIndex = state.history.length - 1;
-    },
-    removeEntry: function removeEntry(state, action) {
-      var id = action.payload;
-      delete state.data[id];
-      // Add to history
-      state.history = state.history.slice(0, state.historyIndex + 1);
-      state.history.push(_objectSpread2({}, state.data));
-      state.historyIndex = state.history.length - 1;
-    },
-    // History management
-    undo: function undo(state) {
-      if (state.historyIndex > 0) {
-        state.historyIndex--;
-        state.data = _objectSpread2({}, state.history[state.historyIndex]);
-      }
-    },
-    redo: function redo(state) {
-      if (state.historyIndex < state.history.length - 1) {
-        state.historyIndex++;
-        state.data = _objectSpread2({}, state.history[state.historyIndex]);
-      }
-    },
-    // Step mode management
-    setStepMode: function setStepMode(state, action) {
-      var _action$payload3 = action.payload,
-        isActive = _action$payload3.isActive,
-        currentStep = _action$payload3.currentStep,
-        totalSteps = _action$payload3.totalSteps;
-      state.stepMode.isActive = isActive;
-      if (currentStep !== undefined) state.stepMode.currentStep = currentStep;
-      if (totalSteps !== undefined) state.stepMode.totalSteps = totalSteps;
-    },
-    stepForward: function stepForward(state) {
-      if (state.stepMode.currentStep < state.stepMode.totalSteps) {
-        state.stepMode.currentStep++;
-      }
-    },
-    stepBackward: function stepBackward(state) {
-      if (state.stepMode.currentStep > 0) {
-        state.stepMode.currentStep--;
-      }
-    },
-    // Arrow management
-    setArrowsVisible: function setArrowsVisible(state, action) {
-      state.arrows.visible = action.payload;
-    },
-    updateArrowConnections: function updateArrowConnections(state, action) {
-      state.arrows.connections = action.payload;
-    },
-    // Rotation management
-    setRotation: function setRotation(state, action) {
-      state.rotation = action.payload;
-    },
-    // Bulk data replacement
-    setDialecticalData: function setDialecticalData(state, action) {
-      state.data = action.payload;
-      // Add to history
-      state.history = state.history.slice(0, state.historyIndex + 1);
-      state.history.push(_objectSpread2({}, state.data));
-      state.historyIndex = state.history.length - 1;
-    },
-    // Reorder entries
-    reorderEntries: function reorderEntries(state, action) {
-      var newOrder = action.payload;
-      var newData = {};
-      // Rebuild data object in the new order
-      newOrder.forEach(function (key) {
-        if (state.data[key]) {
-          newData[key] = state.data[key];
-        }
-      });
-      // Add any entries that weren't in the new order (shouldn't happen, but safety)
-      Object.keys(state.data).forEach(function (key) {
-        if (!newData[key]) {
-          newData[key] = state.data[key];
-        }
-      });
-      state.data = newData;
-      // Add to history
-      state.history = state.history.slice(0, state.historyIndex + 1);
-      state.history.push(_objectSpread2({}, state.data));
-      state.historyIndex = state.history.length - 1;
-    }
-  }
-});
-var _dialecticalSlice$act = dialecticalSlice.actions,
-  updateEntry = _dialecticalSlice$act.updateEntry,
-  addEntry = _dialecticalSlice$act.addEntry,
-  removeEntry = _dialecticalSlice$act.removeEntry,
-  undo = _dialecticalSlice$act.undo,
-  redo = _dialecticalSlice$act.redo,
-  setStepMode = _dialecticalSlice$act.setStepMode;
-  _dialecticalSlice$act.stepForward;
-  _dialecticalSlice$act.stepBackward;
-  var setArrowsVisible = _dialecticalSlice$act.setArrowsVisible,
-  updateArrowConnections = _dialecticalSlice$act.updateArrowConnections,
-  setRotation = _dialecticalSlice$act.setRotation;
-  _dialecticalSlice$act.setDialecticalData;
-  var reorderEntries = _dialecticalSlice$act.reorderEntries;
-var dialecticalReducer = dialecticalSlice.reducer;
-
-function StepControls(_ref) {
-  var chart = _ref.chart;
-  var dispatch = useAppDispatch();
-  var stepMode = useAppSelector(function (state) {
-    return state.dialectical.stepMode;
-  });
-  var rotation = useAppSelector(function (state) {
-    return state.dialectical.rotation;
-  });
-  React.useEffect(function () {
-    if (chart) {
-      // Update step info initially
-      updateStepInfo();
-    }
-  }, [chart]);
-  var updateStepInfo = function updateStepInfo() {
-    if (chart && chart.getCurrentStepInfo) {
-      try {
-        var info = chart.getCurrentStepInfo();
-        if (info) {
-          dispatch(setStepMode({
-            isActive: true,
-            currentStep: info.current,
-            totalSteps: info.total
-          }));
-        } else {
-          dispatch(setStepMode({
-            isActive: false
-          }));
-        }
-      } catch (error) {
-        console.error('Error getting step info:', error);
-      }
-    }
-  };
-  var handleStartStepMode = function handleStartStepMode() {
-    if (chart && chart.startStepMode) {
-      try {
-        chart.startStepMode();
-        updateStepInfo();
-      } catch (error) {
-        console.error('Error starting step mode:', error);
-      }
-    }
-  };
-  var handleStepForward = function handleStepForward() {
-    if (chart && chart.stepForward) {
-      try {
-        chart.stepForward();
-        updateStepInfo();
-      } catch (error) {
-        console.error('Error stepping forward:', error);
-      }
-    }
-  };
-  var handleResetToFull = function handleResetToFull() {
-    if (chart && chart.resetToFull) {
-      try {
-        chart.resetToFull();
-        updateStepInfo();
-      } catch (error) {
-        console.error('Error resetting to full:', error);
-      }
-    }
-  };
-  var handleRotationChange = function handleRotationChange(e) {
-    var degrees = parseInt(e.target.value);
-    var radians = degrees * Math.PI / 180;
-    dispatch(setRotation(degrees));
-    if (chart && chart.rotate) {
-      try {
-        chart.rotate(radians);
-      } catch (error) {
-        console.error('Error rotating:', error);
-      }
-    }
-  };
-  var handleRotationReset = function handleRotationReset() {
-    dispatch(setRotation(0));
-    if (chart && chart.rotate) {
-      try {
-        chart.rotate(0);
-      } catch (error) {
-        console.error('Error resetting rotation:', error);
-      }
-    }
-  };
-  var getCounterText = function getCounterText() {
-    if (stepMode.isActive) {
-      return "Step ".concat(stepMode.currentStep, " of ").concat(stepMode.totalSteps);
-    }
-    return "Full View";
-  };
-  return jsxRuntime.jsxs("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      margin: '20px 0',
-      padding: '20px',
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      background: 'white'
-    },
-    children: [jsxRuntime.jsx("h3", {
-      style: {
-        marginTop: 0
-      },
-      children: "Step Controls"
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '10px',
-        marginBottom: '15px',
-        alignItems: 'center'
-      },
-      children: [jsxRuntime.jsx("button", {
-        onClick: handleStartStepMode,
-        disabled: stepMode.isActive,
-        style: {
-          padding: '8px 16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: stepMode.isActive ? '#e9ecef' : '#007bff',
-          color: stepMode.isActive ? '#6c757d' : 'white',
-          cursor: stepMode.isActive ? 'not-allowed' : 'pointer'
-        },
-        children: "Start Step Mode"
-      }), jsxRuntime.jsx("span", {
-        style: {
-          margin: '0 10px',
-          fontWeight: 'bold'
-        },
-        children: getCounterText()
-      }), jsxRuntime.jsx("button", {
-        onClick: handleStepForward,
-        disabled: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps,
-        style: {
-          padding: '8px 16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? '#e9ecef' : '#28a745',
-          color: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? '#6c757d' : 'white',
-          cursor: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? 'not-allowed' : 'pointer'
-        },
-        children: "Next"
-      }), jsxRuntime.jsx("button", {
-        onClick: handleResetToFull,
-        disabled: !stepMode.isActive,
-        style: {
-          padding: '8px 16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: !stepMode.isActive ? '#e9ecef' : '#dc3545',
-          color: !stepMode.isActive ? '#6c757d' : 'white',
-          cursor: !stepMode.isActive ? 'not-allowed' : 'pointer'
-        },
-        children: "Show All"
-      })]
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px'
-      },
-      children: [jsxRuntime.jsx("label", {
-        htmlFor: "rotation-slider",
-        style: {
-          fontWeight: 'bold'
-        },
-        children: "Rotation:"
-      }), jsxRuntime.jsx("input", {
-        type: "range",
-        id: "rotation-slider",
-        min: "0",
-        max: "360",
-        value: rotation,
-        step: "1",
-        onChange: handleRotationChange,
-        style: {
-          width: '200px',
-          cursor: 'pointer'
-        }
-      }), jsxRuntime.jsxs("span", {
-        style: {
-          minWidth: '40px',
-          fontFamily: 'monospace'
-        },
-        children: [rotation, "\xB0"]
-      }), jsxRuntime.jsx("button", {
-        onClick: handleRotationReset,
-        style: {
-          padding: '4px 8px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: '#f8f9fa',
-          cursor: 'pointer',
-          fontSize: '12px'
-        },
-        children: "Reset"
-      })]
-    })]
-  });
-}
-
-// Arrow parsing function (from Observable notebook)
-function parseArrowConnections(dotScript, dialecticalData) {
-  var connections = [];
-  var lines = dotScript.split('\n');
-  var _iterator = _createForOfIteratorHelper(lines),
-    _step;
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var line = _step.value;
-      // Remove comments and trim
-      line = line.split('//')[0].trim();
-      if (!line) continue;
-      // Parse "A -> B" syntax, supporting + and - suffixes
-      var match = line.match(/(\w+[+-]?)\s*->\s*(\w+[+-]?)/);
-      if (match) {
-        var _match = _slicedToArray(match, 3),
-          from = _match[1],
-          to = _match[2];
-        // Extract unit ID and ring type
-        var parseUnit = function parseUnit(unit) {
-          if (unit.endsWith('+')) {
-            var unitId = unit.slice(0, -1);
-            return dialecticalData[unitId] ? {
-              unitId: unitId,
-              ringType: 'inner'
-            } : null;
-          } else if (unit.endsWith('-')) {
-            var _unitId = unit.slice(0, -1);
-            return dialecticalData[_unitId] ? {
-              unitId: _unitId,
-              ringType: 'outer'
-            } : null;
-          } else {
-            return dialecticalData[unit] ? {
-              unitId: unit,
-              ringType: 'middle'
-            } : null;
-          }
-        };
-        var fromParsed = parseUnit(from);
-        var toParsed = parseUnit(to);
-        if (fromParsed && toParsed) {
-          connections.push({
-            from: fromParsed.unitId,
-            to: toParsed.unitId,
-            fromRing: fromParsed.ringType,
-            toRing: toParsed.ringType
-          });
-        }
-      }
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-  return connections;
-}
-function ArrowControls(_ref) {
-  var chart = _ref.chart;
-  var dispatch = useAppDispatch();
-  var dialecticalData = useAppSelector(function (state) {
-    return state.dialectical.data;
-  });
-  var arrowsVisible = useAppSelector(function (state) {
-    return state.dialectical.arrows.visible;
-  });
-  var arrowConnections = useAppSelector(function (state) {
-    return state.dialectical.arrows.connections;
-  });
-  // Step-by-step arrow state (matching Observable notebook)
-  var _useState = React.useState(false),
-    _useState2 = _slicedToArray(_useState, 2),
-    arrowStepMode = _useState2[0],
-    setArrowStepMode = _useState2[1];
-  var _useState3 = React.useState(0),
-    _useState4 = _slicedToArray(_useState3, 2),
-    currentArrowStep = _useState4[0],
-    setCurrentArrowStep = _useState4[1];
-  var _useState5 = React.useState([]),
-    _useState6 = _slicedToArray(_useState5, 2),
-    parsedArrowConnections = _useState6[0],
-    setParsedArrowConnections = _useState6[1];
-  var _useState7 = React.useState(""),
-    _useState8 = _slicedToArray(_useState7, 2),
-    currentArrowInfo = _useState8[0];
-    _useState8[1];
-  // Parse connections whenever they change
-  React.useEffect(function () {
-    if (chart && arrowConnections) {
-      var parsed = parseArrowConnections(arrowConnections, dialecticalData);
-      setParsedArrowConnections(parsed);
-      console.log('Parsed arrow connections:', parsed);
-    }
-  }, [arrowConnections, dialecticalData, chart]);
-  // Update arrow step UI (matching Observable notebook)
-  var updateArrowStepUI = function updateArrowStepUI() {
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    var totalArrows = connections.length;
-    if (arrowStepMode) {
-      console.log("Arrow step ".concat(currentArrowStep, " of ").concat(totalArrows));
-    } else {
-      console.log("Showing all ".concat(totalArrows, " arrows"));
-    }
-  };
-  React.useEffect(function () {
-    updateArrowStepUI();
-  }, [arrowStepMode, currentArrowStep, parsedArrowConnections]);
-  // Helper function to calculate arrow color based on connection
-  var getArrowColor = function getArrowColor(conn) {
-    var color = "#666"; // Default gray
-    // Check if either endpoint is NOT middle ring (inner/outer ring connections)
-    if (conn.fromRing !== 'middle' || conn.toRing !== 'middle') {
-      if (conn.fromRing === 'inner' && conn.toRing === 'inner' || conn.fromRing === 'outer' && conn.toRing === 'outer') {
-        color = "#16a34a"; // Green for same polarity
-      } else if (conn.fromRing === 'inner' && conn.toRing === 'outer' || conn.fromRing === 'outer' && conn.toRing === 'inner') {
-        color = "#dc2626"; // Red for opposite polarity
-      } else {
-        color = "#8b5cf6"; // Purple for mixed connections (middle to inner/outer)
-      }
-    } else {
-      // Both are middle ring - check thesis vs antithesis
-      var fromIsThesis = conn.from.startsWith('T');
-      var toIsThesis = conn.to.startsWith('T');
-      if (fromIsThesis === toIsThesis) {
-        color = "#2563eb"; // Blue for same type (T->T or A->A)
-      } else {
-        color = "#dc2626"; // Red for opposition (T->A or A->T)
-      }
-    }
-    return color;
-  };
-  // Draw arrows up to specific step (matching Observable notebook)
-  var drawArrowsUpToStep = function drawArrowsUpToStep(step) {
-    if (!chart || !chart.clearArrows || !chart.drawArrow) return;
-    chart.clearArrows();
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    var connectionsToShow = connections.slice(0, step);
-    connectionsToShow.forEach(function (conn, index) {
-      var color = getArrowColor(conn);
-      var delay = index * 200;
-      chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-    });
-  };
-  // Draw next arrow (matching Observable notebook)
-  var drawNextArrow = function drawNextArrow() {
-    if (!chart || !chart.drawArrow) return false;
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    if (currentArrowStep >= connections.length) {
-      return false; // No more arrows to draw
-    }
-    var conn = connections[currentArrowStep];
-    var color = getArrowColor(conn);
-    chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
-    return true;
-  };
-  // Custom function to draw all arrows based on current connections (replaces chart.drawAllArrows)
-  var drawAllCurrentArrows = function drawAllCurrentArrows() {
-    if (!chart || !chart.clearArrows || !chart.drawArrow) return;
-    chart.clearArrows();
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    console.log('Drawing all current arrows:', connections);
-    connections.forEach(function (conn, index) {
-      var color = getArrowColor(conn);
-      var delay = index * 300;
-      chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-    });
-  };
-  // Start arrow step mode (matching Observable notebook)
-  var handleStartArrowStepMode = function handleStartArrowStepMode() {
-    var parsed = parseArrowConnections(arrowConnections, dialecticalData);
-    setParsedArrowConnections(parsed);
-    setArrowStepMode(true);
-    setCurrentArrowStep(0);
-    if (chart && chart.clearArrows) {
-      chart.clearArrows();
-    }
-    dispatch(setArrowsVisible(false));
-    updateArrowStepUI();
-  };
-  // Step forward (matching Observable notebook)
-  var handleStepForward = function handleStepForward() {
-    if (!arrowStepMode) return;
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    if (currentArrowStep < connections.length) {
-      var success = drawNextArrow();
-      if (success) {
-        setCurrentArrowStep(function (prev) {
-          return prev + 1;
-        });
-        updateArrowStepUI();
-      }
-    }
-  };
-  // Step backward (matching Observable notebook)
-  var handleStepBackward = function handleStepBackward() {
-    if (!arrowStepMode) return;
-    if (currentArrowStep > 0) {
-      var newStep = currentArrowStep - 1;
-      setCurrentArrowStep(newStep);
-      drawArrowsUpToStep(newStep);
-      updateArrowStepUI();
-    }
-  };
-  // Show all arrows (exit step mode)
-  var handleShowAllArrows = function handleShowAllArrows() {
-    setArrowStepMode(false);
-    setCurrentArrowStep(0);
-    // Use our custom function instead of chart.drawAllArrows
-    drawAllCurrentArrows();
-    dispatch(setArrowsVisible(true));
-    updateArrowStepUI();
-  };
-  // Toggle arrows (matching Observable notebook)
-  var handleToggleArrows = function handleToggleArrows() {
-    if (!chart) return;
-    if (arrowsVisible) {
-      if (chart.clearArrows) {
-        chart.clearArrows();
-      }
-      dispatch(setArrowsVisible(false));
-    } else {
-      if (arrowStepMode) {
-        drawArrowsUpToStep(currentArrowStep);
-      } else {
-        // Use our custom function instead of chart.drawAllArrows
-        drawAllCurrentArrows();
-      }
-      dispatch(setArrowsVisible(true));
-    }
-  };
-  // Redraw arrows
-  var handleRedrawArrows = function handleRedrawArrows() {
-    if (!chart || !arrowsVisible) return;
-    if (arrowStepMode) {
-      drawArrowsUpToStep(currentArrowStep);
-    } else {
-      // Use our custom function instead of chart.drawAllArrows
-      drawAllCurrentArrows();
-    }
-  };
-  // Update connections (matching Observable notebook)
-  var handleUpdateConnections = function handleUpdateConnections() {
-    console.log('Update button clicked');
-    console.log('Editor value:', arrowConnections);
-    // Parse the new connections
-    var connections = parseArrowConnections(arrowConnections, dialecticalData);
-    setParsedArrowConnections(connections);
-    console.log('Parsed connections:', connections);
-    if (arrowStepMode) {
-      setCurrentArrowStep(0);
-      updateArrowStepUI();
-      if (arrowsVisible && chart && chart.clearArrows) {
-        chart.clearArrows();
-      }
-    } else {
-      // In normal mode, redraw all arrows using the new connections
-      if (arrowsVisible) {
-        drawAllCurrentArrows();
-      }
-    }
-  };
-  var handleConnectionsChange = function handleConnectionsChange(e) {
-    dispatch(updateArrowConnections(e.target.value));
-  };
-  var getArrowCounterText = function getArrowCounterText() {
-    if (arrowStepMode) {
-      return "Arrow ".concat(currentArrowStep, " of ").concat(parsedArrowConnections.length);
-    }
-    return arrowsVisible ? "All Arrows Visible" : "Ready to start";
-  };
-  return jsxRuntime.jsxs("div", {
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      margin: '20px 0',
-      padding: '20px',
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      background: 'white'
-    },
-    children: [jsxRuntime.jsx("div", {
-      style: {
-        marginBottom: '10px',
-        fontWeight: 'bold'
-      },
-      children: "Arrow Connections"
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        display: 'flex',
-        gap: '10px',
-        marginBottom: '15px',
-        alignItems: 'center'
-      },
-      children: [jsxRuntime.jsx("button", {
-        onClick: handleToggleArrows,
-        style: {
-          padding: '8px 16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: '#f8f9fa',
-          cursor: 'pointer'
-        },
-        children: arrowsVisible ? 'Hide Arrows' : 'Show Arrows'
-      }), jsxRuntime.jsx("button", {
-        onClick: handleRedrawArrows,
-        style: {
-          padding: '8px 16px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: '#f8f9fa',
-          cursor: 'pointer'
-        },
-        children: "Redraw Arrows"
-      })]
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '15px',
-        marginBottom: '15px',
-        background: '#f9f9f9',
-        width: '100%',
-        maxWidth: '500px'
-      },
-      children: [jsxRuntime.jsx("div", {
-        style: {
-          fontWeight: 'bold',
-          marginBottom: '10px'
-        },
-        children: "Step-by-Step Arrow Drawing"
-      }), jsxRuntime.jsxs("div", {
-        style: {
-          display: 'flex',
-          gap: '10px',
-          marginBottom: '10px',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        },
-        children: [jsxRuntime.jsx("button", {
-          onClick: handleStartArrowStepMode,
-          disabled: arrowStepMode,
-          style: {
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: arrowStepMode ? '#e9ecef' : '#e7f3ff',
-            cursor: arrowStepMode ? 'not-allowed' : 'pointer'
-          },
-          children: "Start Step Mode"
-        }), jsxRuntime.jsx("button", {
-          onClick: handleStepBackward,
-          disabled: !arrowStepMode || currentArrowStep <= 0,
-          style: {
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: !arrowStepMode || currentArrowStep <= 0 ? '#e9ecef' : '#f8f9fa',
-            cursor: !arrowStepMode || currentArrowStep <= 0 ? 'not-allowed' : 'pointer'
-          },
-          children: "Previous"
-        }), jsxRuntime.jsx("span", {
-          style: {
-            margin: '0 10px',
-            fontWeight: 'bold',
-            minWidth: '120px',
-            textAlign: 'center'
-          },
-          children: getArrowCounterText()
-        }), jsxRuntime.jsx("button", {
-          onClick: handleStepForward,
-          disabled: !arrowStepMode || currentArrowStep >= parseArrowConnections(arrowConnections, dialecticalData).length,
-          style: {
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: !arrowStepMode || currentArrowStep >= parsedArrowConnections.length ? '#e9ecef' : '#f8f9fa',
-            cursor: !arrowStepMode || currentArrowStep >= parsedArrowConnections.length ? 'not-allowed' : 'pointer'
-          },
-          children: "Next Arrow"
-        }), jsxRuntime.jsx("button", {
-          onClick: handleShowAllArrows,
-          style: {
-            padding: '6px 12px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: '#f8f9fa',
-            cursor: 'pointer'
-          },
-          children: "Show All"
-        })]
-      }), jsxRuntime.jsx("div", {
-        style: {
-          fontSize: '12px',
-          color: '#666',
-          minHeight: '20px',
-          fontStyle: 'italic',
-          textAlign: 'center'
-        },
-        children: currentArrowInfo
-      })]
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        width: '100%',
-        maxWidth: '500px'
-      },
-      children: [jsxRuntime.jsx("div", {
-        style: {
-          marginBottom: '10px'
-        },
-        children: jsxRuntime.jsx("label", {
-          htmlFor: "connections-editor",
-          style: {
-            fontWeight: 'bold'
-          },
-          children: "Edit Connections (DOT syntax):"
-        })
-      }), jsxRuntime.jsx("textarea", {
-        id: "connections-editor",
-        value: arrowConnections,
-        onChange: handleConnectionsChange,
-        style: {
-          width: '100%',
-          height: '150px',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          padding: '8px',
-          resize: 'vertical'
-        }
-      }), jsxRuntime.jsx("div", {
-        style: {
-          marginTop: '10px'
-        },
-        children: jsxRuntime.jsx("button", {
-          onClick: handleUpdateConnections,
-          style: {
-            padding: '8px 16px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            background: '#007bff',
-            color: 'white',
-            cursor: 'pointer'
-          },
-          children: "Update Arrows"
-        })
-      }), jsxRuntime.jsxs("div", {
-        style: {
-          marginTop: '15px',
-          fontSize: '12px',
-          color: '#666',
-          maxWidth: '500px'
-        },
-        children: [jsxRuntime.jsx("strong", {
-          children: "Syntax:"
-        }), " Use \"A \u2192 B\" format. Available units: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), jsxRuntime.jsx("strong", {
-          children: "Ring-specific:"
-        }), " Add + for positives (e.g., T1+) or - for negatives (e.g., T1-)", jsxRuntime.jsx("br", {}), jsxRuntime.jsx("strong", {
-          children: "Colors:"
-        }), " \uD83D\uDD34Red for oppositions, \uD83D\uDD35Blue for same type, \uD83D\uDFE2Green for same polarity, \uD83D\uDFE3Purple for mixed"]
-      })]
-    })]
-  });
-}
-
-function DialecticalWheel() {
+function DialecticalWheel(_ref) {
+  var dialecticalData = _ref.dialecticalData,
+    _ref$arrowConnections = _ref.arrowConnections,
+    arrowConnections = _ref$arrowConnections === void 0 ? '' : _ref$arrowConnections,
+    _ref$width = _ref.width,
+    width = _ref$width === void 0 ? 800 : _ref$width,
+    _ref$height = _ref.height,
+    height = _ref$height === void 0 ? 800 : _ref$height,
+    onChartReady = _ref.onChartReady;
   var chartRef = React.useRef(null);
   var _useState = React.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
     setModule = _useState2[1];
   var _useState3 = React.useState(null),
-    _useState4 = _slicedToArray(_useState3, 2),
-    chart = _useState4[0],
-    setChart = _useState4[1];
+    _useState4 = _slicedToArray(_useState3, 2);
+    _useState4[0];
+    var setChart = _useState4[1];
   var _useState5 = React.useState(null),
     _useState6 = _slicedToArray(_useState5, 2);
     _useState6[0];
     var setRuntime = _useState6[1];
-  // Get dialectical data from Redux store
-  var dialecticalData = useAppSelector(function (state) {
-    return state.dialectical.data;
-  });
   React.useEffect(function () {
     console.log('Loading Observable notebook from local npm package...');
     var runtime$1 = new runtime.Runtime();
@@ -1267,6 +379,7 @@ function DialecticalWheel() {
             value: function fulfilled(value) {
               // The chart value IS the SVG node with methods attached
               setChart(value);
+              if (onChartReady) onChartReady(value);
               return _superPropGet(_class, "fulfilled", this)([value]);
             }
           }]);
@@ -1285,32 +398,27 @@ function DialecticalWheel() {
   }, []);
   // Separate useEffect for redefining data - this follows the Observable examples pattern
   React.useEffect(function () {
-    if (module && dialecticalData) {
-      console.log('Redefining dialecticalData in Observable notebook');
+    if (module) {
       try {
-        module.redefine("dialecticalData", dialecticalData);
-        console.log('Successfully redefined dialecticalData from local npm package');
+        module.redefine('dialecticalData', dialecticalData);
+        module.redefine('arrowConnections', arrowConnections);
       } catch (error) {
-        console.warn('Could not redefine dialecticalData:', error);
+        console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [dialecticalData, module]);
+  }, [dialecticalData, arrowConnections, module]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
       ref: chartRef,
       className: "chart-container",
       style: {
-        width: '800px',
-        height: '800px',
+        width: "".concat(width, "px"),
+        height: "".concat(height, "px"),
         border: '1px solid #ddd',
         borderRadius: '8px',
         background: 'white'
       }
-    }), jsxRuntime.jsx(StepControls, {
-      chart: chart
-    }), jsxRuntime.jsx(ArrowControls, {
-      chart: chart
     }), jsxRuntime.jsxs("div", {
       style: {
         marginTop: '10px',
@@ -1320,7 +428,7 @@ function DialecticalWheel() {
         fontSize: '12px',
         color: '#666'
       },
-      children: ["Debug: ", Object.keys(dialecticalData).length, " entries in Redux store: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
+      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
     })]
   });
 }
@@ -1683,122 +791,289 @@ var ExploreComponent = function ExploreComponent(_ref) {
   }, "Confidence: ", currentApiCycle ? (currentApiCycle.probability * 100).toFixed(0) + '%' : 'N/A')));
 };
 
-function DataEditor() {
-  var _dialecticalData$T;
-  var dispatch = useAppDispatch();
-  var dialecticalData = useAppSelector(function (state) {
-    return state.dialectical.data;
-  });
-  var history = useAppSelector(function (state) {
-    return state.dialectical.history;
-  });
-  var historyIndex = useAppSelector(function (state) {
-    return state.dialectical.historyIndex;
-  });
-  var _useState = React.useState(null),
+// Arrow parsing function (from Observable notebook)
+function parseArrowConnections(dotScript, dialecticalData) {
+  var connections = [];
+  var lines = dotScript.split('\n');
+  var _iterator = _createForOfIteratorHelper(lines),
+    _step;
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var line = _step.value;
+      // Remove comments and trim
+      line = line.split('//')[0].trim();
+      if (!line) continue;
+      // Parse "A -> B" syntax, supporting + and - suffixes
+      var match = line.match(/(\w+[+-]?)\s*->\s*(\w+[+-]?)/);
+      if (match) {
+        var _match = _slicedToArray(match, 3),
+          from = _match[1],
+          to = _match[2];
+        // Extract unit ID and ring type
+        var parseUnit = function parseUnit(unit) {
+          if (unit.endsWith('+')) {
+            var unitId = unit.slice(0, -1);
+            return dialecticalData[unitId] ? {
+              unitId: unitId,
+              ringType: 'inner'
+            } : null;
+          } else if (unit.endsWith('-')) {
+            var _unitId = unit.slice(0, -1);
+            return dialecticalData[_unitId] ? {
+              unitId: _unitId,
+              ringType: 'outer'
+            } : null;
+          } else {
+            return dialecticalData[unit] ? {
+              unitId: unit,
+              ringType: 'middle'
+            } : null;
+          }
+        };
+        var fromParsed = parseUnit(from);
+        var toParsed = parseUnit(to);
+        if (fromParsed && toParsed) {
+          connections.push({
+            from: fromParsed.unitId,
+            to: toParsed.unitId,
+            fromRing: fromParsed.ringType,
+            toRing: toParsed.ringType
+          });
+        }
+      }
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+  return connections;
+}
+function ArrowControls(_ref) {
+  var chart = _ref.chart,
+    dialecticalData = _ref.dialecticalData,
+    arrowConnections = _ref.arrowConnections,
+    setArrowConnections = _ref.setArrowConnections;
+  var _useState = React.useState(false),
     _useState2 = _slicedToArray(_useState, 2),
-    draggedItem = _useState2[0],
-    setDraggedItem = _useState2[1];
-  var _useState3 = React.useState(null),
+    arrowsVisible = _useState2[0],
+    setArrowsVisibleState = _useState2[1];
+  // Step-by-step arrow state (matching Observable notebook)
+  var _useState3 = React.useState(false),
     _useState4 = _slicedToArray(_useState3, 2),
-    dragOverItem = _useState4[0],
-    setDragOverItem = _useState4[1];
-  var canUndo = historyIndex > 0;
-  var canRedo = historyIndex < history.length - 1;
-  var dataEntries = Object.entries(dialecticalData);
-  // Test function to update T4 statement
-  var updateT4Statement = function updateT4Statement() {
-    dispatch(updateEntry({
-      id: 'T4',
-      entry: {
-        statement: "Remote work revolutionizes global collaboration",
-        positive: "Connects talent across geographical boundaries",
-        negative: "Creates digital divide and timezone conflicts"
-      }
-    }));
-  };
-  // Test function to add new dialectical pair
-  var addNewDialecticalPair = function addNewDialecticalPair() {
-    var newPairNumber = Object.keys(dialecticalData).filter(function (key) {
-      return key.startsWith('T');
-    }).length + 1;
-    dispatch(addEntry({
-      id: "T".concat(newPairNumber),
-      entry: {
-        statement: "Climate change drives innovation",
-        positive: "Forces development of sustainable technologies",
-        negative: "Creates economic disruption and uncertainty"
-      }
-    }));
-    dispatch(addEntry({
-      id: "A".concat(newPairNumber),
-      entry: {
-        statement: "Economic stability preserves environment",
-        positive: "Steady growth enables green investments",
-        negative: "Short-term profits ignore long-term costs"
-      }
-    }));
-  };
-  var handleUndo = function handleUndo() {
-    dispatch(undo());
-  };
-  var handleRedo = function handleRedo() {
-    dispatch(redo());
-  };
-  var handleRemoveEntry = function handleRemoveEntry(id) {
-    if (window.confirm("Are you sure you want to remove ".concat(id, "?"))) {
-      dispatch(removeEntry(id));
+    arrowStepMode = _useState4[0],
+    setArrowStepMode = _useState4[1];
+  var _useState5 = React.useState(0),
+    _useState6 = _slicedToArray(_useState5, 2),
+    currentArrowStep = _useState6[0],
+    setCurrentArrowStep = _useState6[1];
+  var _useState7 = React.useState([]),
+    _useState8 = _slicedToArray(_useState7, 2),
+    parsedArrowConnections = _useState8[0],
+    setParsedArrowConnections = _useState8[1];
+  var _useState9 = React.useState(""),
+    _useState0 = _slicedToArray(_useState9, 2),
+    currentArrowInfo = _useState0[0];
+    _useState0[1];
+  // Parse connections whenever they change
+  React.useEffect(function () {
+    if (chart && arrowConnections) {
+      var parsed = parseArrowConnections(arrowConnections, dialecticalData);
+      setParsedArrowConnections(parsed);
+      console.log('Parsed arrow connections:', parsed);
+    }
+  }, [arrowConnections, dialecticalData, chart]);
+  // Update arrow step UI (matching Observable notebook)
+  var updateArrowStepUI = function updateArrowStepUI() {
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    var totalArrows = connections.length;
+    if (arrowStepMode) {
+      console.log("Arrow step ".concat(currentArrowStep, " of ").concat(totalArrows));
+    } else {
+      console.log("Showing all ".concat(totalArrows, " arrows"));
     }
   };
-  // Drag and Drop handlers
-  var handleDragStart = function handleDragStart(e, id) {
-    setDraggedItem(id);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', id);
-  };
-  var handleDragOver = function handleDragOver(e, id) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverItem(id);
-  };
-  var handleDragLeave = function handleDragLeave() {
-    setDragOverItem(null);
-  };
-  var handleDrop = function handleDrop(e, targetId) {
-    e.preventDefault();
-    if (!draggedItem || draggedItem === targetId) {
-      setDraggedItem(null);
-      setDragOverItem(null);
-      return;
+  React.useEffect(function () {
+    updateArrowStepUI();
+  }, [arrowStepMode, currentArrowStep, parsedArrowConnections]);
+  // Helper function to calculate arrow color based on connection
+  var getArrowColor = function getArrowColor(conn) {
+    var color = "#666"; // Default gray
+    // Check if either endpoint is NOT middle ring (inner/outer ring connections)
+    if (conn.fromRing !== 'middle' || conn.toRing !== 'middle') {
+      if (conn.fromRing === 'inner' && conn.toRing === 'inner' || conn.fromRing === 'outer' && conn.toRing === 'outer') {
+        color = "#16a34a"; // Green for same polarity
+      } else if (conn.fromRing === 'inner' && conn.toRing === 'outer' || conn.fromRing === 'outer' && conn.toRing === 'inner') {
+        color = "#dc2626"; // Red for opposite polarity
+      } else {
+        color = "#8b5cf6"; // Purple for mixed connections (middle to inner/outer)
+      }
+    } else {
+      // Both are middle ring - check thesis vs antithesis
+      var fromIsThesis = conn.from.startsWith('T');
+      var toIsThesis = conn.to.startsWith('T');
+      if (fromIsThesis === toIsThesis) {
+        color = "#2563eb"; // Blue for same type (T->T or A->A)
+      } else {
+        color = "#dc2626"; // Red for opposition (T->A or A->T)
+      }
     }
-    var currentOrder = Object.keys(dialecticalData);
-    var draggedIndex = currentOrder.indexOf(draggedItem);
-    var targetIndex = currentOrder.indexOf(targetId);
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      var newOrder = [].concat(currentOrder);
-      // Remove dragged item from its current position
-      newOrder.splice(draggedIndex, 1);
-      // Insert dragged item at target position
-      newOrder.splice(targetIndex, 0, draggedItem);
-      dispatch(reorderEntries(newOrder));
-    }
-    setDraggedItem(null);
-    setDragOverItem(null);
+    return color;
   };
-  var handleDragEnd = function handleDragEnd() {
-    setDraggedItem(null);
-    setDragOverItem(null);
+  // Draw arrows up to specific step (matching Observable notebook)
+  var drawArrowsUpToStep = function drawArrowsUpToStep(step) {
+    if (!chart || !chart.clearArrows || !chart.drawArrow) return;
+    chart.clearArrows();
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    var connectionsToShow = connections.slice(0, step);
+    connectionsToShow.forEach(function (conn, index) {
+      var color = getArrowColor(conn);
+      var delay = index * 200;
+      chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+    });
+  };
+  // Draw next arrow (matching Observable notebook)
+  var drawNextArrow = function drawNextArrow() {
+    if (!chart || !chart.drawArrow) return false;
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    if (currentArrowStep >= connections.length) {
+      return false; // No more arrows to draw
+    }
+    var conn = connections[currentArrowStep];
+    var color = getArrowColor(conn);
+    chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
+    return true;
+  };
+  // Custom function to draw all arrows based on current connections (replaces chart.drawAllArrows)
+  var drawAllCurrentArrows = function drawAllCurrentArrows() {
+    if (!chart || !chart.clearArrows || !chart.drawArrow) return;
+    chart.clearArrows();
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    console.log('Drawing all current arrows:', connections);
+    connections.forEach(function (conn, index) {
+      var color = getArrowColor(conn);
+      var delay = index * 300;
+      chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+    });
+  };
+  // Start arrow step mode (matching Observable notebook)
+  var handleStartArrowStepMode = function handleStartArrowStepMode() {
+    var parsed = parseArrowConnections(arrowConnections, dialecticalData);
+    setParsedArrowConnections(parsed);
+    setArrowStepMode(true);
+    setCurrentArrowStep(0);
+    if (chart && chart.clearArrows) {
+      chart.clearArrows();
+    }
+    setArrowsVisibleState(false);
+    updateArrowStepUI();
+  };
+  // Step forward (matching Observable notebook)
+  var handleStepForward = function handleStepForward() {
+    if (!arrowStepMode) return;
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    if (currentArrowStep < connections.length) {
+      var success = drawNextArrow();
+      if (success) {
+        setCurrentArrowStep(function (prev) {
+          return prev + 1;
+        });
+        updateArrowStepUI();
+      }
+    }
+  };
+  // Step backward (matching Observable notebook)
+  var handleStepBackward = function handleStepBackward() {
+    if (!arrowStepMode) return;
+    if (currentArrowStep > 0) {
+      var newStep = currentArrowStep - 1;
+      setCurrentArrowStep(newStep);
+      drawArrowsUpToStep(newStep);
+      updateArrowStepUI();
+    }
+  };
+  // Show all arrows (exit step mode)
+  var handleShowAllArrows = function handleShowAllArrows() {
+    setArrowStepMode(false);
+    setCurrentArrowStep(0);
+    // Use our custom function instead of chart.drawAllArrows
+    drawAllCurrentArrows();
+    setArrowsVisibleState(true);
+    updateArrowStepUI();
+  };
+  // Toggle arrows (matching Observable notebook)
+  var handleToggleArrows = function handleToggleArrows() {
+    if (!chart) return;
+    if (arrowsVisible) {
+      if (chart.clearArrows) {
+        chart.clearArrows();
+      }
+      setArrowsVisibleState(false);
+    } else {
+      if (arrowStepMode) {
+        drawArrowsUpToStep(currentArrowStep);
+      } else {
+        // Use our custom function instead of chart.drawAllArrows
+        drawAllCurrentArrows();
+      }
+      setArrowsVisibleState(true);
+    }
+  };
+  // Redraw arrows
+  var handleRedrawArrows = function handleRedrawArrows() {
+    if (!chart || !arrowsVisible) return;
+    if (arrowStepMode) {
+      drawArrowsUpToStep(currentArrowStep);
+    } else {
+      // Use our custom function instead of chart.drawAllArrows
+      drawAllCurrentArrows();
+    }
+  };
+  // Update connections (matching Observable notebook)
+  var handleUpdateConnections = function handleUpdateConnections() {
+    console.log('Update button clicked');
+    console.log('Editor value:', arrowConnections);
+    // Parse the new connections
+    var connections = parseArrowConnections(arrowConnections, dialecticalData);
+    setParsedArrowConnections(connections);
+    console.log('Parsed connections:', connections);
+    if (arrowStepMode) {
+      setCurrentArrowStep(0);
+      updateArrowStepUI();
+      if (arrowsVisible && chart && chart.clearArrows) {
+        chart.clearArrows();
+      }
+    } else {
+      // In normal mode, redraw all arrows using the new connections
+      if (arrowsVisible) {
+        drawAllCurrentArrows();
+      }
+    }
+    setArrowConnections(arrowConnections);
+  };
+  var getArrowCounterText = function getArrowCounterText() {
+    if (arrowStepMode) {
+      return "Arrow ".concat(currentArrowStep, " of ").concat(parsedArrowConnections.length);
+    }
+    return arrowsVisible ? "All Arrows Visible" : "Ready to start";
   };
   return jsxRuntime.jsxs("div", {
     style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
       margin: '20px 0',
       padding: '20px',
       border: '1px solid #ddd',
       borderRadius: '8px',
       background: 'white'
     },
-    children: [jsxRuntime.jsx("h3", {
-      children: "Data Editor"
+    children: [jsxRuntime.jsx("div", {
+      style: {
+        marginBottom: '10px',
+        fontWeight: 'bold'
+      },
+      children: "Arrow Connections"
     }), jsxRuntime.jsxs("div", {
       style: {
         display: 'flex',
@@ -1807,194 +1082,388 @@ function DataEditor() {
         alignItems: 'center'
       },
       children: [jsxRuntime.jsx("button", {
-        onClick: handleUndo,
-        disabled: !canUndo,
+        onClick: handleToggleArrows,
         style: {
           padding: '8px 16px',
           border: '1px solid #ccc',
           borderRadius: '4px',
-          background: !canUndo ? '#e9ecef' : '#6c757d',
-          color: !canUndo ? '#6c757d' : 'white',
-          cursor: !canUndo ? 'not-allowed' : 'pointer'
+          background: '#f8f9fa',
+          cursor: 'pointer'
         },
-        children: "\u21B6 Undo"
+        children: arrowsVisible ? 'Hide Arrows' : 'Show Arrows'
       }), jsxRuntime.jsx("button", {
-        onClick: handleRedo,
-        disabled: !canRedo,
+        onClick: handleRedrawArrows,
         style: {
           padding: '8px 16px',
           border: '1px solid #ccc',
           borderRadius: '4px',
-          background: !canRedo ? '#e9ecef' : '#6c757d',
-          color: !canRedo ? '#6c757d' : 'white',
-          cursor: !canRedo ? 'not-allowed' : 'pointer'
+          background: '#f8f9fa',
+          cursor: 'pointer'
         },
-        children: "\u21B7 Redo"
-      }), jsxRuntime.jsxs("span", {
-        style: {
-          marginLeft: '10px',
-          fontSize: '12px',
-          color: '#666'
-        },
-        children: ["History: ", historyIndex + 1, " / ", history.length]
+        children: "Redraw Arrows"
       })]
     }), jsxRuntime.jsxs("div", {
       style: {
-        margin: '15px 0',
-        padding: '15px',
-        border: '2px solid #007bff',
+        border: '1px solid #ddd',
         borderRadius: '8px',
-        background: '#f8f9ff'
+        padding: '15px',
+        marginBottom: '15px',
+        background: '#f9f9f9',
+        width: '100%',
+        maxWidth: '500px'
       },
-      children: [jsxRuntime.jsx("h4", {
-        children: "Test Data Flow"
-      }), jsxRuntime.jsxs("p", {
-        children: ["Current T4 statement: ", jsxRuntime.jsx("strong", {
-          children: ((_dialecticalData$T = dialecticalData.T4) === null || _dialecticalData$T === void 0 ? void 0 : _dialecticalData$T.statement) || 'N/A'
-        })]
+      children: [jsxRuntime.jsx("div", {
+        style: {
+          fontWeight: 'bold',
+          marginBottom: '10px'
+        },
+        children: "Step-by-Step Arrow Drawing"
       }), jsxRuntime.jsxs("div", {
         style: {
           display: 'flex',
           gap: '10px',
-          flexWrap: 'wrap'
+          marginBottom: '10px',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
         },
         children: [jsxRuntime.jsx("button", {
-          onClick: updateT4Statement,
+          onClick: handleStartArrowStepMode,
+          disabled: arrowStepMode,
           style: {
-            padding: '10px 20px',
-            background: '#007bff',
-            color: 'white',
-            border: 'none',
+            padding: '6px 12px',
+            border: '1px solid #ccc',
             borderRadius: '4px',
-            cursor: 'pointer'
+            background: arrowStepMode ? '#e9ecef' : '#e7f3ff',
+            cursor: arrowStepMode ? 'not-allowed' : 'pointer'
           },
-          children: "Update T4 Statement"
+          children: "Start Step Mode"
         }), jsxRuntime.jsx("button", {
-          onClick: addNewDialecticalPair,
+          onClick: handleStepBackward,
+          disabled: !arrowStepMode || currentArrowStep <= 0,
           style: {
-            padding: '10px 20px',
-            background: '#28a745',
-            color: 'white',
-            border: 'none',
+            padding: '6px 12px',
+            border: '1px solid #ccc',
             borderRadius: '4px',
+            background: !arrowStepMode || currentArrowStep <= 0 ? '#e9ecef' : '#f8f9fa',
+            cursor: !arrowStepMode || currentArrowStep <= 0 ? 'not-allowed' : 'pointer'
+          },
+          children: "Previous"
+        }), jsxRuntime.jsx("span", {
+          style: {
+            margin: '0 10px',
+            fontWeight: 'bold',
+            minWidth: '120px',
+            textAlign: 'center'
+          },
+          children: getArrowCounterText()
+        }), jsxRuntime.jsx("button", {
+          onClick: handleStepForward,
+          disabled: !arrowStepMode || currentArrowStep >= parseArrowConnections(arrowConnections, dialecticalData).length,
+          style: {
+            padding: '6px 12px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            background: !arrowStepMode || currentArrowStep >= parsedArrowConnections.length ? '#e9ecef' : '#f8f9fa',
+            cursor: !arrowStepMode || currentArrowStep >= parsedArrowConnections.length ? 'not-allowed' : 'pointer'
+          },
+          children: "Next Arrow"
+        }), jsxRuntime.jsx("button", {
+          onClick: handleShowAllArrows,
+          style: {
+            padding: '6px 12px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            background: '#f8f9fa',
             cursor: 'pointer'
           },
-          children: "Add New Pair"
-        })]
-      }), jsxRuntime.jsxs("p", {
-        style: {
-          fontSize: '12px',
-          color: '#666',
-          marginTop: '10px'
-        },
-        children: ["Current entries: ", Object.keys(dialecticalData).length, " total"]
-      })]
-    }), jsxRuntime.jsxs("div", {
-      style: {
-        marginTop: '15px'
-      },
-      children: [jsxRuntime.jsxs("h4", {
-        children: ["Current Dialectical Data: ", jsxRuntime.jsx("span", {
-          style: {
-            fontSize: '12px',
-            color: '#666'
-          },
-          children: "(Drag to reorder)"
+          children: "Show All"
         })]
       }), jsxRuntime.jsx("div", {
         style: {
-          maxHeight: '400px',
-          overflowY: 'auto',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          padding: '10px'
+          fontSize: '12px',
+          color: '#666',
+          minHeight: '20px',
+          fontStyle: 'italic',
+          textAlign: 'center'
         },
-        children: dataEntries.map(function (_ref) {
-          var _ref2 = _slicedToArray(_ref, 2),
-            id = _ref2[0],
-            entry = _ref2[1];
-          return jsxRuntime.jsxs("div", {
-            draggable: true,
-            onDragStart: function onDragStart(e) {
-              return handleDragStart(e, id);
-            },
-            onDragOver: function onDragOver(e) {
-              return handleDragOver(e, id);
-            },
-            onDragLeave: handleDragLeave,
-            onDrop: function onDrop(e) {
-              return handleDrop(e, id);
-            },
-            onDragEnd: handleDragEnd,
-            style: {
-              marginBottom: '10px',
-              padding: '10px',
-              background: draggedItem === id ? '#e3f2fd' : dragOverItem === id ? '#f3e5f5' : '#f8f9fa',
-              borderRadius: '4px',
-              border: dragOverItem === id ? '2px dashed #9c27b0' : '1px solid #e9ecef',
-              cursor: 'move',
-              transition: 'all 0.2s ease',
-              transform: draggedItem === id ? 'rotate(2deg) scale(1.02)' : 'none',
-              opacity: draggedItem === id ? 0.8 : 1
-            },
-            children: [jsxRuntime.jsxs("div", {
-              style: {
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '5px'
-              },
-              children: [jsxRuntime.jsxs("div", {
-                style: {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                },
-                children: [jsxRuntime.jsx("span", {
-                  style: {
-                    fontSize: '16px',
-                    color: '#666',
-                    cursor: 'grab'
-                  },
-                  children: "\u22EE\u22EE"
-                }), jsxRuntime.jsx("strong", {
-                  children: id
-                })]
-              }), jsxRuntime.jsx("button", {
-                onClick: function onClick() {
-                  return handleRemoveEntry(id);
-                },
-                style: {
-                  padding: '2px 6px',
-                  background: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                },
-                children: "Remove"
-              })]
-            }), jsxRuntime.jsxs("div", {
-              style: {
-                fontSize: '14px'
-              },
-              children: [jsxRuntime.jsxs("div", {
-                children: [jsxRuntime.jsx("strong", {
-                  children: "Statement:"
-                }), " ", entry.statement]
-              }), jsxRuntime.jsxs("div", {
-                children: [jsxRuntime.jsx("strong", {
-                  children: "Positive:"
-                }), " ", entry.positive]
-              }), jsxRuntime.jsxs("div", {
-                children: [jsxRuntime.jsx("strong", {
-                  children: "Negative:"
-                }), " ", entry.negative]
-              })]
-            })]
-          }, id);
+        children: currentArrowInfo
+      })]
+    }), jsxRuntime.jsxs("div", {
+      style: {
+        width: '100%',
+        maxWidth: '500px'
+      },
+      children: [jsxRuntime.jsx("div", {
+        style: {
+          marginBottom: '10px'
+        },
+        children: jsxRuntime.jsx("label", {
+          htmlFor: "connections-editor",
+          style: {
+            fontWeight: 'bold'
+          },
+          children: "Edit Connections (DOT syntax):"
         })
+      }), jsxRuntime.jsx("textarea", {
+        id: "connections-editor",
+        value: arrowConnections,
+        onChange: function onChange(e) {
+          return setArrowConnections(e.target.value);
+        },
+        style: {
+          width: '100%',
+          height: '150px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          padding: '8px',
+          resize: 'vertical'
+        }
+      }), jsxRuntime.jsx("div", {
+        style: {
+          marginTop: '10px'
+        },
+        children: jsxRuntime.jsx("button", {
+          onClick: handleUpdateConnections,
+          style: {
+            padding: '8px 16px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            background: '#007bff',
+            color: 'white',
+            cursor: 'pointer'
+          },
+          children: "Update Arrows"
+        })
+      }), jsxRuntime.jsxs("div", {
+        style: {
+          marginTop: '15px',
+          fontSize: '12px',
+          color: '#666',
+          maxWidth: '500px'
+        },
+        children: [jsxRuntime.jsx("strong", {
+          children: "Syntax:"
+        }), " Use \"A \u2192 B\" format. Available units: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), jsxRuntime.jsx("strong", {
+          children: "Ring-specific:"
+        }), " Add + for positives (e.g., T1+) or - for negatives (e.g., T1-)", jsxRuntime.jsx("br", {}), jsxRuntime.jsx("strong", {
+          children: "Colors:"
+        }), " \uD83D\uDD34Red for oppositions, \uD83D\uDD35Blue for same type, \uD83D\uDFE2Green for same polarity, \uD83D\uDFE3Purple for mixed"]
+      })]
+    })]
+  });
+}
+
+function StepControls(_ref) {
+  var chart = _ref.chart;
+  var _useState = React.useState({
+      isActive: false,
+      currentStep: 0,
+      totalSteps: 0
+    }),
+    _useState2 = _slicedToArray(_useState, 2),
+    stepMode = _useState2[0],
+    setStepModeState = _useState2[1];
+  var _useState3 = React.useState(0),
+    _useState4 = _slicedToArray(_useState3, 2),
+    rotation = _useState4[0],
+    setRotationState = _useState4[1];
+  React.useEffect(function () {
+    if (chart) {
+      // Update step info initially
+      updateStepInfo();
+    }
+  }, [chart]);
+  var updateStepInfo = function updateStepInfo() {
+    if (chart && chart.getCurrentStepInfo) {
+      try {
+        var info = chart.getCurrentStepInfo();
+        if (info) {
+          setStepModeState({
+            isActive: true,
+            currentStep: info.current,
+            totalSteps: info.total
+          });
+        } else {
+          setStepModeState({
+            isActive: false,
+            currentStep: 0,
+            totalSteps: 0
+          });
+        }
+      } catch (error) {
+        console.error('Error getting step info:', error);
+      }
+    }
+  };
+  var handleStartStepMode = function handleStartStepMode() {
+    if (chart && chart.startStepMode) {
+      try {
+        chart.startStepMode();
+        updateStepInfo();
+      } catch (error) {
+        console.error('Error starting step mode:', error);
+      }
+    }
+  };
+  var handleStepForward = function handleStepForward() {
+    if (chart && chart.stepForward) {
+      try {
+        chart.stepForward();
+        updateStepInfo();
+      } catch (error) {
+        console.error('Error stepping forward:', error);
+      }
+    }
+  };
+  var handleResetToFull = function handleResetToFull() {
+    if (chart && chart.resetToFull) {
+      try {
+        chart.resetToFull();
+        updateStepInfo();
+      } catch (error) {
+        console.error('Error resetting to full:', error);
+      }
+    }
+  };
+  var handleRotationChange = function handleRotationChange(e) {
+    var degrees = parseInt(e.target.value);
+    var radians = degrees * Math.PI / 180;
+    setRotationState(degrees);
+    if (chart && chart.rotate) {
+      try {
+        chart.rotate(radians);
+      } catch (error) {
+        console.error('Error rotating:', error);
+      }
+    }
+  };
+  var handleRotationReset = function handleRotationReset() {
+    setRotationState(0);
+    if (chart && chart.rotate) {
+      try {
+        chart.rotate(0);
+      } catch (error) {
+        console.error('Error resetting rotation:', error);
+      }
+    }
+  };
+  var getCounterText = function getCounterText() {
+    if (stepMode.isActive) {
+      return "Step ".concat(stepMode.currentStep, " of ").concat(stepMode.totalSteps);
+    }
+    return "Full View";
+  };
+  return jsxRuntime.jsxs("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      margin: '20px 0',
+      padding: '20px',
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      background: 'white'
+    },
+    children: [jsxRuntime.jsx("h3", {
+      style: {
+        marginTop: 0
+      },
+      children: "Step Controls"
+    }), jsxRuntime.jsxs("div", {
+      style: {
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '10px',
+        marginBottom: '15px',
+        alignItems: 'center'
+      },
+      children: [jsxRuntime.jsx("button", {
+        onClick: handleStartStepMode,
+        disabled: stepMode.isActive,
+        style: {
+          padding: '8px 16px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          background: stepMode.isActive ? '#e9ecef' : '#007bff',
+          color: stepMode.isActive ? '#6c757d' : 'white',
+          cursor: stepMode.isActive ? 'not-allowed' : 'pointer'
+        },
+        children: "Start Step Mode"
+      }), jsxRuntime.jsx("span", {
+        style: {
+          margin: '0 10px',
+          fontWeight: 'bold'
+        },
+        children: getCounterText()
+      }), jsxRuntime.jsx("button", {
+        onClick: handleStepForward,
+        disabled: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps,
+        style: {
+          padding: '8px 16px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          background: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? '#e9ecef' : '#28a745',
+          color: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? '#6c757d' : 'white',
+          cursor: !stepMode.isActive || stepMode.currentStep >= stepMode.totalSteps ? 'not-allowed' : 'pointer'
+        },
+        children: "Next"
+      }), jsxRuntime.jsx("button", {
+        onClick: handleResetToFull,
+        disabled: !stepMode.isActive,
+        style: {
+          padding: '8px 16px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          background: !stepMode.isActive ? '#e9ecef' : '#dc3545',
+          color: !stepMode.isActive ? '#6c757d' : 'white',
+          cursor: !stepMode.isActive ? 'not-allowed' : 'pointer'
+        },
+        children: "Show All"
+      })]
+    }), jsxRuntime.jsxs("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      },
+      children: [jsxRuntime.jsx("label", {
+        htmlFor: "rotation-slider",
+        style: {
+          fontWeight: 'bold'
+        },
+        children: "Rotation:"
+      }), jsxRuntime.jsx("input", {
+        type: "range",
+        id: "rotation-slider",
+        min: "0",
+        max: "360",
+        value: rotation,
+        step: "1",
+        onChange: handleRotationChange,
+        style: {
+          width: '200px',
+          cursor: 'pointer'
+        }
+      }), jsxRuntime.jsxs("span", {
+        style: {
+          minWidth: '40px',
+          fontFamily: 'monospace'
+        },
+        children: [rotation, "\xB0"]
+      }), jsxRuntime.jsx("button", {
+        onClick: handleRotationReset,
+        style: {
+          padding: '4px 8px',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          background: '#f8f9fa',
+          cursor: 'pointer',
+          fontSize: '12px'
+        },
+        children: "Reset"
       })]
     })]
   });
@@ -3284,19 +2753,6 @@ function useManualWheel(sessionId, wisdomUnitsData) {
   };
 }
 
-var store = toolkit.configureStore({
-  reducer: {
-    dialectical: dialecticalReducer
-  },
-  middleware: function middleware(getDefaultMiddleware) {
-    return getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE']
-      }
-    });
-  }
-});
-
 var useNodeConnections = function useNodeConnections(dynamicSlices, title, recordRef) {
   var _useState = React.useState(true),
     _useState2 = _slicedToArray(_useState, 2),
@@ -4338,15 +3794,15 @@ var useWheelSlices = function useWheelSlices(sequenceWithLabels, normalSliceAngl
   };
 };
 
-exports.DataEditor = DataEditor;
+exports.ArrowControls = ArrowControls;
 exports.DialecticalWheel = DialecticalWheel;
 exports.ExploreComponent = ExploreComponent;
 exports.SliceAtAngle = SliceAtAngle;
+exports.StepControls = StepControls;
 exports.WisdomService = WisdomService;
 exports.default = DialecticalWheel;
 exports.defaultPairTexts = defaultPairTexts;
 exports.generatePairTextsFromWisdomUnits = generatePairTextsFromWisdomUnits;
-exports.store = store;
 exports.useDialecticalWheel = useDialecticalWheel;
 exports.useDialecticalWheelWithCycles = useDialecticalWheelWithCycles;
 exports.useManualWheel = useManualWheel;

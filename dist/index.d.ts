@@ -1,9 +1,8 @@
-export { DialecticalWheel, ExploreComponent, DataEditor } from './components';
+export { DialecticalWheel, ExploreComponent, ArrowControls, StepControls } from './components';
 export { WisdomService, useDialecticalWheel, useDialecticalWheelWithCycles, useManualWheel } from './services';
 export { useNodeConnections } from './components/DialecticalWheel/hooks/useNodeConnections';
 export { useWheelSlices } from './components/DialecticalWheel/hooks/useWheelSlices';
 export { SliceAtAngle, generatePairTextsFromWisdomUnits, defaultPairTexts } from './utils';
 export * from './types';
 export { DialecticalWheel as default } from './components';
-export { store, type RootState, type AppDispatch } from './store/store';
 //# sourceMappingURL=index.d.ts.map

@@ -1,7 +1,7 @@
 // Main entry point for dialectical-wheel npm module
 
 // Export all components
-export { DialecticalWheel, ExploreComponent, DataEditor } from './components';
+export { DialecticalWheel, ExploreComponent, ArrowControls, StepControls } from './components';
 
 // Export all services and hooks
 export { 
@@ -28,5 +28,3 @@ export * from './types';
 // Default export for convenience
 export { DialecticalWheel as default } from './components';
 
-// Export the store and types explicitly
-export { store, type RootState, type AppDispatch } from './store/store';

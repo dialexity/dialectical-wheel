@@ -1,21 +1,28 @@
 import {Runtime, Inspector} from '@observablehq/runtime';
 import React, {useEffect, useRef, useState} from 'react';
-import { useAppSelector } from '../../store/hooks';
-import StepControls from './components/StepControls';
-import ArrowControls from './components/ArrowControls';
-import DataEditor from '../DataEditor';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
 
-export default function DialecticalWheel() {
+export interface DialecticalWheelProps {
+  dialecticalData: any;
+  arrowConnections?: string;
+  width?: number;
+  height?: number;
+  onChartReady?: (chart: any) => void;
+}
+
+export default function DialecticalWheel({
+  dialecticalData,
+  arrowConnections = '',
+  width = 800,
+  height = 800,
+  onChartReady
+}: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   const [chart, setChart] = useState<any>(null);
   const [runtime, setRuntime] = useState<any>(null);
   
-  // Get dialectical data from Redux store
-  const dialecticalData = useAppSelector(state => state.dialectical.data);
-
   useEffect(() => {
     console.log('Loading Observable notebook from local npm package...');
     
@@ -31,6 +38,7 @@ export default function DialecticalWheel() {
           fulfilled(value: any) {
             // The chart value IS the SVG node with methods attached
             setChart(value);
+            if (onChartReady) onChartReady(value);
             return super.fulfilled(value);
           }
         }(chartRef.current);
@@ -51,18 +59,15 @@ export default function DialecticalWheel() {
 
   // Separate useEffect for redefining data - this follows the Observable examples pattern
   useEffect(() => {
-    if (module && dialecticalData) {
-      console.log('Redefining dialecticalData in Observable notebook');
+    if (module) {
       try {
-        module.redefine("dialecticalData", dialecticalData);
-        console.log('Successfully redefined dialecticalData from local npm package');
+        module.redefine('dialecticalData', dialecticalData);
+        module.redefine('arrowConnections', arrowConnections);
       } catch (error) {
-        console.warn('Could not redefine dialecticalData:', error);
+        console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [dialecticalData, module]);
-
-
+  }, [dialecticalData, arrowConnections, module]);
 
   return (
     <div className="dialectical-wheel-wrapper">
@@ -70,17 +75,13 @@ export default function DialecticalWheel() {
         ref={chartRef} 
         className="chart-container"
         style={{
-          width: '800px',
-          height: '800px',
+          width: `${width}px`,
+          height: `${height}px`,
           border: '1px solid #ddd',
           borderRadius: '8px',
           background: 'white'
         }}
       />
-      
-      <StepControls chart={chart} />
-      
-      <ArrowControls chart={chart} />
       
       {/* Debug info */}
       <div style={{ 
@@ -91,7 +92,7 @@ export default function DialecticalWheel() {
         fontSize: '12px',
         color: '#666'
       }}>
-        Debug: {Object.keys(dialecticalData).length} entries in Redux store: {Object.keys(dialecticalData).join(', ')}<br/>
+        Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
         Using local npm package: @dialexity/dialectical-wheel
       </div>
     </div>

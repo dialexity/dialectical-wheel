@@ -1,15 +1,12 @@
-import React, { useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '../../../store/hooks';
-import { setStepMode, setRotation } from '../../../store/dialecticalSlice';
+import React, { useEffect, useState } from 'react';
 
 interface StepControlsProps {
   chart: any;
 }
 
 export default function StepControls({ chart }: StepControlsProps) {
-  const dispatch = useAppDispatch();
-  const stepMode = useAppSelector(state => state.dialectical.stepMode);
-  const rotation = useAppSelector(state => state.dialectical.rotation);
+  const [stepMode, setStepModeState] = useState({ isActive: false, currentStep: 0, totalSteps: 0 });
+  const [rotation, setRotationState] = useState(0);
 
   useEffect(() => {
     if (chart) {
@@ -23,13 +20,13 @@ export default function StepControls({ chart }: StepControlsProps) {
       try {
         const info = chart.getCurrentStepInfo();
         if (info) {
-          dispatch(setStepMode({
+          setStepModeState({
             isActive: true,
             currentStep: info.current,
             totalSteps: info.total
-          }));
+          });
         } else {
-          dispatch(setStepMode({ isActive: false }));
+          setStepModeState({ isActive: false, currentStep: 0, totalSteps: 0 });
         }
       } catch (error) {
         console.error('Error getting step info:', error);
@@ -73,7 +70,7 @@ export default function StepControls({ chart }: StepControlsProps) {
   const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const degrees = parseInt(e.target.value);
     const radians = (degrees * Math.PI) / 180;
-    dispatch(setRotation(degrees));
+    setRotationState(degrees);
     if (chart && chart.rotate) {
       try {
         chart.rotate(radians);
@@ -84,7 +81,7 @@ export default function StepControls({ chart }: StepControlsProps) {
   };
 
   const handleRotationReset = () => {
-    dispatch(setRotation(0));
+    setRotationState(0);
     if (chart && chart.rotate) {
       try {
         chart.rotate(0);

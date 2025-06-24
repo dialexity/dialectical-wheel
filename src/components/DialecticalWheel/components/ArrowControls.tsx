@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '../../../store/hooks';
-import { setArrowsVisible, updateArrowConnections } from '../../../store/dialecticalSlice';
 
 interface ArrowControlsProps {
   chart: any;
+  dialecticalData: any;
+  arrowConnections: string;
+  setArrowConnections: (dot: string) => void;
 }
 
 // Arrow parsing function (from Observable notebook)
@@ -51,12 +52,9 @@ function parseArrowConnections(dotScript: string, dialecticalData: any) {
   return connections;
 }
 
-export default function ArrowControls({ chart }: ArrowControlsProps) {
-  const dispatch = useAppDispatch();
-  const dialecticalData = useAppSelector(state => state.dialectical.data);
-  const arrowsVisible = useAppSelector(state => state.dialectical.arrows.visible);
-  const arrowConnections = useAppSelector(state => state.dialectical.arrows.connections);
-  
+export default function ArrowControls({ chart, dialecticalData, arrowConnections, setArrowConnections }: ArrowControlsProps) {
+  const [arrowsVisible, setArrowsVisibleState] = useState(false);
+
   // Step-by-step arrow state (matching Observable notebook)
   const [arrowStepMode, setArrowStepMode] = useState(false);
   const [currentArrowStep, setCurrentArrowStep] = useState(0);
@@ -174,7 +172,7 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
       chart.clearArrows();
     }
     
-    dispatch(setArrowsVisible(false));
+    setArrowsVisibleState(false);
     updateArrowStepUI();
   };
 
@@ -212,7 +210,7 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
     // Use our custom function instead of chart.drawAllArrows
     drawAllCurrentArrows();
     
-    dispatch(setArrowsVisible(true));
+    setArrowsVisibleState(true);
     updateArrowStepUI();
   };
 
@@ -224,7 +222,7 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
       if (chart.clearArrows) {
         chart.clearArrows();
       }
-      dispatch(setArrowsVisible(false));
+      setArrowsVisibleState(false);
     } else {
       if (arrowStepMode) {
         drawArrowsUpToStep(currentArrowStep);
@@ -232,7 +230,7 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
         // Use our custom function instead of chart.drawAllArrows
         drawAllCurrentArrows();
       }
-      dispatch(setArrowsVisible(true));
+      setArrowsVisibleState(true);
     }
   };
 
@@ -270,10 +268,8 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
         drawAllCurrentArrows();
       }
     }
-  };
 
-  const handleConnectionsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    dispatch(updateArrowConnections(e.target.value));
+    setArrowConnections(arrowConnections);
   };
 
   const getArrowCounterText = () => {
@@ -437,7 +433,7 @@ export default function ArrowControls({ chart }: ArrowControlsProps) {
         <textarea 
           id="connections-editor"
           value={arrowConnections}
-          onChange={handleConnectionsChange}
+          onChange={(e) => setArrowConnections(e.target.value)}
           style={{
             width: '100%',
             height: '150px',
