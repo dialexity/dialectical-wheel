@@ -6,3 +6,6 @@ export { default as DataEditor } from './DataEditor';
 // Re-export services and utilities for convenience (optional)
 export * from '../services';
 export * from '../utils'; 
+export * from '../store/hooks';
+export * from '../store/dialecticalSlice';
+export * from '../store/dialecticalSlice';
