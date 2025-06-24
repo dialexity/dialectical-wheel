@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import { useAppSelector } from '../../store/hooks';
 import StepControls from './components/StepControls';
 import ArrowControls from './components/ArrowControls';
-import DataEditor from './components/DataEditor';
+import DataEditor from '../DataEditor';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
 

@@ -1,7 +1,7 @@
 // Main entry point for dialectical-wheel npm module
 
 // Export all components
-export { DialecticalWheel, ExploreComponent } from './components';
+export { DialecticalWheel, ExploreComponent, DataEditor } from './components';
 
 // Export all services and hooks
 export { 
