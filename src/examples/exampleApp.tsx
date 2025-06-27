@@ -1,10 +1,8 @@
-import DialecticalWheel from 'dialectical-wheel';
-import StepControls from 'dialectical-wheel';
-import ArrowControls from 'dialectical-wheel';
+import DialecticalWheel, { StepControls, ArrowControls } from 'dialectical-wheel';
 import React, { useState } from 'react';
 //import './App.css';
 
-function exampleApp() {
+function App() {
   const [dialecticalData, setDialecticalData] = useState<any>({
     T1: {
       statement: "Sample thesis 1",
@@ -53,4 +51,4 @@ function exampleApp() {
   );
 }
 
-export default exampleApp;
+export default App;

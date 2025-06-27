@@ -68,7 +68,7 @@
     "@observablehq/runtime": "^5.9.9",
     "@reduxjs/toolkit": "^2.8.2",
     "d3": "^7.8.5",
-    "@dialexity/dialectical-wheel": "https://api.observablehq.com/@dialexity/dialectical-wheel@239.tgz?v=3",
+    "@dialexity/dialectical-wheel": "https://api.observablehq.com/@dialexity/dialectical-wheel@395.tgz?v=3",
     "react-redux": "^9.2.0"
   }
 }
