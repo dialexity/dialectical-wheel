@@ -6,16 +6,16 @@ import notebook from '@dialexity/dialectical-wheel';
 export interface DialecticalWheelProps {
   dialecticalData: any;
   arrowConnections?: string;
-  width?: number;
-  height?: number;
+  width?: string;
+  height?: string;
   onChartReady?: (chart: any) => void;
 }
 
 export default function DialecticalWheel({
   dialecticalData,
   arrowConnections = '',
-  width = 800,
-  height = 800,
+  width = '100%',
+  height = '100%',
   onChartReady
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
