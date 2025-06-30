@@ -6,17 +6,17 @@ import notebook from '@dialexity/dialectical-wheel';
 export interface DialecticalWheelProps {
   dialecticalData: any;
   arrowConnections?: string;
-  width?: string;
-  height?: string;
+  style?: React.CSSProperties;
   onChartReady?: (chart: any) => void;
+  debug?: boolean;
 }
 
 export default function DialecticalWheel({
   dialecticalData,
   arrowConnections = '',
-  width = '100%',
-  height = '100%',
-  onChartReady
+  style = {},
+  onChartReady,
+  debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
@@ -75,26 +75,26 @@ export default function DialecticalWheel({
         ref={chartRef} 
         className="chart-container"
         style={{
-          width: `${width}`,
-          height: `${height}`,
-          //border: '1px solid #ddd',
           borderRadius: '8px',
-          background: 'white'
+          background: 'white',
+          ...style
         }}
       />
       
       {/* Debug info */}
-      <div style={{ 
-        marginTop: '10px', 
-        padding: '10px', 
-        background: '#f8f9fa', 
-        borderRadius: '4px',
-        fontSize: '12px',
-        color: '#666'
-      }}>
-        Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
-        Using local npm package: @dialexity/dialectical-wheel
-      </div>
+      {debug && (
+        <div style={{ 
+          marginTop: '10px', 
+          padding: '10px', 
+          background: '#f8f9fa', 
+          borderRadius: '4px',
+          fontSize: '12px',
+          color: '#666'
+        }}>
+          Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
+          Using local npm package: @dialexity/dialectical-wheel
+        </div>
+      )}
     </div>
   );
 } 

@@ -112,6 +112,14 @@ function _createForOfIteratorHelper(r, e) {
     }
   };
 }
+function _defineProperty(e, r, t) {
+  return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
+    value: t,
+    enumerable: true,
+    configurable: true,
+    writable: true
+  }) : e[r] = t, e;
+}
 function _get() {
   return _get = "undefined" != typeof Reflect && Reflect.get ? Reflect.get.bind() : function (e, t, r) {
     var p = _superPropBase(e, t);
@@ -181,6 +189,27 @@ function _nonIterableRest() {
 }
 function _nonIterableSpread() {
   throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
+function ownKeys(e, r) {
+  var t = Object.keys(e);
+  if (Object.getOwnPropertySymbols) {
+    var o = Object.getOwnPropertySymbols(e);
+    r && (o = o.filter(function (r) {
+      return Object.getOwnPropertyDescriptor(e, r).enumerable;
+    })), t.push.apply(t, o);
+  }
+  return t;
+}
+function _objectSpread2(e) {
+  for (var r = 1; r < arguments.length; r++) {
+    var t = null != arguments[r] ? arguments[r] : {};
+    r % 2 ? ownKeys(Object(t), true).forEach(function (r) {
+      _defineProperty(e, r, t[r]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
+      Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
+    });
+  }
+  return e;
 }
 function _possibleConstructorReturn(t, e) {
   if (e && ("object" == typeof e || "function" == typeof e)) return e;
@@ -326,7 +355,7 @@ function _toPrimitive(t, r) {
     if ("object" != typeof i) return i;
     throw new TypeError("@@toPrimitive must return a primitive value.");
   }
-  return (String )(t);
+  return ("string" === r ? String : Number)(t);
 }
 function _toPropertyKey(t) {
   var i = _toPrimitive(t, "string");
@@ -344,11 +373,11 @@ function DialecticalWheel(_ref) {
   var dialecticalData = _ref.dialecticalData,
     _ref$arrowConnections = _ref.arrowConnections,
     arrowConnections = _ref$arrowConnections === void 0 ? '' : _ref$arrowConnections,
-    _ref$width = _ref.width,
-    width = _ref$width === void 0 ? '100%' : _ref$width,
-    _ref$height = _ref.height,
-    height = _ref$height === void 0 ? '100%' : _ref$height,
-    onChartReady = _ref.onChartReady;
+    _ref$style = _ref.style,
+    style = _ref$style === void 0 ? {} : _ref$style,
+    onChartReady = _ref.onChartReady,
+    _ref$debug = _ref.debug,
+    debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = React.useRef(null);
   var _useState = React.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
@@ -412,14 +441,11 @@ function DialecticalWheel(_ref) {
     children: [jsxRuntime.jsx("div", {
       ref: chartRef,
       className: "chart-container",
-      style: {
-        width: "".concat(width),
-        height: "".concat(height),
-        //border: '1px solid #ddd',
+      style: _objectSpread2({
         borderRadius: '8px',
         background: 'white'
-      }
-    }), jsxRuntime.jsxs("div", {
+      }, style)
+    }), debug && jsxRuntime.jsxs("div", {
       style: {
         marginTop: '10px',
         padding: '10px',
