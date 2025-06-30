@@ -345,9 +345,9 @@ function DialecticalWheel(_ref) {
     _ref$arrowConnections = _ref.arrowConnections,
     arrowConnections = _ref$arrowConnections === void 0 ? '' : _ref$arrowConnections,
     _ref$width = _ref.width,
-    width = _ref$width === void 0 ? 800 : _ref$width,
+    width = _ref$width === void 0 ? '100%' : _ref$width,
     _ref$height = _ref.height,
-    height = _ref$height === void 0 ? 800 : _ref$height,
+    height = _ref$height === void 0 ? '100%' : _ref$height,
     onChartReady = _ref.onChartReady;
   var chartRef = React.useRef(null);
   var _useState = React.useState(null),
@@ -413,9 +413,9 @@ function DialecticalWheel(_ref) {
       ref: chartRef,
       className: "chart-container",
       style: {
-        width: "".concat(width, "px"),
-        height: "".concat(height, "px"),
-        border: '1px solid #ddd',
+        width: "".concat(width),
+        height: "".concat(height),
+        //border: '1px solid #ddd',
         borderRadius: '8px',
         background: 'white'
       }
