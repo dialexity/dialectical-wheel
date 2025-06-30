@@ -75,9 +75,9 @@ export default function DialecticalWheel({
         ref={chartRef} 
         className="chart-container"
         style={{
-          width: `${width}px`,
-          height: `${height}px`,
-          border: '1px solid #ddd',
+          width: `${width}`,
+          height: `${height}`,
+          //border: '1px solid #ddd',
           borderRadius: '8px',
           background: 'white'
         }}
