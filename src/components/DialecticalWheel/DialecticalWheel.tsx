@@ -8,6 +8,7 @@ export interface DialecticalWheelProps {
   arrowConnections?: string;
   style?: React.CSSProperties;
   onChartReady?: (chart: any) => void;
+  onSliceFocus?: (sliceData: any) => void;
   debug?: boolean;
 }
 
@@ -16,12 +17,14 @@ export default function DialecticalWheel({
   arrowConnections = '',
   style = {},
   onChartReady,
+  onSliceFocus,
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   const [chart, setChart] = useState<any>(null);
   const [runtime, setRuntime] = useState<any>(null);
+  const [focusedSlice, setFocusedSlice] = useState<any>(null);
   
   useEffect(() => {
     console.log('Loading Observable notebook from local npm package...');
@@ -39,6 +42,31 @@ export default function DialecticalWheel({
             // The chart value IS the SVG node with methods attached
             setChart(value);
             if (onChartReady) onChartReady(value);
+            
+            // Add click event listeners for slice focus
+            if (onSliceFocus && value) {
+              // Listen for slice focus events from the chart
+              const handleSliceFocus = (event: any) => {
+                if (event.detail && event.detail.sliceData) {
+                  setFocusedSlice(event.detail.sliceData);
+                  onSliceFocus(event.detail.sliceData);
+                }
+              };
+              
+              // Add event listener for custom slice focus events
+              value.addEventListener('sliceFocus', handleSliceFocus);
+              
+              // Also try to listen for clicks on slice elements directly
+              const handleSliceClick = (event: any) => {
+                if (chart && onSliceFocus) {
+                  onSliceFocus(chart.focusedPair);
+                  setFocusedSlice(chart.focusedPair);
+                }
+              };
+              
+              value.addEventListener('click', handleSliceClick);
+            }
+            
             return super.fulfilled(value);
           }
         }(chartRef.current);
@@ -92,7 +120,8 @@ export default function DialecticalWheel({
           color: '#666'
         }}>
           Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
-          Using local npm package: @dialexity/dialectical-wheel
+          Using local npm package: @dialexity/dialectical-wheel<br/>
+          {focusedSlice && `Focused slice: ${JSON.stringify(focusedSlice)}`}
         </div>
       )}
     </div>
