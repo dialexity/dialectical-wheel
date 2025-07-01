@@ -372,6 +372,7 @@ function DialecticalWheel(_ref) {
     _ref$style = _ref.style,
     style = _ref$style === void 0 ? {} : _ref$style,
     onChartReady = _ref.onChartReady,
+    onSliceFocus = _ref.onSliceFocus,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = useRef(null);
@@ -380,13 +381,17 @@ function DialecticalWheel(_ref) {
     module = _useState2[0],
     setModule = _useState2[1];
   var _useState3 = useState(null),
-    _useState4 = _slicedToArray(_useState3, 2);
-    _useState4[0];
-    var setChart = _useState4[1];
+    _useState4 = _slicedToArray(_useState3, 2),
+    chart = _useState4[0],
+    setChart = _useState4[1];
   var _useState5 = useState(null),
     _useState6 = _slicedToArray(_useState5, 2);
     _useState6[0];
     var setRuntime = _useState6[1];
+  var _useState7 = useState(null),
+    _useState8 = _slicedToArray(_useState7, 2),
+    focusedSlice = _useState8[0],
+    setFocusedSlice = _useState8[1];
   useEffect(function () {
     console.log('Loading Observable notebook from local npm package...');
     var runtime = new Runtime();
@@ -405,6 +410,26 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               setChart(value);
               if (onChartReady) onChartReady(value);
+              // Add click event listeners for slice focus
+              if (onSliceFocus && value) {
+                // Listen for slice focus events from the chart
+                var handleSliceFocus = function handleSliceFocus(event) {
+                  if (event.detail && event.detail.sliceData) {
+                    setFocusedSlice(event.detail.sliceData);
+                    onSliceFocus(event.detail.sliceData);
+                  }
+                };
+                // Add event listener for custom slice focus events
+                value.addEventListener('sliceFocus', handleSliceFocus);
+                // Also try to listen for clicks on slice elements directly
+                var handleSliceClick = function handleSliceClick(event) {
+                  if (chart && onSliceFocus) {
+                    onSliceFocus(chart.focusedPair);
+                    setFocusedSlice(chart.focusedPair);
+                  }
+                };
+                value.addEventListener('click', handleSliceClick);
+              }
               return _superPropGet(_class, "fulfilled", this)([value]);
             }
           }]);
@@ -450,7 +475,7 @@ function DialecticalWheel(_ref) {
         fontSize: '12px',
         color: '#666'
       },
-      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
+      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel", jsx("br", {}), focusedSlice && "Focused slice: ".concat(JSON.stringify(focusedSlice))]
     })]
   });
 }
