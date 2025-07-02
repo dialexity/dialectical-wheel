@@ -58,7 +58,7 @@ export default function DialecticalWheel({
             if (onTopSliceChange) onTopSliceChange(value);
             return super.fulfilled(value);
           }
-        }(chartRef.current);
+        }(null);
       }
       if (name === 'focusedSlice') {
         return new class extends Inspector {
@@ -71,7 +71,7 @@ export default function DialecticalWheel({
             if (onFocusedSliceChange) onFocusedSliceChange(value);
             return super.fulfilled(value);
           }
-        }(chartRef.current);
+        }(null);
       }
       // Don't render the Observable controls - we'll use React components instead
       return undefined;

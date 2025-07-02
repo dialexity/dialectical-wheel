@@ -7872,7 +7872,7 @@ function DialecticalWheel(_ref) {
               return _superPropGet(_class2, "fulfilled", this)([value]);
             }
           }]);
-        }(Inspector))(chartRef.current);
+        }(Inspector))(null);
       }
       if (name === 'focusedSlice') {
         return new (/*#__PURE__*/function (_Inspector3) {
@@ -7890,7 +7890,7 @@ function DialecticalWheel(_ref) {
               return _superPropGet(_class3, "fulfilled", this)([value]);
             }
           }]);
-        }(Inspector))(chartRef.current);
+        }(Inspector))(null);
       }
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
