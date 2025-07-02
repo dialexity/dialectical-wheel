@@ -4866,7 +4866,7 @@ function _styles(){return(
   }
 )}
 
-function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,chart,d3){return(
+function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,$0,d3){return(
 (() => {
   const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
     <div style="margin-bottom: 10px; font-weight: bold;">Arrow Connections</div>
@@ -4940,7 +4940,7 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
   }
   
   function drawArrowsUpToStep(step) {
-    chart.clearArrows();
+    $0.clearArrows();
     if (step <= 0) return;
     
     for (let i = 0; i < Math.min(step, parsedArrowConnections.length); i++) {
@@ -4999,12 +4999,12 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
     }
     
     // Draw this arrow with animation
-    chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
+    $0.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
   }
   
   function drawStaticArrow(from, to, color = "#666", strokeWidth = 2, fromRing = 'middle', toRing = 'middle') {
-    const fromPos = chart.getCellCentroid(from, fromRing);
-    const toPos = chart.getCellCentroid(to, toRing);
+    const fromPos = $0.getCellCentroid(from, fromRing);
+    const toPos = $0.getCellCentroid(to, toRing);
     
     if (!fromPos || !toPos) return;
     
@@ -5049,7 +5049,7 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
     const path = `M ${fromShortened.x} ${fromShortened.y} Q ${controlX} ${controlY} ${toShortened.x} ${toShortened.y}`;
     
     // Get the arrows group from the chart
-    const svg = d3.select(chart);
+    const svg = d3.select($0);
     const arrowsGroup = svg.select('.arrows-group');
     
     // Draw static arrow (no animation)
@@ -5065,14 +5065,14 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
   // Basic arrow controls
   toggleBtn.addEventListener('click', () => {
     if (arrowsVisible) {
-      chart.clearArrows();
+      $0.clearArrows();
       toggleBtn.textContent = 'Show Arrows';
       arrowsVisible = false;
     } else {
       if (arrowStepMode) {
         drawArrowsUpToStep(currentArrowStep);
       } else {
-        chart.drawAllArrows();
+        $0.drawAllArrows();
       }
       toggleBtn.textContent = 'Hide Arrows';
       arrowsVisible = true;
@@ -5084,7 +5084,7 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
       if (arrowStepMode) {
         drawArrowsUpToStep(currentArrowStep);
       } else {
-        chart.drawAllArrows();
+        $0.drawAllArrows();
       }
     }
   });
@@ -5093,9 +5093,10 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
   startStepsBtn.addEventListener('click', () => {
     updateArrowConnections();
     arrowStepMode = true;
+    arrowsVisible = true;
     currentArrowStep = 0;
     if (arrowsVisible) {
-      chart.clearArrows();
+      $0.clearArrows();
     }
     updateArrowStepUI();
   });
@@ -5125,7 +5126,7 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
     arrowStepMode = false;
     currentArrowStep = 0;
     if (arrowsVisible) {
-      chart.drawAllArrows();
+      $0.drawAllArrows();
     }
     updateArrowStepUI();
   });
@@ -5162,8 +5163,18 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
 
   // State variables
   let focusedPair = null;
+  let clickedSlice = null;
   let activeZoom = null;
   let cellVisibility = {};
+
+  function updateChartValue() {
+  svg.node().value = {
+    focusedPair,
+    clickedSlice,
+    currentRotation: getCurrentRotationFromDOM()
+  };
+  svg.node().dispatchEvent(new CustomEvent("input"));
+}
 
   // Double tap detection for zoom reset
   let lastTapTime = 0;
@@ -5185,6 +5196,8 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
     rotationGroup.attr("transform", `rotate(${degrees})`);
     // Update text positions immediately
     updateTextPositions(degrees);
+    // Update chart value and dispatch event
+    updateChartValue();
   }
 
   // Helper function to get rotated centroid using simple matrix transform
@@ -5438,7 +5451,7 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
         // Update text positions during transition
         updateTextPositions(degrees);
       };
-    });
+    }).on("end", updateChartValue);
   }
 
   // Create groups for each ring (in content group)
@@ -5826,6 +5839,8 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
     const pairId = isThesis ? clickedUnitId.replace('T', 'A') : clickedUnitId.replace('A', 'T');
     const thesis = isThesis ? clickedUnitId : pairId;
     const antithesis = isThesis ? pairId : clickedUnitId;
+
+    clickedSlice = clickedUnitId;    
     
     const isAlreadyFocused = focusedPair && 
       focusedPair.thesis === thesis && 
@@ -5836,6 +5851,7 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
     
     if (isAlreadyFocused) {
       focusedPair = null;
+      clickedSlice = null;
       // Reset all opacities to 1
       ["outer", "middle", "inner"].forEach(ringType => {
         dataToModify[ringType].forEach(item => {
@@ -5876,6 +5892,8 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
     } else {
       updateAllRings();
     }
+    // --- MAKE CHART REACTIVE: update .value and dispatch input event ---
+    updateChartValue();
   }
 
   // Zoom functions
@@ -6029,6 +6047,8 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
     const currentRotation = getCurrentRotationFromDOM();
     const rotationDegrees = (currentRotation * 180) / Math.PI;
     updateTextPositions(rotationDegrees);
+    // Update chart value and dispatch event
+    updateChartValue();
   }
   let isUpdatingTransform = false;
   
@@ -6785,10 +6805,13 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
   // Draw initial arrows
   //drawAllArrows();
 
+  // --- MAKE CHART REACTIVE INITIALLY ---
+  updateChartValue();
+
   // Return the svg node with exposed methods (Observable pattern)
   return Object.assign(svg.node(), {
     focusPair,
-    focusedPair,
+    get focusedPair() { return focusedPair; },
     cells,
     resetZoom,
     zoomToCell,
@@ -6812,7 +6835,145 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
 })()
 )}
 
-function _stepControls(html,chart){return(
+function _focusedSlice(chart){return(
+chart.clickedSlice
+)}
+
+function _topSlice(chart,dialecticalData)
+{// Get current rotation
+    const currentRotation = chart.currentRotation;
+    
+    // Calculate which slice is at the top (0 degrees)
+    const units = Object.keys(dialecticalData);
+    const numSlices = units.length;
+    const angleStep = (2 * Math.PI) / numSlices;
+    
+    // The top position is at 0 degrees (top of wheel)
+    // We need to find which slice contains this angle
+    const topAngle = 0; // 0 degrees
+    const adjustedAngle = topAngle - currentRotation;
+    
+    // Normalize angle to [0, 2π]
+    let normalizedAngle = ((adjustedAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    
+    // Find which slice this angle falls into
+    const sliceIndex = Math.floor(normalizedAngle / angleStep);
+    const topUnitId = units[sliceIndex];
+    return topUnitId}
+
+
+function _topSliceTracker(html,chart,dialecticalData){return(
+(() => {
+  const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
+    <div style="margin-bottom: 10px; font-weight: bold;">Top Slice Tracker</div>
+    
+    <div id="top-slice-info" style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9; min-width: 300px; max-width: 500px;">
+      <div id="top-slice-status" style="font-weight: bold; color: #666; margin-bottom: 10px;">Calculating...</div>
+      <div id="top-slice-details" style="font-size: 14px; line-height: 1.4; color: #333;"></div>
+    </div>
+    
+    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+      Shows the slice currently at the top (0°) position
+    </div>
+  </div>`;
+
+  const topSliceStatus = container.querySelector('#top-slice-status');
+  const topSliceDetails = container.querySelector('#top-slice-details');
+  
+  function updateTopSliceDisplay() {
+    // Get current rotation
+    const currentRotation = chart.currentRotation;
+    
+    // Calculate which slice is at the top (0 degrees)
+    const units = Object.keys(dialecticalData);
+    const numSlices = units.length;
+    const angleStep = (2 * Math.PI) / numSlices;
+    
+    // The top position is at 0 degrees (top of wheel)
+    // We need to find which slice contains this angle
+    const topAngle = 0; // 0 degrees
+    const adjustedAngle = topAngle - currentRotation;
+    
+    // Normalize angle to [0, 2π]
+    let normalizedAngle = ((adjustedAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    
+    // Find which slice this angle falls into
+    const sliceIndex = Math.floor(normalizedAngle / angleStep);
+    const topUnitId = units[sliceIndex];
+    
+    if (topUnitId) {
+      topSliceStatus.textContent = `Top Slice: ${topUnitId}`;
+      topSliceStatus.style.color = '#007bff';
+      
+      // Get the data for this unit
+      const unitData = dialecticalData[topUnitId];
+      
+      if (unitData) {
+        const details = `
+          <div style="margin-bottom: 10px;">
+            <div style="font-weight: bold; color: #333; margin-bottom: 5px;">${topUnitId}:</div>
+            <div style="margin-left: 10px; margin-bottom: 8px;">
+              <strong>Statement:</strong> ${unitData.statement}
+            </div>
+            <div style="margin-left: 10px; margin-bottom: 8px;">
+              <strong>Positive:</strong> ${unitData.positive}
+            </div>
+            <div style="margin-left: 10px;">
+              <strong>Negative:</strong> ${unitData.negative}
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #666; margin-top: 10px;">
+            Rotation: ${(currentRotation * 180 / Math.PI).toFixed(1)}°
+          </div>
+        `;
+        topSliceDetails.innerHTML = details;
+      } else {
+        topSliceDetails.innerHTML = '<em>Data not available</em>';
+      }
+    } else {
+      topSliceStatus.textContent = 'No slice at top';
+      topSliceStatus.style.color = '#666';
+      topSliceDetails.innerHTML = '<em>Could not determine top slice</em>';
+    }
+  }
+  
+  // Set up a simple polling mechanism to check rotation
+  function startTracking() {
+    // Update immediately
+    updateTopSliceDisplay();
+    
+    // Update every 100ms to catch rotation changes
+    setInterval(updateTopSliceDisplay, 100);
+  }
+  
+  // Start tracking when the cell is created
+  startTracking();
+
+  // Return the container with exposed topUnitId
+  container.value = "top-slice-tracker";
+  container.topUnitId = null; // Will be updated by the tracking function
+  
+  // Update the tracking function to also update the exposed value
+  const originalUpdateTopSliceDisplay = updateTopSliceDisplay;
+  updateTopSliceDisplay = function() {
+    originalUpdateTopSliceDisplay();
+    // Also update the exposed topUnitId
+    const currentRotation = chart.currentRotation;
+    const units = Object.keys(dialecticalData);
+    const numSlices = units.length;
+    const angleStep = (2 * Math.PI) / numSlices;
+    const topAngle = 0;
+    const adjustedAngle = topAngle - currentRotation;
+    let normalizedAngle = ((adjustedAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const sliceIndex = Math.floor(normalizedAngle / angleStep);
+    container.topUnitId = units[sliceIndex] || null;
+  };
+  
+  return container;
+})()
+)}
+
+function _stepControls(html,$0){return(
 (() => {
   const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
     <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;">
@@ -6841,7 +7002,7 @@ function _stepControls(html,chart){return(
   const rotationResetBtn = container.querySelector('#rotation-reset');
 
   function updateUI() {
-    const stepInfo = chart.getCurrentStepInfo();
+    const stepInfo = $0.getCurrentStepInfo();
     
     if (stepInfo) {
       // In step mode
@@ -6861,22 +7022,22 @@ function _stepControls(html,chart){return(
   }
 
   startBtn.addEventListener('click', () => {
-    chart.startStepMode();
+    $0.startStepMode();
     updateUI();
   });
 
   // prevBtn.addEventListener('click', () => {
-  //   chart.stepBackward();
+  //   viewof chart.stepBackward();
   //   updateUI();
   // }); // Hidden - commenting out
 
   nextBtn.addEventListener('click', () => {
-    chart.stepForward();
+    $0.stepForward();
     updateUI();
   });
 
   resetBtn.addEventListener('click', () => {
-    chart.resetToFull();
+    $0.resetToFull();
     updateUI();
   });
 
@@ -6884,13 +7045,13 @@ function _stepControls(html,chart){return(
   rotationSlider.addEventListener('input', (e) => {
     const degrees = parseInt(e.target.value);
     const radians = (degrees * Math.PI) / 180;
-    chart.rotate(radians);
+    $0.rotate(radians);
     rotationValue.textContent = `${degrees}°`;
   });
 
   rotationResetBtn.addEventListener('click', () => {
     rotationSlider.value = 0;
-    chart.rotate(0);
+    $0.rotate(0);
     rotationValue.textContent = '0°';
   });
 
@@ -6949,7 +7110,7 @@ function _parseArrowConnections(){return(
 }
 )}
 
-function _dotScriptEditor(html,dialecticalData,arrowConnections,chart,parseArrowConnections){return(
+function _dotScriptEditor(html,dialecticalData,arrowConnections,chart,parseArrowConnections,$0){return(
 (() => {
   const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
     <div style="margin-bottom: 10px; font-weight: bold;">DOT Script Editor</div>
@@ -7004,7 +7165,7 @@ function _dotScriptEditor(html,dialecticalData,arrowConnections,chart,parseArrow
       }
       
       const delay = index * 300;
-      chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+      $0.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
     });
   }
   
@@ -7630,11 +7791,15 @@ function define(runtime, observer) {
   main.variable(observer("dialecticalData")).define("dialecticalData", _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", _styles);
-  main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","chart","d3"], _arrowControls);
-  main.variable(observer("chart")).define("chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
-  main.variable(observer("stepControls")).define("stepControls", ["html","chart"], _stepControls);
+  main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","d3"], _arrowControls);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
+  main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
+  main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
+  main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
+  main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);
+  main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
   main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
-  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","chart","parseArrowConnections"], _dotScriptEditor);
+  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","chart","parseArrowConnections","viewof chart"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", _arrowConnections);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
@@ -7655,7 +7820,8 @@ function DialecticalWheel(_ref) {
     _ref$style = _ref.style,
     style = _ref$style === void 0 ? {} : _ref$style,
     onChartReady = _ref.onChartReady,
-    onSliceFocus = _ref.onSliceFocus,
+    onTopSliceChange = _ref.onTopSliceChange,
+    onFocusedSliceChange = _ref.onFocusedSliceChange,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = React.useRef(null);
@@ -7664,23 +7830,19 @@ function DialecticalWheel(_ref) {
     module = _useState2[0],
     setModule = _useState2[1];
   var _useState3 = React.useState(null),
-    _useState4 = _slicedToArray(_useState3, 2),
-    chart = _useState4[0],
-    setChart = _useState4[1];
+    _useState4 = _slicedToArray(_useState3, 2);
+    _useState4[0];
+    var setChart = _useState4[1];
   var _useState5 = React.useState(null),
     _useState6 = _slicedToArray(_useState5, 2);
     _useState6[0];
     var setRuntime = _useState6[1];
-  var _useState7 = React.useState(null),
-    _useState8 = _slicedToArray(_useState7, 2),
-    focusedSlice = _useState8[0],
-    setFocusedSlice = _useState8[1];
   React.useEffect(function () {
     console.log('Loading Observable notebook from local npm package...');
     var runtime = new Runtime();
     setRuntime(runtime);
     var main = runtime.module(define, function (name) {
-      if (name === 'chart') {
+      if (name === 'viewof chart') {
         return new (/*#__PURE__*/function (_Inspector) {
           function _class(node) {
             _classCallCheck(this, _class);
@@ -7693,27 +7855,43 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               setChart(value);
               if (onChartReady) onChartReady(value);
-              // Add click event listeners for slice focus
-              if (onSliceFocus && value) {
-                // Listen for slice focus events from the chart
-                var handleSliceFocus = function handleSliceFocus(event) {
-                  if (event.detail && event.detail.sliceData) {
-                    setFocusedSlice(event.detail.sliceData);
-                    onSliceFocus(event.detail.sliceData);
-                  }
-                };
-                // Add event listener for custom slice focus events
-                value.addEventListener('sliceFocus', handleSliceFocus);
-                // Also try to listen for clicks on slice elements directly
-                var handleSliceClick = function handleSliceClick(event) {
-                  if (chart && onSliceFocus) {
-                    onSliceFocus(chart.focusedPair);
-                    setFocusedSlice(chart.focusedPair);
-                  }
-                };
-                value.addEventListener('click', handleSliceClick);
-              }
               return _superPropGet(_class, "fulfilled", this)([value]);
+            }
+          }]);
+        }(Inspector))(chartRef.current);
+      }
+      if (name === 'topSlice') {
+        return new (/*#__PURE__*/function (_Inspector2) {
+          function _class2(node) {
+            _classCallCheck(this, _class2);
+            return _callSuper(this, _class2, [node]);
+          }
+          _inherits(_class2, _Inspector2);
+          return _createClass(_class2, [{
+            key: "fulfilled",
+            value: function fulfilled(value) {
+              // This will be called whenever topSlice updates
+              console.log('topSlice updated:', value);
+              if (onTopSliceChange) onTopSliceChange(value);
+              return _superPropGet(_class2, "fulfilled", this)([value]);
+            }
+          }]);
+        }(Inspector))(chartRef.current);
+      }
+      if (name === 'focusedSlice') {
+        return new (/*#__PURE__*/function (_Inspector3) {
+          function _class3(node) {
+            _classCallCheck(this, _class3);
+            return _callSuper(this, _class3, [node]);
+          }
+          _inherits(_class3, _Inspector3);
+          return _createClass(_class3, [{
+            key: "fulfilled",
+            value: function fulfilled(value) {
+              // This will be called whenever focusedSlice updates
+              console.log('focusedSlice updated:', value);
+              if (onFocusedSliceChange) onFocusedSliceChange(value);
+              return _superPropGet(_class3, "fulfilled", this)([value]);
             }
           }]);
         }(Inspector))(chartRef.current);
@@ -7758,7 +7936,7 @@ function DialecticalWheel(_ref) {
         fontSize: '12px',
         color: '#666'
       },
-      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel", jsxRuntime.jsx("br", {}), focusedSlice && "Focused slice: ".concat(JSON.stringify(focusedSlice))]
+      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
     })]
   });
 }

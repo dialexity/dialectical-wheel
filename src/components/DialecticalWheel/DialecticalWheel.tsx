@@ -8,7 +8,8 @@ export interface DialecticalWheelProps {
   arrowConnections?: string;
   style?: React.CSSProperties;
   onChartReady?: (chart: any) => void;
-  onSliceFocus?: (sliceData: any) => void;
+  onTopSliceChange?: (topSlice: any) => void;
+  onFocusedSliceChange?: (focusedSlice: any) => void;
   debug?: boolean;
 }
 
@@ -17,14 +18,14 @@ export default function DialecticalWheel({
   arrowConnections = '',
   style = {},
   onChartReady,
-  onSliceFocus,
+  onTopSliceChange,
+  onFocusedSliceChange,
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   const [chart, setChart] = useState<any>(null);
   const [runtime, setRuntime] = useState<any>(null);
-  const [focusedSlice, setFocusedSlice] = useState<any>(null);
   
   useEffect(() => {
     console.log('Loading Observable notebook from local npm package...');
@@ -33,7 +34,7 @@ export default function DialecticalWheel({
     setRuntime(runtime);
     
     const main = runtime.module(notebook, (name: string) => {
-      if (name === 'chart') {
+      if (name === 'viewof chart') {
         return new class extends Inspector {
           constructor(node: any) {
             super(node);
@@ -42,31 +43,32 @@ export default function DialecticalWheel({
             // The chart value IS the SVG node with methods attached
             setChart(value);
             if (onChartReady) onChartReady(value);
-            
-            // Add click event listeners for slice focus
-            if (onSliceFocus && value) {
-              // Listen for slice focus events from the chart
-              const handleSliceFocus = (event: any) => {
-                if (event.detail && event.detail.sliceData) {
-                  setFocusedSlice(event.detail.sliceData);
-                  onSliceFocus(event.detail.sliceData);
-                }
-              };
-              
-              // Add event listener for custom slice focus events
-              value.addEventListener('sliceFocus', handleSliceFocus);
-              
-              // Also try to listen for clicks on slice elements directly
-              const handleSliceClick = (event: any) => {
-                if (chart && onSliceFocus) {
-                  onSliceFocus(chart.focusedPair);
-                  setFocusedSlice(chart.focusedPair);
-                }
-              };
-              
-              value.addEventListener('click', handleSliceClick);
-            }
-            
+            return super.fulfilled(value);
+          }
+        }(chartRef.current);
+      }
+      if (name === 'topSlice') {
+        return new class extends Inspector {
+          constructor(node: any) {
+            super(node);
+          }
+          fulfilled(value: any) {
+            // This will be called whenever topSlice updates
+            console.log('topSlice updated:', value);
+            if (onTopSliceChange) onTopSliceChange(value);
+            return super.fulfilled(value);
+          }
+        }(chartRef.current);
+      }
+      if (name === 'focusedSlice') {
+        return new class extends Inspector {
+          constructor(node: any) {
+            super(node);
+          }
+          fulfilled(value: any) {
+            // This will be called whenever focusedSlice updates
+            console.log('focusedSlice updated:', value);
+            if (onFocusedSliceChange) onFocusedSliceChange(value);
             return super.fulfilled(value);
           }
         }(chartRef.current);
@@ -120,8 +122,7 @@ export default function DialecticalWheel({
           color: '#666'
         }}>
           Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
-          Using local npm package: @dialexity/dialectical-wheel<br/>
-          {focusedSlice && `Focused slice: ${JSON.stringify(focusedSlice)}`}
+          Using local npm package: @dialexity/dialectical-wheel
         </div>
       )}
     </div>
