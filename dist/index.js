@@ -6835,13 +6835,17 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
 })()
 )}
 
-function _focusedSlice(chart){return(
-chart.clickedSlice
-)}
+function _focusedSlice(chart)
+{ 
+  console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
+  
+  return chart.clickedSlice; }
+
 
 function _topSlice(chart,dialecticalData)
 {// Get current rotation
     const currentRotation = chart.currentRotation;
+    console.log(`topSlice current rotation at ntbk level: ${currentRotation}`);
     
     // Calculate which slice is at the top (0 degrees)
     const units = Object.keys(dialecticalData);
