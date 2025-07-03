@@ -1,5 +1,5 @@
 import {Runtime, Inspector} from '@observablehq/runtime';
-import React, {useEffect, useRef, useState, useCallback} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
 
@@ -25,102 +25,69 @@ export default function DialecticalWheel({
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   const [chart, setChart] = useState<any>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const runtimeRef = useRef<any>(null);
+  const [runtime, setRuntime] = useState<any>(null);
   
-  // Memoize the inspector factory to prevent recreation
-  const createInspector = useCallback((name: string) => {
-    if (name === 'viewof chart') {
-      return new class extends Inspector {
-        constructor(node: any) {
-          super(node);
-        }
-        fulfilled(value: any) {
-          setChart(value);
-          if (onChartReady) onChartReady(value);
-          return super.fulfilled(value);
-        }
-      }(chartRef.current);
-    }
-    
-    if (name === 'topSlice') {
-      return new class extends Inspector {
-        constructor() {
-          super(document.createElement('div')); // Create dummy element
-        }
-        fulfilled(value: any) {
-          console.log('topSlice updated:', value);
-          if (onTopSliceChange) onTopSliceChange(value);
-          return super.fulfilled(value);
-        }
-      }();
-    }
-    
-    if (name === 'focusedSlice') {
-      return new class extends Inspector {
-        constructor() {
-          super(document.createElement('div')); // Create dummy element
-        }
-        fulfilled(value: any) {
-          console.log('focusedSlice updated:', value);
-          if (onFocusedSliceChange) onFocusedSliceChange(value);
-          return super.fulfilled(value);
-        }
-      }();
-    }
-    
-    // For other variables, return undefined to hide them
-    return undefined;
-  }, [onChartReady, onTopSliceChange, onFocusedSliceChange]);
-
-  // Initialize the notebook only once
   useEffect(() => {
-    if (!chartRef.current) return;
-    
-    console.log('Initializing Observable notebook...');
+    console.log('Loading Observable notebook from local npm package...');
     
     const runtime = new Runtime();
-    runtimeRef.current = runtime;
+    setRuntime(runtime);
     
-    // Create the module with initial data
-    const main = runtime.module(notebook, createInspector);
-    
-    // Set initial data immediately after module creation
-    try {
-      main.redefine('dialecticalData', dialecticalData);
-      main.redefine('arrowConnections', arrowConnections);
-    } catch (error) {
-      console.warn('Could not set initial data:', error);
-    }
-    
+    const main = runtime.module(notebook, (name: string) => {
+      if (name === 'viewof chart') {
+        return new class extends Inspector {
+          constructor(node: any) {
+            super(node);
+          }
+          fulfilled(value: any) {
+            // The chart value IS the SVG node with methods attached
+            setChart(value);
+            if (onChartReady) onChartReady(value);
+            return super.fulfilled(value);
+          }
+        }(chartRef.current);
+      }
+      if (name === 'topSlice') {
+        return {
+          fulfilled(value: any) {
+            console.log('topSlice updated:', value);
+            if (onTopSliceChange) onTopSliceChange(value);
+          }
+        };
+      }
+      if (name === 'focusedSlice') {
+        return {
+          fulfilled(value: any) {
+            console.log('focusedSlice updated:', value);
+            if (onFocusedSliceChange) onFocusedSliceChange(value);
+          }
+        };
+      }
+      // Don't render the Observable controls - we'll use React components instead
+      return undefined;
+    });
+
     setModule(main);
-    setIsInitialized(true);
     
     return () => {
-      console.log('Cleaning up Observable notebook...');
-      setIsInitialized(false);
       setModule(null);
       setChart(null);
-      if (runtimeRef.current) {
-        runtimeRef.current.dispose();
-        runtimeRef.current = null;
-      }
+      setRuntime(null);
+      runtime.dispose();
     };
-  }, []); // Empty dependency array - only run once
+  }, []);
 
-  // Update data when props change, but only after initialization
+  // Separate useEffect for redefining data - this follows the Observable examples pattern
   useEffect(() => {
-    if (!module || !isInitialized) return;
-    
-    console.log('Updating notebook data...');
-    
-    try {
-      module.redefine('dialecticalData', dialecticalData);
-      module.redefine('arrowConnections', arrowConnections);
-    } catch (error) {
-      console.error('Failed to update notebook data:', error);
+    if (module) {
+      try {
+        module.redefine('dialecticalData', dialecticalData);
+        module.redefine('arrowConnections', arrowConnections);
+      } catch (error) {
+        console.warn('Could not redefine variables in notebook:', error);
+      }
     }
-  }, [dialecticalData, arrowConnections, module, isInitialized]);
+  }, [dialecticalData, arrowConnections, module]);
 
   return (
     <div className="dialectical-wheel-wrapper">
@@ -130,7 +97,6 @@ export default function DialecticalWheel({
         style={{
           borderRadius: '8px',
           background: 'white',
-          minHeight: '400px', // Ensure container has some height
           ...style
         }}
       />
@@ -145,15 +111,10 @@ export default function DialecticalWheel({
           fontSize: '12px',
           color: '#666'
         }}>
-          <div>Debug Info:</div>
-          <div>Initialized: {isInitialized ? 'Yes' : 'No'}</div>
-          <div>Chart loaded: {chart ? 'Yes' : 'No'}</div>
-          <div>Data entries: {dialecticalData ? Object.keys(dialecticalData).length : 0}</div>
-          <div>Data keys: {dialecticalData ? Object.keys(dialecticalData).join(', ') : 'None'}</div>
-          <div>Arrow connections: {arrowConnections || 'None'}</div>
-          <div>Using package: @dialexity/dialectical-wheel</div>
+          Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
+          Using local npm package: @dialexity/dialectical-wheel
         </div>
       )}
     </div>
   );
-}
+} 

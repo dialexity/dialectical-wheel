@@ -7834,109 +7834,74 @@ function DialecticalWheel(_ref) {
     module = _useState2[0],
     setModule = _useState2[1];
   var _useState3 = React.useState(null),
-    _useState4 = _slicedToArray(_useState3, 2),
-    chart = _useState4[0],
-    setChart = _useState4[1];
-  var _useState5 = React.useState(false),
-    _useState6 = _slicedToArray(_useState5, 2),
-    isInitialized = _useState6[0],
-    setIsInitialized = _useState6[1];
-  var runtimeRef = React.useRef(null);
-  // Memoize the inspector factory to prevent recreation
-  var createInspector = React.useCallback(function (name) {
-    if (name === 'viewof chart') {
-      return new (/*#__PURE__*/function (_Inspector) {
-        function _class(node) {
-          _classCallCheck(this, _class);
-          return _callSuper(this, _class, [node]);
-        }
-        _inherits(_class, _Inspector);
-        return _createClass(_class, [{
-          key: "fulfilled",
-          value: function fulfilled(value) {
-            setChart(value);
-            if (onChartReady) onChartReady(value);
-            return _superPropGet(_class, "fulfilled", this)([value]);
+    _useState4 = _slicedToArray(_useState3, 2);
+    _useState4[0];
+    var setChart = _useState4[1];
+  var _useState5 = React.useState(null),
+    _useState6 = _slicedToArray(_useState5, 2);
+    _useState6[0];
+    var setRuntime = _useState6[1];
+  React.useEffect(function () {
+    console.log('Loading Observable notebook from local npm package...');
+    var runtime = new Runtime();
+    setRuntime(runtime);
+    var main = runtime.module(define, function (name) {
+      if (name === 'viewof chart') {
+        return new (/*#__PURE__*/function (_Inspector) {
+          function _class(node) {
+            _classCallCheck(this, _class);
+            return _callSuper(this, _class, [node]);
           }
-        }]);
-      }(Inspector))(chartRef.current);
-    }
-    if (name === 'topSlice') {
-      return new (/*#__PURE__*/function (_Inspector2) {
-        function _class2() {
-          _classCallCheck(this, _class2);
-          return _callSuper(this, _class2, [document.createElement('div')]); // Create dummy element
-        }
-        _inherits(_class2, _Inspector2);
-        return _createClass(_class2, [{
-          key: "fulfilled",
-          value: function fulfilled(value) {
+          _inherits(_class, _Inspector);
+          return _createClass(_class, [{
+            key: "fulfilled",
+            value: function fulfilled(value) {
+              // The chart value IS the SVG node with methods attached
+              setChart(value);
+              if (onChartReady) onChartReady(value);
+              return _superPropGet(_class, "fulfilled", this)([value]);
+            }
+          }]);
+        }(Inspector))(chartRef.current);
+      }
+      if (name === 'topSlice') {
+        return {
+          fulfilled: function fulfilled(value) {
             console.log('topSlice updated:', value);
             if (onTopSliceChange) onTopSliceChange(value);
-            return _superPropGet(_class2, "fulfilled", this)([value]);
           }
-        }]);
-      }(Inspector))();
-    }
-    if (name === 'focusedSlice') {
-      return new (/*#__PURE__*/function (_Inspector3) {
-        function _class3() {
-          _classCallCheck(this, _class3);
-          return _callSuper(this, _class3, [document.createElement('div')]); // Create dummy element
-        }
-        _inherits(_class3, _Inspector3);
-        return _createClass(_class3, [{
-          key: "fulfilled",
-          value: function fulfilled(value) {
+        };
+      }
+      if (name === 'focusedSlice') {
+        return {
+          fulfilled: function fulfilled(value) {
             console.log('focusedSlice updated:', value);
             if (onFocusedSliceChange) onFocusedSliceChange(value);
-            return _superPropGet(_class3, "fulfilled", this)([value]);
           }
-        }]);
-      }(Inspector))();
-    }
-    // For other variables, return undefined to hide them
-    return undefined;
-  }, [onChartReady, onTopSliceChange, onFocusedSliceChange]);
-  // Initialize the notebook only once
-  React.useEffect(function () {
-    if (!chartRef.current) return;
-    console.log('Initializing Observable notebook...');
-    var runtime = new Runtime();
-    runtimeRef.current = runtime;
-    // Create the module with initial data
-    var main = runtime.module(define, createInspector);
-    // Set initial data immediately after module creation
-    try {
-      main.redefine('dialecticalData', dialecticalData);
-      main.redefine('arrowConnections', arrowConnections);
-    } catch (error) {
-      console.warn('Could not set initial data:', error);
-    }
+        };
+      }
+      // Don't render the Observable controls - we'll use React components instead
+      return undefined;
+    });
     setModule(main);
-    setIsInitialized(true);
     return function () {
-      console.log('Cleaning up Observable notebook...');
-      setIsInitialized(false);
       setModule(null);
       setChart(null);
-      if (runtimeRef.current) {
-        runtimeRef.current.dispose();
-        runtimeRef.current = null;
-      }
+      setRuntime(null);
+      runtime.dispose();
     };
-  }, []); // Empty dependency array - only run once
-  // Update data when props change, but only after initialization
+  }, []);
+  // Separate useEffect for redefining data - this follows the Observable examples pattern
   React.useEffect(function () {
-    if (!module || !isInitialized) return;
-    console.log('Updating notebook data...');
-    try {
-      module.redefine('dialecticalData', dialecticalData);
-      module.redefine('arrowConnections', arrowConnections);
-    } catch (error) {
-      console.error('Failed to update notebook data:', error);
+    if (module) {
+      try {
+        module.redefine('dialecticalData', dialecticalData);
+        module.redefine('arrowConnections', arrowConnections);
+      } catch (error) {
+        console.warn('Could not redefine variables in notebook:', error);
+      }
     }
-  }, [dialecticalData, arrowConnections, module, isInitialized]);
+  }, [dialecticalData, arrowConnections, module]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
@@ -7944,8 +7909,7 @@ function DialecticalWheel(_ref) {
       className: "chart-container",
       style: _objectSpread2({
         borderRadius: '8px',
-        background: 'white',
-        minHeight: '400px'
+        background: 'white'
       }, style)
     }), debug && jsxRuntime.jsxs("div", {
       style: {
@@ -7956,21 +7920,7 @@ function DialecticalWheel(_ref) {
         fontSize: '12px',
         color: '#666'
       },
-      children: [jsxRuntime.jsx("div", {
-        children: "Debug Info:"
-      }), jsxRuntime.jsxs("div", {
-        children: ["Initialized: ", isInitialized ? 'Yes' : 'No']
-      }), jsxRuntime.jsxs("div", {
-        children: ["Chart loaded: ", chart ? 'Yes' : 'No']
-      }), jsxRuntime.jsxs("div", {
-        children: ["Data entries: ", dialecticalData ? Object.keys(dialecticalData).length : 0]
-      }), jsxRuntime.jsxs("div", {
-        children: ["Data keys: ", dialecticalData ? Object.keys(dialecticalData).join(', ') : 'None']
-      }), jsxRuntime.jsxs("div", {
-        children: ["Arrow connections: ", arrowConnections || 'None']
-      }), jsxRuntime.jsx("div", {
-        children: "Using package: @dialexity/dialectical-wheel"
-      })]
+      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
     })]
   });
 }
