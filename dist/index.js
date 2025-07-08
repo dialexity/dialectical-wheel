@@ -4829,10 +4829,10 @@ function _styles(){return(
     },
     // Colors
     colors: {
-      hub: "#F0E68C", // Khaki
+      hub: "#ffff7a", // Khaki
       rings: { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" },
       text: { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" },
-      strokes: { default: "white", middleRing: "#ddd", zoom: null },
+      strokes: { default: "white", middleRing: "white", zoom: null },
       axis: {
         positive: { fill: "#C6E5B3", stroke: "#2d5a2d" },
         neutral:  { fill: "white",   stroke: "#333" },
@@ -5144,1163 +5144,1196 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
 function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstraints,wrapText,arrowUtilities,parseArrowConnections,arrowConnections,initializeBuildSteps){return(
 (() => {
   
-    let isTouchDragging = false;
-    let touchDragStart = null;
-    const TOUCH_DRAG_THRESHOLD = 8;
+  let isTouchDragging = false;
+  let touchDragStart = null;
+  const TOUCH_DRAG_THRESHOLD = 8;
 
-  styles.height;
-  const outerRadius = styles.radii.outer;
-  const innerRadius = styles.radii.middleOuter; // Outer ring's inner radius
-  const middleRadius = styles.radii.middleOuter; // Middle ring's outer radius
-  const innerInnerRadius = styles.radii.middleInner; // Middle ring's inner radius
-  const centerRadius = styles.radii.inner; // Inner ring's outer radius
+styles.height;
+const outerRadius = styles.radii.outer;
+const innerRadius = styles.radii.middleOuter; // Outer ring's inner radius
+const middleRadius = styles.radii.middleOuter; // Middle ring's outer radius
+const innerInnerRadius = styles.radii.middleInner; // Middle ring's inner radius
+const centerRadius = styles.radii.inner; // Inner ring's outer radius
 
-  // Create SVG with centered viewBox
-  const svg = d3.create("svg")
-    .attr("viewBox", [-styles.width/2, -styles.height/2, styles.width, styles.height])
-    .style("max-width", "100%")
-    .style("height", "auto");
+// Create SVG with centered viewBox
+const svg = d3.create("svg")
+  .attr("viewBox", [-styles.width/2, -styles.height/2, styles.width, styles.height])
+  .style("max-width", "100%")
+  .style("height", "auto");
 
-  // State variables
-  let focusedPair = null;
-  let clickedSlice = null;
-  let activeZoom = null;
-  let cellVisibility = {};
+// State variables
+let focusedPair = null;
+let clickedSlice = null;
+let activeZoom = null;
+let cellVisibility = {};
 
-  function updateChartValue() {
-  svg.node().value = {
-    focusedPair,
-    clickedSlice,
-    currentRotation: getCurrentRotationFromDOM()
-  };
-  svg.node().dispatchEvent(new CustomEvent("input"));
+function updateChartValue() {
+svg.node().value = {
+  focusedPair,
+  clickedSlice,
+  currentRotation: getCurrentRotationFromDOM()
+};
+svg.node().dispatchEvent(new CustomEvent("input"));
 }
 
-  // Double tap detection for zoom reset
-  let lastTapTime = 0;
-  const DOUBLE_TAP_DELAY = 300; // 300ms window for double tap
+// Double tap detection for zoom reset
+let lastTapTime = 0;
+const DOUBLE_TAP_DELAY = 300; // 300ms window for double tap
 
-  // Helper function to get current rotation from DOM (eliminates state tracking)
-  function getCurrentRotationFromDOM() {
-    const transform = rotationGroup.attr("transform") || "";
-    const rotateMatch = transform.match(/rotate\(([-\d.]+)\)/);
-    if (rotateMatch) {
-      return parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
-    }
-    return 0;
+// Helper function to get current rotation from DOM (eliminates state tracking)
+function getCurrentRotationFromDOM() {
+  const transform = rotationGroup.attr("transform") || "";
+  const rotateMatch = transform.match(/rotate\(([-\d.]+)\)/);
+  if (rotateMatch) {
+    return parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
   }
+  return 0;
+}
 
-  // Helper function to set rotation directly on DOM (no state tracking)
-  function setRotationDirectly(radians) {
-    const degrees = (radians * 180) / Math.PI;
-    rotationGroup.attr("transform", `rotate(${degrees})`);
-    // Update text positions immediately
-    updateTextPositions(degrees);
-    // Update chart value and dispatch event
-    updateChartValue();
-  }
+// Helper function to set rotation directly on DOM (no state tracking)
+function setRotationDirectly(radians) {
+  const degrees = (radians * 180) / Math.PI;
+  rotationGroup.attr("transform", `rotate(${degrees})`);
+  // Update text positions immediately
+  updateTextPositions(degrees);
+  // Update chart value and dispatch event
+  updateChartValue();
+}
 
-  // Helper function to get rotated centroid using simple matrix transform
-  function getRotatedCentroid(rawCentroid, currentRotation) {
-    // Simple rotation matrix: [x*cos - y*sin, x*sin + y*cos]
-    const rotatedX = rawCentroid[0] * Math.cos(currentRotation) - rawCentroid[1] * Math.sin(currentRotation);
-    const rotatedY = rawCentroid[0] * Math.sin(currentRotation) + rawCentroid[1] * Math.cos(currentRotation);
-    
-    return [rotatedX, rotatedY];
-  }
-
-  // Step-by-step animation state
-  let currentStep = 0;
-  let isStepMode = false;
-  let animationData = {};
-  let buildSteps = [];
-
-  // Initialize cell visibility
-  const cells = Object.keys(dialecticalData);
-  cells.forEach(cell => {
-    cellVisibility[cell] = {
-      outer: true,  // Start visible for normal mode
-      middle: true,
-      inner: true
-    };
-  });
-
-  // Add background rectangle for reset clicks
-  svg.append("rect")
-    .attr("class", "background")
-    .attr("x", -styles.width/2)
-    .attr("y", -styles.height/2)
-    .attr("width", styles.width)
-    .attr("height", styles.height)
-    .style("fill", "none")
-    .style("pointer-events", "all")
-    .on("click", resetZoom);
-
-  // NEW TRANSFORM HIERARCHY:
-  // svg (D3 zoom applied here)
-  //   zoomGroup (zoom applied FIRST - D3 zoom controls this)
-  //     rotationGroup (rotation applied SECOND - rotates the zoomed content)
-  //       contentGroup (actual wheel content)
-  const zoomGroup = svg.append("g").attr("class", "zoom-group");
-  const rotationGroup = zoomGroup.append("g").attr("class", "rotation-group");
-  const contentGroup = rotationGroup.append("g").attr("class", "content-group");
-
-  // Add large invisible circle for better mobile touch target (in rotation group so it rotates with wheel)
-  const dragCircle = rotationGroup.append("circle")
-    .attr("cx", 0)
-    .attr("cy", 0)
-    .attr("r", styles.radii.drag) // Larger than outerRadius for easier touch
-    .style("fill", "transparent")
-    .style("pointer-events", "none") // FIXED: Don't block clicks - only handle drag
-    .style("cursor", "grab");
-
-  // Create zoom behavior (disable panning, only allow programmatic zoom)
-  const zoom = d3.zoom()
-    .scaleExtent([1, 8])
-    .filter(event => false) // Disable all zoom interactions
-    .on("zoom", zoomed);
-
-  // FIXED: Bind zoom to svg - D3 zoom needs to control the main element
-  svg.call(zoom);
-
-  // Drag behavior for rotation with mobile optimization
-  let dragStartAngle = 0;
-  let dragStartRotation = 0;
-
-  const drag = d3.drag()
-    .filter(function(event) {
-      // Allow drag on touch devices and mouse
-      return !event.ctrlKey && !event.button;
-    })
-    .touchable(true)  // Explicitly enable touch support
-    .on("start", dragStarted)
-    .on("drag", dragged)
-    .on("end", dragEnded);
-
-  // Apply mobile-friendly styles and drag behavior
-  svg.style("touch-action", "none")  // Prevent default touch behaviors
-     .style("user-select", "none");   // Prevent text selection
-
-  // Add scroll-to-zoom functionality
-  let hoveredCell = null;
+// Helper function to get rotated centroid using simple matrix transform
+function getRotatedCentroid(rawCentroid, currentRotation) {
+  // Simple rotation matrix: [x*cos - y*sin, x*sin + y*cos]
+  const rotatedX = rawCentroid[0] * Math.cos(currentRotation) - rawCentroid[1] * Math.sin(currentRotation);
+  const rotatedY = rawCentroid[0] * Math.sin(currentRotation) + rawCentroid[1] * Math.cos(currentRotation);
   
-  // Track hover state on cells
-  function setHoveredCell(cell) {
-    hoveredCell = cell;
-  }
+  return [rotatedX, rotatedY];
+}
+
+// Step-by-step animation state
+let currentStep = 0;
+let isStepMode = false;
+let animationData = {};
+let buildSteps = [];
+
+// Initialize cell visibility
+const cells = Object.keys(dialecticalData);
+cells.forEach(cell => {
+  cellVisibility[cell] = {
+    outer: true,  // Start visible for normal mode
+    middle: true,
+    inner: true
+  };
+});
+
+// Add background rectangle for reset clicks
+svg.append("rect")
+  .attr("class", "background")
+  .attr("x", -styles.width/2)
+  .attr("y", -styles.height/2)
+  .attr("width", styles.width)
+  .attr("height", styles.height)
+  .style("fill", "none")
+  .style("pointer-events", "all")
+  .on("click", resetZoom);
+
+// NEW TRANSFORM HIERARCHY:
+// svg (D3 zoom applied here)
+//   zoomGroup (zoom applied FIRST - D3 zoom controls this)
+//     rotationGroup (rotation applied SECOND - rotates the zoomed content)
+//       contentGroup (actual wheel content)
+const zoomGroup = svg.append("g").attr("class", "zoom-group");
+const rotationGroup = zoomGroup.append("g").attr("class", "rotation-group");
+const contentGroup = rotationGroup.append("g").attr("class", "content-group");
+
+// Add large invisible circle for better mobile touch target (in rotation group so it rotates with wheel)
+const dragCircle = rotationGroup.append("circle")
+  .attr("cx", 0)
+  .attr("cy", 0)
+  .attr("r", styles.radii.drag) // Larger than outerRadius for easier touch
+  .style("fill", "transparent")
+  .style("pointer-events", "none") // FIXED: Don't block clicks - only handle drag
+  .style("cursor", "grab");
+
+// Create zoom behavior (disable panning, only allow programmatic zoom)
+const zoom = d3.zoom()
+  .scaleExtent([1, 8])
+  .filter(event => false) // Disable all zoom interactions
+  .on("zoom", zoomed);
+
+// FIXED: Bind zoom to svg - D3 zoom needs to control the main element
+svg.call(zoom);
+
+// Drag behavior for rotation with mobile optimization
+let dragStartAngle = 0;
+let dragStartRotation = 0;
+
+const drag = d3.drag()
+  .filter(function(event) {
+    // Allow drag on touch devices and mouse
+    return !event.ctrlKey && !event.button;
+  })
+  .touchable(true)  // Explicitly enable touch support
+  .on("start", dragStarted)
+  .on("drag", dragged)
+  .on("end", dragEnded);
+
+// Apply mobile-friendly styles and drag behavior
+svg.style("touch-action", "none")  // Prevent default touch behaviors
+   .style("user-select", "none");   // Prevent text selection
+
+// Add scroll-to-zoom functionality
+let hoveredCell = null;
+
+// Track hover state on cells
+function setHoveredCell(cell) {
+  hoveredCell = cell;
+}
+
+// Add wheel event listener for scroll-to-zoom
+svg.on('wheel', function(event) {
+  event.preventDefault();
   
-  // Add wheel event listener for scroll-to-zoom
-  svg.on('wheel', function(event) {
-    event.preventDefault();
-    
-    if (hoveredCell) {
-      // Scroll forward (negative deltaY) = zoom to cell
-      // Scroll backward (positive deltaY) = reset zoom
-      if (event.deltaY < 0) {
-        // Scrolling forward - zoom to hovered cell (same as cmd+click)
-        // But only if we're not already zoomed into this cell
-        
-        // Check if we're already zoomed into the hovered cell
-        let isAlreadyZoomedToThisCell = false;
-        if (activeZoom && activeZoom.data && activeZoom.data.unitId === hoveredCell.unitId) {
-          // Find which ring the activeZoom belongs to
-          const zoomedPath = svg.selectAll('path').nodes().find(path => path.__data__ === activeZoom);
-          if (zoomedPath) {
-            const parentClass = d3.select(zoomedPath.parentNode).attr("class");
-            const zoomedRingType = parentClass.includes("outer") ? "outer" : 
-                                  parentClass.includes("middle") ? "middle" : "inner";
-            isAlreadyZoomedToThisCell = (zoomedRingType === hoveredCell.ringType);
-          }
+  if (hoveredCell) {
+    // Scroll forward (negative deltaY) = zoom to cell
+    // Scroll backward (positive deltaY) = reset zoom
+    if (event.deltaY < 0) {
+      // Scrolling forward - zoom to hovered cell (same as cmd+click)
+      // But only if we're not already zoomed into this cell
+      
+      // Check if we're already zoomed into the hovered cell
+      let isAlreadyZoomedToThisCell = false;
+      if (activeZoom && activeZoom.data && activeZoom.data.unitId === hoveredCell.unitId) {
+        // Find which ring the activeZoom belongs to
+        const zoomedPath = svg.selectAll('path').nodes().find(path => path.__data__ === activeZoom);
+        if (zoomedPath) {
+          const parentClass = d3.select(zoomedPath.parentNode).attr("class");
+          const zoomedRingType = parentClass.includes("outer") ? "outer" : 
+                                parentClass.includes("middle") ? "middle" : "inner";
+          isAlreadyZoomedToThisCell = (zoomedRingType === hoveredCell.ringType);
         }
+      }
+      
+      if (!isAlreadyZoomedToThisCell) {
+        //console.log('Scroll forward on cell - zooming in');
         
-        if (!isAlreadyZoomedToThisCell) {
-          console.log('Scroll forward on cell - zooming in');
-          
-          // Find the actual path element for this cell
-          const allPaths = svg.selectAll('path').nodes();
-          let targetPath = null;
-          
-          allPaths.forEach(path => {
-            const pathData = path.__data__;
-            if (pathData && pathData.data && pathData.data.unitId === hoveredCell.unitId) {
-              const parentClass = d3.select(path.parentNode).attr("class");
-              if ((hoveredCell.ringType === "outer" && parentClass.includes("outer")) ||
-                  (hoveredCell.ringType === "middle" && parentClass.includes("middle")) ||
-                  (hoveredCell.ringType === "inner" && parentClass.includes("inner"))) {
-                targetPath = path;
-              }
+        // Find the actual path element for this cell
+        const allPaths = svg.selectAll('path').nodes();
+        let targetPath = null;
+        
+        allPaths.forEach(path => {
+          const pathData = path.__data__;
+          if (pathData && pathData.data && pathData.data.unitId === hoveredCell.unitId) {
+            const parentClass = d3.select(path.parentNode).attr("class");
+            if ((hoveredCell.ringType === "outer" && parentClass.includes("outer")) ||
+                (hoveredCell.ringType === "middle" && parentClass.includes("middle")) ||
+                (hoveredCell.ringType === "inner" && parentClass.includes("inner"))) {
+              targetPath = path;
             }
-          });
-          
-          if (targetPath) {
-            // Create mock event for zoomToCell (same as cmd+click)
-            const mockEvent = {
-              currentTarget: targetPath
-            };
-            zoomToCell(mockEvent, targetPath.__data__);
           }
-        } else {
-          console.log('Scroll forward on already-zoomed cell - ignoring');
+        });
+        
+        if (targetPath) {
+          // Create mock event for zoomToCell (same as cmd+click)
+          const mockEvent = {
+            currentTarget: targetPath
+          };
+          zoomToCell(mockEvent, targetPath.__data__);
         }
-      } else if (event.deltaY > 0) {
-        // Scrolling backward - reset zoom
-        console.log('Scroll backward on cell - resetting zoom');
-        resetZoom();
       }
-    } else {
-      // No cell hovered - scroll backward still resets zoom
-      if (event.deltaY > 0) {
-        console.log('Scroll backward (no hover) - resetting zoom');
-        resetZoom();
-      }
+    } else if (event.deltaY > 0) {
+      // Scrolling backward - reset zoom
+      //console.log('Scroll backward on cell - resetting zoom');
+      resetZoom();
     }
-  });
-
-  // FIXED: Apply drag behavior to the rotationGroup so it scales with zoom
-  rotationGroup.call(drag);
-
-  // ===== TOUCH BEHAVIOR: Focus + Zoom to Slice =====
-  // Touch events now simply focus the pair and zoom to the entire slice
-
-  // Create pie generator
-  const pie = d3.pie()
-    .value(d => d.value)
-    .sort(null);
-
-  // Create arc generators
-  const outerArc = d3.arc()
-    .innerRadius(innerRadius)
-    .outerRadius(outerRadius);
-
-  const middleArc = d3.arc()
-    .innerRadius(innerInnerRadius)
-    .outerRadius(middleRadius);
-
-  const innerArc = d3.arc()
-    .innerRadius(styles.radii.hub)  // Add inner radius to make it a ring, not a pie
-    .outerRadius(centerRadius);
-
-  // Simple Text Rotation and Flipping Logic
-  // Single function to calculate text orientation with consistent flipping
-  function calculateTextTransform(d, arcGenerator, currentRotationRadians = null) {
-    const centroid = arcGenerator.centroid(d);
-    
-    // Get the slice middle angle in the original data
-    const sliceMiddleAngle = (d.startAngle + d.endAngle) / 2;
-    
-    // PERFORMANCE: Use passed rotation or get from DOM only if needed
-    const currentRotation = currentRotationRadians !== null ? 
-      currentRotationRadians : 
-      getCurrentRotationFromDOM();
-    
-    // Calculate the current visual angle (slice angle + wheel rotation)
-    const currentVisualAngle = sliceMiddleAngle + currentRotation;
-    
-    // Normalize to [0, 2π] for consistent flipping logic
-    const normalizedAngle = ((currentVisualAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    
-    // Convert slice angle to degrees for text rotation
-    let textRotationDegrees = (sliceMiddleAngle * 180) / Math.PI;
-    
-    // DISABLE text flipping when focused to avoid confusion
-    // Only flip text if we're NOT in focus mode (focusedPair is null)
-    if (!focusedPair && normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
-      textRotationDegrees += 180;
+  } else {
+    // No cell hovered - scroll backward still resets zoom
+    if (event.deltaY > 0) {
+      //console.log('Scroll backward (no hover) - resetting zoom');
+      resetZoom();
     }
-    
-    return `translate(${centroid[0]}, ${centroid[1]}) rotate(${textRotationDegrees})`;
   }
+});
 
-  // Reusable function to rotate wheel to center a slice at the top
-  function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
-    // Choose which data to use based on current mode
+// FIXED: Apply drag behavior to the rotationGroup so it scales with zoom
+rotationGroup.call(drag);
+
+// ===== TOUCH BEHAVIOR: Focus + Zoom to Slice =====
+// Touch events now simply focus the pair and zoom to the entire slice
+
+// Create pie generator
+const pie = d3.pie()
+  .value(d => d.value)
+  .sort(null);
+
+// Create arc generators
+const outerArc = d3.arc()
+  .innerRadius(innerRadius)
+  .outerRadius(outerRadius);
+
+const middleArc = d3.arc()
+  .innerRadius(innerInnerRadius)
+  .outerRadius(middleRadius);
+
+const innerArc = d3.arc()
+  .innerRadius(styles.radii.hub)  // Add inner radius to make it a ring, not a pie
+  .outerRadius(centerRadius);
+
+// Simple Text Rotation and Flipping Logic
+// Single function to calculate text orientation with consistent flipping
+function calculateTextTransform(d, arcGenerator, currentRotationRadians = null) {
+  const centroid = arcGenerator.centroid(d);
+  
+  // Get the slice middle angle in the original data
+  const sliceMiddleAngle = (d.startAngle + d.endAngle) / 2;
+  
+  // PERFORMANCE: Use passed rotation or get from DOM only if needed
+  const currentRotation = currentRotationRadians !== null ? 
+    currentRotationRadians : 
+    getCurrentRotationFromDOM();
+  
+  // Calculate the current visual angle (slice angle + wheel rotation)
+  const currentVisualAngle = sliceMiddleAngle + currentRotation;
+  
+  // Normalize to [0, 2π] for consistent flipping logic
+  const normalizedAngle = ((currentVisualAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  
+  // Convert slice angle to degrees for text rotation
+  let textRotationDegrees = (sliceMiddleAngle * 180) / Math.PI;
+  
+  // DISABLE text flipping when focused to avoid confusion
+  // Only flip text if we're NOT in focus mode (focusedPair is null)
+  if (!focusedPair && normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
+    textRotationDegrees += 180;
+  }
+  
+  return `translate(${centroid[0]}, ${centroid[1]}) rotate(${textRotationDegrees})`;
+}
+
+// Reusable function to rotate wheel to center a slice at the top
+function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
+  // Choose which data to use based on current mode
+  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  
+  // Calculate rotation needed to center the slice at the top
+  const pieData = pie(dataToUse.middle);
+  const targetSlice = pieData.find(d => d.data.unitId === unitId);
+  
+  if (!targetSlice) return;
+  
+  // Calculate the current angle of the slice center in the original data
+  const sliceAngle = (targetSlice.startAngle + targetSlice.endAngle) / 2;
+  
+  // Simple calculation: to center this slice at the top, 
+  // we need: sliceAngle + newRotation = 0
+  // Therefore: newRotation = -sliceAngle
+  const newRotation = -sliceAngle;
+  
+  // Get current rotation from DOM
+  const startRotation = getCurrentRotationFromDOM();
+  let rotationDelta = newRotation - startRotation;
+  
+  // Normalize rotation delta to always take the shortest path (-π to π)
+  while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
+  while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
+  
+  // Use D3 transition for smooth rotation
+  const rotationTransition = d3.transition()
+    .duration(duration)
+    .ease(d3.easeCubicInOut);
+    
+  rotationTransition.tween("rotate", function() {
+    return function(t) {
+      const currentRotation = startRotation + rotationDelta * t;
+      const degrees = (currentRotation * 180) / Math.PI;
+      rotationGroup.attr("transform", `rotate(${degrees})`);
+      // Update text positions during transition
+      updateTextPositions(degrees);
+    };
+  }).on("end", updateChartValue);
+}
+
+// Create groups for each ring (in content group)
+const outerGroup = contentGroup.append("g").attr("class", "outer-ring");
+const middleGroup = contentGroup.append("g").attr("class", "middle-ring");
+const innerGroup = contentGroup.append("g").attr("class", "inner-ring");
+
+// Create groups for labels (in content group)
+const outerLabelsGroup = contentGroup.append("g").attr("class", "outer-labels");
+const middleLabelsGroup = contentGroup.append("g").attr("class", "middle-labels");
+const innerLabelsGroup = contentGroup.append("g").attr("class", "inner-labels");
+
+// Add yellow center circle (axle/hub) (in content group)
+contentGroup.append("circle")
+  .attr("cx", 0)
+  .attr("cy", 0)
+  .attr("r", styles.radii.hub)  // Same as inner radius of green ring
+  .style("fill", styles.colors.hub);
+
+// Add coordinate system BACK inside the content group so it gets rotation transforms
+const coordinateGroup = contentGroup.append("g").attr("class", "coordinate-system");
+
+// Add circumference numbers at slice centers
+const numSlices = Object.keys(dialecticalData).length;
+const angleStep = (2 * Math.PI) / numSlices;
+const numberRadius = outerRadius + 15;
+
+// Place numbers at the center of each slice, starting from top and going clockwise
+for (let i = 0; i < numSlices; i++) {
+  const angle = (i * angleStep) + (angleStep / 2) - Math.PI / 2; // Center of slice, start at top
+  const x = numberRadius * Math.cos(angle);
+  const y = numberRadius * Math.sin(angle);
+  
+  coordinateGroup.append("text")
+    .attr("class", "coordinate-number")
+    .attr("x", x)
+    .attr("y", y)
+    .style("text-anchor", "middle")
+    .style("dominant-baseline", "central")
+    .style("font-family", styles.fonts.family)
+    .style("font-size", `${styles.fonts.coordinates.size}px`)
+    .style("font-weight", styles.fonts.coordinates.weight)
+    .style("fill", styles.colors.text.coordinates)
+    .text(i + 1);
+}
+
+// Add axis symbols at the center of each ring layer
+const ringRadii = [
+  (styles.radii.hub + centerRadius) / 2,                // Inner ring center
+  (innerInnerRadius + middleRadius) / 2,  // Middle ring center
+  (innerRadius + outerRadius) / 2         // Outer ring center
+];
+
+const symbols = ["a", "b", "c"]; // Positive, neutral, negative
+const axisColors = [styles.colors.axis.positive, styles.colors.axis.neutral, styles.colors.axis.negative];
+
+// Function to update axis positions based on focus
+function updateAxisPositions(focusedUnitId = null) {
+  // Remove existing axis elements
+  coordinateGroup.selectAll(".coordinate-circle").remove();
+  coordinateGroup.selectAll(".coordinate-symbol").remove();
+  
+  let axisAngle;
+  
+  if (focusedUnitId) {
+    // When focused, position axis at the left edge of the focused slice
+    // Choose which data to use based on current mode (same as other functions)
     const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-    
-    // Calculate rotation needed to center the slice at the top
     const pieData = pie(dataToUse.middle);
-    const targetSlice = pieData.find(d => d.data.unitId === unitId);
+    const focusedSlice = pieData.find(d => d.data.unitId === focusedUnitId);
     
-    if (!targetSlice) return;
-    
-    // Calculate the current angle of the slice center in the original data
-    const sliceAngle = (targetSlice.startAngle + targetSlice.endAngle) / 2;
-    
-    // Simple calculation: to center this slice at the top, 
-    // we need: sliceAngle + newRotation = 0
-    // Therefore: newRotation = -sliceAngle
-    const newRotation = -sliceAngle;
-    
-    // Get current rotation from DOM
-    const startRotation = getCurrentRotationFromDOM();
-    let rotationDelta = newRotation - startRotation;
-    
-    // Normalize rotation delta to always take the shortest path (-π to π)
-    while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
-    while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
-    
-    // Use D3 transition for smooth rotation
-    const rotationTransition = d3.transition()
-      .duration(duration)
-      .ease(d3.easeCubicInOut);
-      
-    rotationTransition.tween("rotate", function() {
-      return function(t) {
-        const currentRotation = startRotation + rotationDelta * t;
-        const degrees = (currentRotation * 180) / Math.PI;
-        rotationGroup.attr("transform", `rotate(${degrees})`);
-        // Update text positions during transition
-        updateTextPositions(degrees);
-      };
-    }).on("end", updateChartValue);
-  }
-
-  // Create groups for each ring (in content group)
-  const outerGroup = contentGroup.append("g").attr("class", "outer-ring");
-  const middleGroup = contentGroup.append("g").attr("class", "middle-ring");
-  const innerGroup = contentGroup.append("g").attr("class", "inner-ring");
-
-  // Create groups for labels (in content group)
-  const outerLabelsGroup = contentGroup.append("g").attr("class", "outer-labels");
-  const middleLabelsGroup = contentGroup.append("g").attr("class", "middle-labels");
-  const innerLabelsGroup = contentGroup.append("g").attr("class", "inner-labels");
-
-  // Add yellow center circle (axle/hub) (in content group)
-  contentGroup.append("circle")
-    .attr("cx", 0)
-    .attr("cy", 0)
-    .attr("r", styles.radii.hub)  // Same as inner radius of green ring
-    .style("fill", styles.colors.hub);
-
-  // Add coordinate system BACK inside the content group so it gets rotation transforms
-  const coordinateGroup = contentGroup.append("g").attr("class", "coordinate-system");
-
-  // Add circumference numbers at slice centers
-  const numSlices = Object.keys(dialecticalData).length;
-  const angleStep = (2 * Math.PI) / numSlices;
-  const numberRadius = outerRadius + 15;
-  
-  // Place numbers at the center of each slice, starting from top and going clockwise
-  for (let i = 0; i < numSlices; i++) {
-    const angle = (i * angleStep) + (angleStep / 2) - Math.PI / 2; // Center of slice, start at top
-    const x = numberRadius * Math.cos(angle);
-    const y = numberRadius * Math.sin(angle);
-    
-    coordinateGroup.append("text")
-      .attr("class", "coordinate-number")
-      .attr("x", x)
-      .attr("y", y)
-      .style("text-anchor", "middle")
-      .style("dominant-baseline", "central")
-      .style("font-family", styles.fonts.family)
-      .style("font-size", `${styles.fonts.coordinates.size}px`)
-      .style("font-weight", styles.fonts.coordinates.weight)
-      .style("fill", styles.colors.text.coordinates)
-      .text(i + 1);
-  }
-
-  // Add axis symbols at the center of each ring layer
-  const ringRadii = [
-    (styles.radii.hub + centerRadius) / 2,                // Inner ring center
-    (innerInnerRadius + middleRadius) / 2,  // Middle ring center
-    (innerRadius + outerRadius) / 2         // Outer ring center
-  ];
-  
-  const symbols = ["a", "b", "c"]; // Positive, neutral, negative
-  const axisColors = [styles.colors.axis.positive, styles.colors.axis.neutral, styles.colors.axis.negative];
-  
-  // Function to update axis positions based on focus
-  function updateAxisPositions(focusedUnitId = null) {
-    // Remove existing axis elements
-    coordinateGroup.selectAll(".coordinate-circle").remove();
-    coordinateGroup.selectAll(".coordinate-symbol").remove();
-    
-    let axisAngle;
-    
-    if (focusedUnitId) {
-      // When focused, position axis at the left edge of the focused slice
-      // Choose which data to use based on current mode (same as other functions)
-      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-      const pieData = pie(dataToUse.middle);
-      const focusedSlice = pieData.find(d => d.data.unitId === focusedUnitId);
-      
-      if (focusedSlice) {
-        // Position axis at the start angle of the slice (left edge)
-        axisAngle = focusedSlice.startAngle - Math.PI / 2;
-      } else {
-        // Fallback to default
-        const units = Object.keys(dialecticalData);
-        const numSlices = units.length;
-        const angleStep = (2 * Math.PI) / numSlices;
-        axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
-      }
+    if (focusedSlice) {
+      // Position axis at the start angle of the slice (left edge)
+      axisAngle = focusedSlice.startAngle - Math.PI / 2;
     } else {
-      // Default: axis that bisects wheel, separating first half from second half
+      // Fallback to default
       const units = Object.keys(dialecticalData);
       const numSlices = units.length;
       const angleStep = (2 * Math.PI) / numSlices;
-      
-      // For even number of slices, position axis between middle slices
-      // For 8 slices: between slice 4 and 5 (indices 3 and 4)
       axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
     }
+  } else {
+    // Default: axis that bisects wheel, separating first half from second half
+    const units = Object.keys(dialecticalData);
+    const numSlices = units.length;
+    const angleStep = (2 * Math.PI) / numSlices;
     
-    // Create axis on both sides of the wheel
-    const axisAngles = [axisAngle, axisAngle + Math.PI]; // Both sides
-    
-    axisAngles.forEach(angle => {
-      ringRadii.forEach((radius, ringIndex) => {
-        const x = radius * Math.cos(angle);
-        const y = radius * Math.sin(angle);
-        
-        // Create a group for this axis element (circle + symbol)
-        const axisGroup = coordinateGroup.append("g")
-          .attr("class", "axis-element");
-        
-        // Create circle background within the group
-        axisGroup.append("circle")
-          .attr("class", "coordinate-circle")
-          .attr("cx", x)
-          .attr("cy", y)
-          .attr("r", 8)
-          .style("fill", axisColors[ringIndex].fill)
-          .style("stroke", axisColors[ringIndex].stroke)
-          .style("stroke-width", styles.strokes.axisCircleWidth);
-        
-        // Add symbol text within the same group, perfectly centered
-        axisGroup.append("text")
-          .attr("class", "coordinate-symbol")
-          .attr("x", x)
-          .attr("y", y)
-          .style("text-anchor", "middle")
-          .style("dominant-baseline", "central")
-          .style("font-family", styles.fonts.family)
-          .style("font-size", "10px") // Slightly smaller for better fit in 8px radius circle
-          .style("font-weight", styles.fonts.coordinates.weight)
-          .style("fill", axisColors[ringIndex].stroke)
-          .style("pointer-events", "none") // Prevent text from interfering with interactions
-          .text(symbols[ringIndex]);
-      });
-    });
+    // For even number of slices, position axis between middle slices
+    // For 8 slices: between slice 4 and 5 (indices 3 and 4)
+    axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
   }
   
-  // Initialize axes
-  updateAxisPositions();
+  // Create axis on both sides of the wheel
+  const axisAngles = [axisAngle, axisAngle + Math.PI]; // Both sides
+  
+  axisAngles.forEach(angle => {
+    ringRadii.forEach((radius, ringIndex) => {
+      const x = radius * Math.cos(angle);
+      const y = radius * Math.sin(angle);
+      
+      // Create a group for this axis element (circle + symbol)
+      const axisGroup = coordinateGroup.append("g")
+        .attr("class", "axis-element");
+      
+      // Create circle background within the group
+      axisGroup.append("circle")
+        .attr("class", "coordinate-circle")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", 8)
+        .style("fill", axisColors[ringIndex].fill)
+        .style("stroke", axisColors[ringIndex].stroke)
+        .style("stroke-width", styles.strokes.axisCircleWidth);
+      
+      // Add symbol text within the same group, perfectly centered
+      axisGroup.append("text")
+        .attr("class", "coordinate-symbol")
+        .attr("x", x)
+        .attr("y", y)
+        .style("text-anchor", "middle")
+        .style("dominant-baseline", "central")
+        .style("font-family", styles.fonts.family)
+        .style("font-size", "10px") // Slightly smaller for better fit in 8px radius circle
+        .style("font-weight", styles.fonts.coordinates.weight)
+        .style("fill", axisColors[ringIndex].stroke)
+        .style("pointer-events", "none") // Prevent text from interfering with interactions
+        .text(symbols[ringIndex]);
+    });
+  });
+}
 
-  // Color scales
-  const outerColor = d3.scaleOrdinal()
-    .domain(Object.keys(dialecticalData))
-    .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer));
+// Initialize axes
+updateAxisPositions();
 
-  const middleColor = d3.scaleOrdinal()
-    .domain(Object.keys(dialecticalData))
-    .range(Object.keys(dialecticalData).map(() => styles.colors.rings.middle));
+// Color scales
+const outerColor = d3.scaleOrdinal()
+  .domain(Object.keys(dialecticalData))
+  .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer));
 
-  const innerColor = d3.scaleOrdinal()
-    .domain(Object.keys(dialecticalData))
-    .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner));
+const middleColor = d3.scaleOrdinal()
+  .domain(Object.keys(dialecticalData))
+  .range(Object.keys(dialecticalData).map(() => styles.colors.rings.middle));
 
-  // Initialize data
-  const nestedData = transformToNestedPieData(dialecticalData);
+const innerColor = d3.scaleOrdinal()
+  .domain(Object.keys(dialecticalData))
+  .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner));
 
-  // Arc tween function
-  function arcTween(arcGenerator) {
-    return function(a) {
-      const i = d3.interpolate(this._current, a);
-      this._current = i(0);
-      return function(t) {
-        return arcGenerator(i(t));
-      };
+// Initialize data
+const nestedData = transformToNestedPieData(dialecticalData);
+
+// Arc tween function
+function arcTween(arcGenerator) {
+  return function(a) {
+    const i = d3.interpolate(this._current, a);
+    this._current = i(0);
+    return function(t) {
+      return arcGenerator(i(t));
     };
-  }
+  };
+}
 
-  // Function to hide individual cell (sucking into inner ring)
-  function hideCell(unitId, ringType) {
-    if (!cellVisibility[unitId] || !cellVisibility[unitId][ringType]) return;
-    
-    cellVisibility[unitId][ringType] = false;
-    
-    let group, labelsGroup, targetRadius;
-    switch(ringType) {
-      case "outer":
-        group = outerGroup;
-        labelsGroup = outerLabelsGroup;
-        targetRadius = innerRadius;
-        break;
-      case "middle":
-        group = middleGroup;
-        labelsGroup = middleLabelsGroup;
-        targetRadius = innerInnerRadius;
-        break;
-      case "inner":
-        group = innerGroup;
-        labelsGroup = innerLabelsGroup;
-        targetRadius = 0;
-        break;
-    }
-    
-    // Hide cell with radius animation
-    group.selectAll("path")
-      .filter(d => d.data.unitId === unitId)
-      .classed("hidden", true)
-      .transition()
-      .duration(styles.durations.stepRotation) // Mismatched name, but using for now
-      .ease(d3.easeExpIn)
-      .attrTween("d", function(d) {
-        const currentData = d;
-        
-        return function(t) {
-          let arcGen;
-          if (ringType === "outer") {
-            const newInnerRadius = d3.interpolate(innerRadius, targetRadius)(t);
-            const newOuterRadius = d3.interpolate(outerRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          } else if (ringType === "middle") {
-            const newInnerRadius = d3.interpolate(innerInnerRadius, targetRadius)(t);
-            const newOuterRadius = d3.interpolate(middleRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          } else {
-            const newInnerRadius = d3.interpolate(0, targetRadius)(t);
-            const newOuterRadius = d3.interpolate(centerRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          }
-          return arcGen(currentData);
-        };
-      })
-      .style("opacity", d3.interpolate(1, 0))
-      .on("end", function(d) {
-        // Restore data binding after hide animation
-        this._current = d;
-      });
-    
-    // Hide label
-    labelsGroup.selectAll("text")
-      .filter(d => d.data.unitId === unitId)
-      .transition()
-      .duration(styles.durations.stepRotation)
-      .style("opacity", 0);
+// Function to hide individual cell (sucking into inner ring)
+function hideCell(unitId, ringType) {
+  if (!cellVisibility[unitId] || !cellVisibility[unitId][ringType]) return;
+  
+  cellVisibility[unitId][ringType] = false;
+  
+  let group, labelsGroup, targetRadius;
+  switch(ringType) {
+    case "outer":
+      group = outerGroup;
+      labelsGroup = outerLabelsGroup;
+      targetRadius = innerRadius;
+      break;
+    case "middle":
+      group = middleGroup;
+      labelsGroup = middleLabelsGroup;
+      targetRadius = innerInnerRadius;
+      break;
+    case "inner":
+      group = innerGroup;
+      labelsGroup = innerLabelsGroup;
+      targetRadius = 0;
+      break;
   }
-
-  // Function to show individual cell (expanding from inner ring)
-  function showCell(unitId, ringType) {
-    if (!cellVisibility[unitId] || cellVisibility[unitId][ringType]) return;
-    
-    cellVisibility[unitId][ringType] = true;
-    
-    let group, labelsGroup, startRadius, endInnerRadius, endOuterRadius;
-    switch(ringType) {
-      case "outer":
-        group = outerGroup;
-        labelsGroup = outerLabelsGroup;
-        startRadius = innerRadius;
-        endInnerRadius = innerRadius;
-        endOuterRadius = outerRadius;
-        break;
-      case "middle":
-        group = middleGroup;
-        labelsGroup = middleLabelsGroup;
-        startRadius = innerInnerRadius;
-        endInnerRadius = innerInnerRadius;
-        endOuterRadius = middleRadius;
-        break;
-      case "inner":
-        group = innerGroup;
-        labelsGroup = innerLabelsGroup;
-        startRadius = 0;
-        endInnerRadius = 0;
-        endOuterRadius = centerRadius;
-        break;
-    }
-    
-    // Show cell with radius animation
-    group.selectAll("path")
-      .filter(d => d.data.unitId === unitId)
-      .classed("hidden", false)
-      .transition()
-      .duration(styles.durations.stepRotation)
-      .ease(d3.easeExpOut)
-      .attrTween("d", function(d) {
-        const currentData = d;
-        
-        return function(t) {
-          const newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
-          const newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
-          const arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          return arcGen(currentData);
-        };
-      })
-      .style("opacity", d3.interpolate(0, ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8))
-      .on("end", function(d) {
-        // After animation completes, ensure text content is properly wrapped with up-to-date arc data
-        const textElement = d3.select(this);
-        textElement.selectAll("tspan").remove();
-        const text = d.data.fullText || d.data.name;
-        let pieData;
+  
+  // Hide cell with radius animation
+  group.selectAll("path")
+    .filter(d => d.data.unitId === unitId)
+    .classed("hidden", true)
+    .transition()
+    .duration(styles.durations.stepRotation) // Mismatched name, but using for now
+    .ease(d3.easeExpIn)
+    .attrTween("d", function(d) {
+      const currentData = d;
+      
+      return function(t) {
+        let arcGen;
         if (ringType === "outer") {
-          pieData = pie(nestedData.outer);
-          d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+          const newInnerRadius = d3.interpolate(innerRadius, targetRadius)(t);
+          const newOuterRadius = d3.interpolate(outerRadius, targetRadius)(t);
+          arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
         } else if (ringType === "middle") {
-          pieData = pie(nestedData.middle);
-          d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+          const newInnerRadius = d3.interpolate(innerInnerRadius, targetRadius)(t);
+          const newOuterRadius = d3.interpolate(middleRadius, targetRadius)(t);
+          arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
         } else {
-          pieData = pie(nestedData.inner);
-          d3.arc().innerRadius(30).outerRadius(centerRadius);
+          const newInnerRadius = d3.interpolate(0, targetRadius)(t);
+          const newOuterRadius = d3.interpolate(centerRadius, targetRadius)(t);
+          arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
         }
-        const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-        const constraints = getTextConstraints(ringType, arcDatum);
-        wrapText(textElement, text, constraints);
-      });
-    
-    // Show label with position animation
-    labelsGroup.selectAll("text")
-      .filter(d => d.data.unitId === unitId)
-      .transition()
-      .duration(styles.durations.stepRotation)
-      .ease(d3.easeExpOut)
-      .attrTween("transform", function(d) {
-        const currentData = d;
-        
-        return function(t) {
-          const newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
-          const newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
-          const arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          
-          // Use the simple text transform function
-          return calculateTextTransform(currentData, arcGen);
-        };
-      })
-      .style("opacity", 1)
-      .on("end", function(d) {
-        // After animation completes, ensure text content is properly wrapped with up-to-date arc data
-        const textElement = d3.select(this);
-        textElement.selectAll("tspan").remove();
-        const text = d.data.fullText || d.data.name;
-        let pieData;
-        if (ringType === "outer") {
-          pieData = pie(nestedData.outer);
-          d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-        } else if (ringType === "middle") {
-          pieData = pie(nestedData.middle);
-          d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-        } else {
-          pieData = pie(nestedData.inner);
-          d3.arc().innerRadius(30).outerRadius(centerRadius);
-        }
-        const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-        const constraints = getTextConstraints(ringType, arcDatum);
-        wrapText(textElement, text, constraints);
-      });
-  }
+        return arcGen(currentData);
+      };
+    })
+    .style("opacity", d3.interpolate(1, 0))
+    .on("end", function(d) {
+      // Restore data binding after hide animation
+      this._current = d;
+    });
+  
+  // Hide label
+  labelsGroup.selectAll("text")
+    .filter(d => d.data.unitId === unitId)
+    .transition()
+    .duration(styles.durations.stepRotation)
+    .style("opacity", 0);
+}
 
-  // Change data function for smooth value transitions
-  function changeData(ringType, newData, arcGenerator) {
-    const group = ringType === "outer" ? outerGroup : 
-                 ringType === "middle" ? middleGroup : innerGroup;
-    const labelsGroup = ringType === "outer" ? outerLabelsGroup :
-                       ringType === "middle" ? middleLabelsGroup : innerLabelsGroup;
-    
-    const pieData = pie(newData);
-    
-    // Update paths with smooth transitions
-    const paths = group.selectAll("path").data(pieData, d => d.data.name);
-    
-    paths.transition()
-      .duration(styles.durations.normal)
-      .attrTween("d", arcTween(arcGenerator))
-      .style("opacity", d => {
-        if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
-        }
-        // Use data opacity combined with ring-specific opacity
-        const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-        return d.data.opacity * baseOpacity;
-      });
-    
-    // Update labels with opacity based on data value
-    const labels = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
-    
-    labels.transition()
-      .duration(styles.durations.normal)
-      .attr("transform", function(d) {
+// Function to show individual cell (expanding from inner ring)
+function showCell(unitId, ringType) {
+  if (!cellVisibility[unitId] || cellVisibility[unitId][ringType]) return;
+  
+  cellVisibility[unitId][ringType] = true;
+  
+  let group, labelsGroup, startRadius, endInnerRadius, endOuterRadius;
+  switch(ringType) {
+    case "outer":
+      group = outerGroup;
+      labelsGroup = outerLabelsGroup;
+      startRadius = innerRadius;
+      endInnerRadius = innerRadius;
+      endOuterRadius = outerRadius;
+      break;
+    case "middle":
+      group = middleGroup;
+      labelsGroup = middleLabelsGroup;
+      startRadius = innerInnerRadius;
+      endInnerRadius = innerInnerRadius;
+      endOuterRadius = middleRadius;
+      break;
+    case "inner":
+      group = innerGroup;
+      labelsGroup = innerLabelsGroup;
+      startRadius = 0;
+      endInnerRadius = 0;
+      endOuterRadius = centerRadius;
+      break;
+  }
+  
+  // Show cell with radius animation
+  group.selectAll("path")
+    .filter(d => d.data.unitId === unitId)
+    .classed("hidden", false)
+    .transition()
+    .duration(styles.durations.stepRotation)
+    .ease(d3.easeExpOut)
+    .attrTween("d", function(d) {
+      const currentData = d;
+      
+      return function(t) {
+        const newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
+        const newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
+        const arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
+        return arcGen(currentData);
+      };
+    })
+    .style("opacity", d3.interpolate(0, ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8))
+    .on("end", function(d) {
+      // After animation completes, ensure text content is properly wrapped with up-to-date arc data
+      const textElement = d3.select(this);
+      textElement.selectAll("tspan").remove();
+      const text = d.data.fullText || d.data.name;
+      let pieData;
+      if (ringType === "outer") {
+        pieData = pie(nestedData.outer);
+        d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+      } else if (ringType === "middle") {
+        pieData = pie(nestedData.middle);
+        d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+      } else {
+        pieData = pie(nestedData.inner);
+        d3.arc().innerRadius(30).outerRadius(centerRadius);
+      }
+      const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
+      const constraints = getTextConstraints(ringType, arcDatum);
+      wrapText(textElement, text, constraints);
+    });
+  
+  // Show label with position animation
+  labelsGroup.selectAll("text")
+    .filter(d => d.data.unitId === unitId)
+    .transition()
+    .duration(styles.durations.stepRotation)
+    .ease(d3.easeExpOut)
+    .attrTween("transform", function(d) {
+      const currentData = d;
+      
+      return function(t) {
+        const newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
+        const newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
+        const arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
+        
         // Use the simple text transform function
-        return calculateTextTransform(d, arcGenerator);
-      })
-      .style("opacity", d => {
-        // Hide if data value is 0 or if visibility is toggled off
-        if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
-        }
-        return d.data.opacity;
+        return calculateTextTransform(currentData, arcGen);
+      };
+    })
+    .style("opacity", 1)
+    .on("end", function(d) {
+      // After animation completes, ensure text content is properly wrapped with up-to-date arc data
+      const textElement = d3.select(this);
+      textElement.selectAll("tspan").remove();
+      const text = d.data.fullText || d.data.name;
+      let pieData;
+      if (ringType === "outer") {
+        pieData = pie(nestedData.outer);
+        d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+      } else if (ringType === "middle") {
+        pieData = pie(nestedData.middle);
+        d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+      } else {
+        pieData = pie(nestedData.inner);
+        d3.arc().innerRadius(30).outerRadius(centerRadius);
+      }
+      const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
+      const constraints = getTextConstraints(ringType, arcDatum);
+      wrapText(textElement, text, constraints);
+    });
+}
+
+// Change data function for smooth value transitions
+function changeData(ringType, newData, arcGenerator) {
+  const group = ringType === "outer" ? outerGroup : 
+               ringType === "middle" ? middleGroup : innerGroup;
+  const labelsGroup = ringType === "outer" ? outerLabelsGroup :
+                     ringType === "middle" ? middleLabelsGroup : innerLabelsGroup;
+  
+  const pieData = pie(newData);
+  
+  // Update paths with smooth transitions
+  const paths = group.selectAll("path").data(pieData, d => d.data.name);
+  
+  paths.transition()
+    .duration(styles.durations.normal)
+    .attrTween("d", arcTween(arcGenerator))
+    .style("opacity", d => {
+      if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      // Use data opacity combined with ring-specific opacity
+      const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+      return d.data.opacity * baseOpacity;
+    });
+  
+  // Update labels with opacity based on data value
+  const labels = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
+  
+  labels.transition()
+    .duration(styles.durations.normal)
+    .attr("transform", function(d) {
+      // Use the simple text transform function
+      return calculateTextTransform(d, arcGenerator);
+    })
+    .style("opacity", d => {
+      // Hide if data value is 0 or if visibility is toggled off
+      if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      return d.data.opacity;
+    });
+}
+
+// Focus pair function
+function focusPair(clickedUnitId) {
+  const isThesis = clickedUnitId.startsWith('T');
+  const pairId = isThesis ? clickedUnitId.replace('T', 'A') : clickedUnitId.replace('A', 'T');
+  const thesis = isThesis ? clickedUnitId : pairId;
+  const antithesis = isThesis ? pairId : clickedUnitId;   
+  
+  const isAlreadyFocused = focusedPair && 
+    focusedPair.thesis === thesis && 
+    focusedPair.antithesis === antithesis;
+  
+  // Choose which data to modify
+  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  
+  if (isAlreadyFocused) {
+    if(clickedUnitId != clickedSlice) {
+      rotateToSlice(clickedUnitId);
+      clickedSlice = clickedUnitId;
+      updateChartValue();
+      return;
+    }
+    focusedPair = null;
+    clickedSlice = null;
+    // Reset all opacities to 1
+    ["outer", "middle", "inner"].forEach(ringType => {
+      dataToModify[ringType].forEach(item => {
+        item.opacity = 1;
       });
-  }
-
-  // Focus pair function
-  function focusPair(clickedUnitId) {
-    const isThesis = clickedUnitId.startsWith('T');
-    const pairId = isThesis ? clickedUnitId.replace('T', 'A') : clickedUnitId.replace('A', 'T');
-    const thesis = isThesis ? clickedUnitId : pairId;
-    const antithesis = isThesis ? pairId : clickedUnitId;
-
-    clickedSlice = clickedUnitId;    
+    });
+    // Reset axes to default positions
+    //updateAxisPositions();
+  } else {
+    focusedPair = { thesis, antithesis };
     
-    const isAlreadyFocused = focusedPair && 
-      focusedPair.thesis === thesis && 
-      focusedPair.antithesis === antithesis;
+    // Rotate to center the clicked slice at the top
+    rotateToSlice(clickedUnitId, styles.durations.stepRotation);
     
-    // Choose which data to modify
-    const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-    
-    if (isAlreadyFocused) {
-      focusedPair = null;
-      clickedSlice = null;
-      // Reset all opacities to 1
-      ["outer", "middle", "inner"].forEach(ringType => {
-        dataToModify[ringType].forEach(item => {
+    // Dim all cells first
+    ["outer", "middle", "inner"].forEach(ringType => {
+      dataToModify[ringType].forEach(item => {
+        item.opacity = 0.3;
+      });
+    });
+    // Highlight the focused pair
+    ["outer", "middle", "inner"].forEach(ringType => {
+      dataToModify[ringType].forEach(item => {
+        if (item.unitId === thesis || item.unitId === antithesis) {
           item.opacity = 1;
-        });
+        }
       });
-      // Reset axes to default positions
-      updateAxisPositions();
-    } else {
-      focusedPair = { thesis, antithesis };
-      
-      // Rotate to center the clicked slice at the top
-      rotateToSlice(clickedUnitId, styles.durations.stepRotation);
-      
-      // Dim all cells first
-      ["outer", "middle", "inner"].forEach(ringType => {
-        dataToModify[ringType].forEach(item => {
-          item.opacity = 0.3;
-        });
-      });
-      // Highlight the focused pair
-      ["outer", "middle", "inner"].forEach(ringType => {
-        dataToModify[ringType].forEach(item => {
-          if (item.unitId === thesis || item.unitId === antithesis) {
-            item.opacity = 1;
-          }
-        });
-      });
-      // Update axes to focus on the pair
-      updateAxisPositions(clickedUnitId);
-    }
-    
-    // Re-render with updated opacity
-    if (isStepMode && Object.keys(animationData).length > 0) {
-      changeData("outer", animationData.outer, outerArc);
-      changeData("middle", animationData.middle, middleArc);
-      changeData("inner", animationData.inner, innerArc);
-    } else {
-      updateAllRings();
-    }
-    // --- MAKE CHART REACTIVE: update .value and dispatch input event ---
-    updateChartValue();
+    });
+    // Update axes to focus on the pair
+    updateAxisPositions(clickedUnitId);
   }
+  
+  // Re-render with updated opacity
+  if (isStepMode && Object.keys(animationData).length > 0) {
+    changeData("outer", animationData.outer, outerArc);
+    changeData("middle", animationData.middle, middleArc);
+    changeData("inner", animationData.inner, innerArc);
+  } else {
+    updateAllRings();
+  }
+  // --- MAKE CHART REACTIVE: update .value and dispatch input event ---
+  clickedSlice = clickedUnitId; 
+  updateChartValue();
+}
 
-  // Zoom functions
-  function zoomToCell(event, d) {
-    if (activeZoom === d) return resetZoom();
-    
-    zoomGroup.selectAll("path").style("stroke-width", null);
-    
-    activeZoom = d;
-    d3.select(event.currentTarget)
+// Zoom functions
+function zoomToCell(event, d) {
+  if (activeZoom === d) return resetZoom();
+  
+  zoomGroup.selectAll("path").style("stroke-width", null);
+  
+  activeZoom = d;
+  d3.select(event.currentTarget)
+    .style("stroke", styles.colors.strokes.zoom)
+    .style("stroke-width", styles.strokes.zoomWidth);
+  
+  const parentClass = d3.select(event.currentTarget.parentNode).attr("class");
+  let arcGenerator;
+  
+  if (parentClass.includes("outer-ring")) {
+    arcGenerator = outerArc;
+  } else if (parentClass.includes("middle-ring")) {
+    arcGenerator = middleArc;
+  } else if (parentClass.includes("inner-ring")) {
+    arcGenerator = innerArc;
+  } else {
+    arcGenerator = middleArc;
+  }
+  
+  // NEW: Get raw centroid and apply current rotation to it using DOM transforms
+  const rawCentroid = arcGenerator.centroid(d);
+  const currentRotation = getCurrentRotationFromDOM();
+  
+  // Use DOM transforms to get rotated centroid (more efficient than manual math)
+  const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
+  
+  const scale = 3;
+  const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
+  
+  // Apply zoom transform to svg - D3 zoom controls the main element
+  svg.transition()
+    .duration(styles.durations.normal)
+    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+}
+
+// Function to zoom to entire slice (all three rings of a unitId)
+function zoomToSlice(unitId) {
+  // Choose which data to use based on current mode (same as other functions)
+  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  
+  // Use the middle ring to calculate the centroid for the entire slice
+  const pieData = pie(dataToUse.middle);
+  const sliceData = pieData.find(d => d.data.unitId === unitId);
+  
+  if (!sliceData) return;
+  
+  // Clear existing zoom styling
+  zoomGroup.selectAll("path").style("stroke-width", null);
+  
+  // NEW: Get raw centroid and apply current rotation to it using DOM transforms
+  const rawCentroid = middleArc.centroid(sliceData);
+  const currentRotation = getCurrentRotationFromDOM();
+  
+  // Use DOM transforms to get rotated centroid (more efficient than manual math)
+  const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
+  
+  // Apply rotation to centroid: [x*cos - y*sin, x*sin + y*cos]
+  //const rotatedCentroidX = rotatedCentroid[0] * Math.cos(currentRotation) - rotatedCentroid[1] * Math.sin(currentRotation);
+  //const rotatedCentroidY = rotatedCentroid[0] * Math.sin(currentRotation) + rotatedCentroid[1] * Math.cos(currentRotation);
+  
+  // Set active zoom (use slice data for reference)
+  activeZoom = sliceData;
+  
+  // Highlight all three rings of this slice
+  [outerGroup, middleGroup, innerGroup].forEach(group => {
+    group.selectAll("path")
+      .filter(d => d.data.unitId === unitId)
       .style("stroke", styles.colors.strokes.zoom)
       .style("stroke-width", styles.strokes.zoomWidth);
-    
-    const parentClass = d3.select(event.currentTarget.parentNode).attr("class");
-    let arcGenerator;
-    
-    if (parentClass.includes("outer-ring")) {
-      arcGenerator = outerArc;
-    } else if (parentClass.includes("middle-ring")) {
-      arcGenerator = middleArc;
-    } else if (parentClass.includes("inner-ring")) {
-      arcGenerator = innerArc;
-    } else {
-      arcGenerator = middleArc;
-    }
-    
-    // NEW: Get raw centroid and apply current rotation to it using DOM transforms
-    const rawCentroid = arcGenerator.centroid(d);
-    const currentRotation = getCurrentRotationFromDOM();
-    
-    // Use DOM transforms to get rotated centroid (more efficient than manual math)
-    const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
-    
-    const scale = 3;
-    const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
-    
-    // Apply zoom transform to svg - D3 zoom controls the main element
-    svg.transition()
-      .duration(styles.durations.normal)
-      .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-  }
-
-  // Function to zoom to entire slice (all three rings of a unitId)
-  function zoomToSlice(unitId) {
-    // Choose which data to use based on current mode (same as other functions)
-    const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-    
-    // Use the middle ring to calculate the centroid for the entire slice
-    const pieData = pie(dataToUse.middle);
-    const sliceData = pieData.find(d => d.data.unitId === unitId);
-    
-    if (!sliceData) return;
-    
-    // Clear existing zoom styling
-    zoomGroup.selectAll("path").style("stroke-width", null);
-    
-    // NEW: Get raw centroid and apply current rotation to it using DOM transforms
-    const rawCentroid = middleArc.centroid(sliceData);
-    const currentRotation = getCurrentRotationFromDOM();
-    
-    // Use DOM transforms to get rotated centroid (more efficient than manual math)
-    const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
-    
-    // Apply rotation to centroid: [x*cos - y*sin, x*sin + y*cos]
-    //const rotatedCentroidX = rotatedCentroid[0] * Math.cos(currentRotation) - rotatedCentroid[1] * Math.sin(currentRotation);
-    //const rotatedCentroidY = rotatedCentroid[0] * Math.sin(currentRotation) + rotatedCentroid[1] * Math.cos(currentRotation);
-    
-    // Set active zoom (use slice data for reference)
-    activeZoom = sliceData;
-    
-    // Highlight all three rings of this slice
-    [outerGroup, middleGroup, innerGroup].forEach(group => {
-      group.selectAll("path")
-        .filter(d => d.data.unitId === unitId)
-        .style("stroke", styles.colors.strokes.zoom)
-        .style("stroke-width", styles.strokes.zoomWidth);
-    });
-    
-    const scale = 2.1;
-    const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
-    
-    // Apply zoom transform to svg
-    svg.transition()
-      .duration(styles.durations.normal)
-      .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-  }
-
-  function resetZoom() {
-    zoomGroup.selectAll("path.cell")  // Only apply to pie chart cells, not arrows
-      .style("stroke", function() {
-        const ringType = d3.select(this.parentNode).attr("class");
-        return ringType && ringType.includes("middle") ? styles.colors.strokes.middleRing : styles.colors.strokes.default;
-      })
-      .style("stroke-width", function() {
-        const ringType = d3.select(this.parentNode).attr("class");
-        return ringType && ringType.includes("middle") ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth;
-      });
-    activeZoom = null;
-    
-    // FIXED: Apply zoom reset to svg - D3 zoom controls the main element  
-    svg.transition()
-      .duration(styles.durations.normal)
-      .call(zoom.transform, d3.zoomIdentity);
-  }
-
-  // ===== INITIALIZE LONG PRESS HANDLER =====
-  // Now that zoomToCell is defined, initialize the long press handler
-  // REMOVED: Long press not needed anymore - touch events do focus + zoom directly
-
-  // Drag functions for rotation
-  function dragStarted(event) {
-    // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
-    // Just use the event coordinates directly (they're relative to the rotationGroup)
-    dragStartAngle = Math.atan2(event.y, event.x);
-    dragStartRotation = getCurrentRotationFromDOM();
-    
-    // Change cursor during drag
-    dragCircle.style("cursor", "grabbing");
-  }
-
-  function dragged(event) {
-    // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
-    // Just use the event coordinates directly
-    const currentAngle = Math.atan2(event.y, event.x);
-    
-    // Calculate rotation delta using shortest angular distance
-    let angleDelta = currentAngle - dragStartAngle;
-    
-    // Normalize angle delta to be between -π and π (shortest path)
-    while (angleDelta > Math.PI) angleDelta -= 2 * Math.PI;
-    while (angleDelta < -Math.PI) angleDelta += 2 * Math.PI;
-    
-    // Calculate new rotation (no state tracking - just apply directly)
-    const newRotation = dragStartRotation + angleDelta;
-    
-    // Apply rotation directly to DOM (no state tracking!)
-    const rotationDegrees = (newRotation * 180) / Math.PI;
-    rotationGroup.attr("transform", `rotate(${rotationDegrees})`);
-    
-    // PERFORMANCE FIX: Don't update text during drag!
-    // Text positions will be updated once at the end of drag for much smoother rotation
-    // The wheel geometry itself rotates smoothly without needing text recalculation
-  }
-
-  function dragEnded(event) {
-    // Restore cursor
-    dragCircle.style("cursor", "grab");
-    
-    // PERFORMANCE FIX: Single text update after drag ends
-    // Get current rotation and update text positions once
-    const currentRotation = getCurrentRotationFromDOM();
-    const rotationDegrees = (currentRotation * 180) / Math.PI;
-    updateTextPositions(rotationDegrees);
-    // Update chart value and dispatch event
-    updateChartValue();
-  }
-  let isUpdatingTransform = false;
+  });
   
-  function updateTextPositions(rotationDegrees) {
-    isUpdatingTransform = true;
-    
-    // Convert degrees to radians once
-    const currentRotationRadians = (rotationDegrees * Math.PI) / 180;
-    
-    // Use requestAnimationFrame for smoother updates
-    requestAnimationFrame(() => {
-      // PERFORMANCE: Update all cell text using the optimized transform function
-      // Pass rotation to avoid repeated DOM queries
-      const outerTexts = outerLabelsGroup.selectAll("text");
-      const middleTexts = middleLabelsGroup.selectAll("text");
-      const innerTexts = innerLabelsGroup.selectAll("text");
-      
-      outerTexts.attr("transform", function(d) {
-        if (!d) return this.getAttribute("transform"); // Keep existing if no data
-        return calculateTextTransform(d, outerArc, currentRotationRadians);
-      });
-      
-      middleTexts.attr("transform", function(d) {
-        if (!d) return this.getAttribute("transform"); // Keep existing if no data
-        return calculateTextTransform(d, middleArc, currentRotationRadians);
-      });
-      
-      innerTexts.attr("transform", function(d) {
-        if (!d) return this.getAttribute("transform"); // Keep existing if no data
-        return calculateTextTransform(d, innerArc, currentRotationRadians);
-      });
-      
-      // PERFORMANCE: Optimize coordinate system counter-rotation
-      const counterRotationDegrees = -rotationDegrees;
-      
-      // Update coordinate numbers (more efficient transform calculation)
-      coordinateGroup.selectAll("text.coordinate-number").attr("transform", function() {
-        const x = parseFloat(d3.select(this).attr("x"));
-        const y = parseFloat(d3.select(this).attr("y"));
-        return `translate(${x}, ${y}) rotate(${counterRotationDegrees}) translate(${-x}, ${-y})`;
-      });
-      
-      // Update coordinate symbols (more efficient transform calculation)
-      coordinateGroup.selectAll("text.coordinate-symbol").attr("transform", function() {
-        const x = parseFloat(d3.select(this).attr("x"));
-        const y = parseFloat(d3.select(this).attr("y"));
-        return `translate(${x}, ${y}) rotate(${counterRotationDegrees}) translate(${-x}, ${-y})`;
-      });
-      
-      isUpdatingTransform = false;
+  const scale = 2.1;
+  const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
+  
+  // Apply zoom transform to svg
+  svg.transition()
+    .duration(styles.durations.normal)
+    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
+}
+
+function resetZoom() {
+  zoomGroup.selectAll("path.cell")  // Only apply to pie chart cells, not arrows
+    .style("stroke", function() {
+      const ringType = d3.select(this.parentNode).attr("class");
+      return ringType && ringType.includes("middle") ? styles.colors.strokes.middleRing : styles.colors.strokes.default;
+    })
+    .style("stroke-width", function() {
+      const ringType = d3.select(this.parentNode).attr("class");
+      return ringType && ringType.includes("middle") ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth;
     });
-  }
+  activeZoom = null;
+  
+  // FIXED: Apply zoom reset to svg - D3 zoom controls the main element  
+  svg.transition()
+    .duration(styles.durations.normal)
+    .call(zoom.transform, d3.zoomIdentity);
+}
 
-  function zoomed(event) {
-    const { transform } = event;
-    
-    // NEW: Apply zoom transform to zoomGroup (zoom happens first in hierarchy)
-    // D3 applies transform to SVG, we redirect it to zoomGroup
-    zoomGroup.attr("transform", transform);
-    
-    // Update stroke widths to maintain visual consistency at different zoom levels
-    zoomGroup.selectAll("path.cell")
-      .style("stroke-width", function() {
-        const ringType = d3.select(this.parentNode).attr("class");
-        const baseWidth = ringType && ringType.includes("middle") ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth;
-        return (baseWidth / transform.k) + "px";
-      });
-    
-    // PERFORMANCE FIX: Don't rewrap text on every zoom event!
-    // Text wrapping should only happen when content changes, not during zoom
-    // The text bounds are handled by CSS and SVG scaling naturally
-    
-    // Only update font size if needed (commented out the expensive rewrapping)
-    zoomGroup.selectAll("text.cell-label")
-      .style("font-size", function() {
-        const baseSize = styles.fonts.labels.zoomBaseSize;
-        return baseSize + "px"; // Keep consistent size during zoom
-      });
-  }
+// ===== INITIALIZE LONG PRESS HANDLER =====
+// Now that zoomToCell is defined, initialize the long press handler
+// REMOVED: Long press not needed anymore - touch events do focus + zoom directly
 
-  // Update ring function
-  function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale) {
-    const pieData = pie(data);
-    
-    const paths = group.selectAll("path")
-      .data(pieData, d => d.data.name);
+// Drag functions for rotation
+function dragStarted(event) {
+  // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
+  // Just use the event coordinates directly (they're relative to the rotationGroup)
+  dragStartAngle = Math.atan2(event.y, event.x);
+  dragStartRotation = getCurrentRotationFromDOM();
+  
+  // Change cursor during drag
+  dragCircle.style("cursor", "grabbing");
+}
 
-    const pathsEnter = paths.enter()
-      .append("path")
-      .attr("class", "cell")
-      .attr("fill", d => colorScale(d.data.unitId))
-      .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
-      .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
-      .style("opacity", d => {
-        if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
+function dragged(event) {
+  // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
+  // Just use the event coordinates directly
+  const currentAngle = Math.atan2(event.y, event.x);
+  
+  // Calculate rotation delta using shortest angular distance
+  let angleDelta = currentAngle - dragStartAngle;
+  
+  // Normalize angle delta to be between -π and π (shortest path)
+  while (angleDelta > Math.PI) angleDelta -= 2 * Math.PI;
+  while (angleDelta < -Math.PI) angleDelta += 2 * Math.PI;
+  
+  // Calculate new rotation (no state tracking - just apply directly)
+  const newRotation = dragStartRotation + angleDelta;
+  
+  // Apply rotation directly to DOM (no state tracking!)
+  const rotationDegrees = (newRotation * 180) / Math.PI;
+  rotationGroup.attr("transform", `rotate(${rotationDegrees})`);
+  
+  // PERFORMANCE FIX: Don't update text during drag!
+  // Text positions will be updated once at the end of drag for much smoother rotation
+  // The wheel geometry itself rotates smoothly without needing text recalculation
+}
+
+function dragEnded(event) {
+  // Restore cursor
+  dragCircle.style("cursor", "grab");
+  
+  // PERFORMANCE FIX: Single text update after drag ends
+  // Get current rotation and update text positions once
+  const currentRotation = getCurrentRotationFromDOM();
+  const rotationDegrees = (currentRotation * 180) / Math.PI;
+  updateTextPositions(rotationDegrees);
+  // Update chart value and dispatch event
+  updateChartValue();
+}
+let isUpdatingTransform = false;
+
+function updateTextPositions(rotationDegrees) {
+  isUpdatingTransform = true;
+  
+  // Convert degrees to radians once
+  const currentRotationRadians = (rotationDegrees * Math.PI) / 180;
+  
+  // Use requestAnimationFrame for smoother updates
+  requestAnimationFrame(() => {
+    // PERFORMANCE: Update all cell text using the optimized transform function
+    // Pass rotation to avoid repeated DOM queries
+    const outerTexts = outerLabelsGroup.selectAll("text");
+    const middleTexts = middleLabelsGroup.selectAll("text");
+    const innerTexts = innerLabelsGroup.selectAll("text");
+    
+    outerTexts.attr("transform", function(d) {
+      if (!d) return this.getAttribute("transform"); // Keep existing if no data
+      return calculateTextTransform(d, outerArc, currentRotationRadians);
+    });
+    
+    middleTexts.attr("transform", function(d) {
+      if (!d) return this.getAttribute("transform"); // Keep existing if no data
+      return calculateTextTransform(d, middleArc, currentRotationRadians);
+    });
+    
+    innerTexts.attr("transform", function(d) {
+      if (!d) return this.getAttribute("transform"); // Keep existing if no data
+      return calculateTextTransform(d, innerArc, currentRotationRadians);
+    });
+    
+    // PERFORMANCE: Optimize coordinate system counter-rotation
+    const counterRotationDegrees = -rotationDegrees;
+    
+    // Update coordinate numbers (more efficient transform calculation)
+    coordinateGroup.selectAll("text.coordinate-number").attr("transform", function() {
+      const x = parseFloat(d3.select(this).attr("x"));
+      const y = parseFloat(d3.select(this).attr("y"));
+      return `translate(${x}, ${y}) rotate(${counterRotationDegrees}) translate(${-x}, ${-y})`;
+    });
+    
+    // Update coordinate symbols (more efficient transform calculation)
+    coordinateGroup.selectAll("text.coordinate-symbol").attr("transform", function() {
+      const x = parseFloat(d3.select(this).attr("x"));
+      const y = parseFloat(d3.select(this).attr("y"));
+      return `translate(${x}, ${y}) rotate(${counterRotationDegrees}) translate(${-x}, ${-y})`;
+    });
+    
+    isUpdatingTransform = false;
+  });
+}
+
+function zoomed(event) {
+  const { transform } = event;
+  
+  // NEW: Apply zoom transform to zoomGroup (zoom happens first in hierarchy)
+  // D3 applies transform to SVG, we redirect it to zoomGroup
+  zoomGroup.attr("transform", transform);
+  
+  // Update stroke widths to maintain visual consistency at different zoom levels
+  zoomGroup.selectAll("path.cell")
+    .style("stroke-width", function() {
+      const ringType = d3.select(this.parentNode).attr("class");
+      const baseWidth = ringType && ringType.includes("middle") ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth;
+      return (baseWidth / transform.k) + "px";
+    });
+  
+  // PERFORMANCE FIX: Don't rewrap text on every zoom event!
+  // Text wrapping should only happen when content changes, not during zoom
+  // The text bounds are handled by CSS and SVG scaling naturally
+  
+  // Only update font size if needed (commented out the expensive rewrapping)
+  zoomGroup.selectAll("text.cell-label")
+    .style("font-size", function() {
+      const baseSize = styles.fonts.labels.zoomBaseSize;
+      return baseSize + "px"; // Keep consistent size during zoom
+    });
+}
+
+// Update ring function
+function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale) {
+  const pieData = pie(data);
+  
+  const paths = group.selectAll("path")
+    .data(pieData, d => d.data.name);
+
+  const pathsEnter = paths.enter()
+    .append("path")
+    .attr("class", "cell")
+    .attr("fill", d => colorScale(d.data.unitId))
+    .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
+    .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+    .style("opacity", d => {
+      if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+      return d.data.opacity * baseOpacity;
+    })
+    .attr("d", arcGenerator)
+    .each(function(d) { this._current = d; })
+    .on("click", function(event, d) {
+      if (event.metaKey || event.ctrlKey) {
+        zoomToCell(event, d);
+      } else {
+        // Match touch behavior: focus pair and zoom to slice if not already zoomed
+        //console.log('Mouse click - focusing slice:', d.data.unitId);
+        const isCurrentlyZoomed = activeZoom !== null;
+        focusPair(d.data.unitId);
+        if (!isCurrentlyZoomed) {
+          //console.log('Not zoomed - zooming to slice after rotation completes');
+          setTimeout(() => {
+            zoomToSlice(d.data.unitId);
+          }, styles.durations.stepRotation + 50);
         }
-        const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-        return d.data.opacity * baseOpacity;
-      })
-      .attr("d", arcGenerator)
-      .each(function(d) { this._current = d; })
-      .on("click", function(event, d) {
-        if (event.metaKey || event.ctrlKey) {
-          zoomToCell(event, d);
-        } else {
-          // Match touch behavior: focus pair and zoom to slice if not already zoomed
-          console.log('Mouse click - focusing slice:', d.data.unitId);
-          const isCurrentlyZoomed = activeZoom !== null;
-          focusPair(d.data.unitId);
-          if (!isCurrentlyZoomed) {
-            console.log('Not zoomed - zooming to slice after rotation completes');
-            setTimeout(() => {
-              zoomToSlice(d.data.unitId);
-            }, styles.durations.stepRotation + 50);
-          } else {
-            console.log('Already zoomed - rotation only, no zoom translation');
-          }
+      }
+    })
+    .on("touchstart", function(event, d) {
+      event.preventDefault();
+      const touch = event.touches && event.touches[0];
+      if (touch) {
+        touchDragStart = { x: touch.clientX, y: touch.clientY };
+      } else {
+        touchDragStart = null;
+      }
+      isTouchDragging = false;
+    })
+    .on("touchmove", function(event, d) {
+      if (!touchDragStart) return;
+      const touch = event.touches && event.touches[0];
+      if (touch) {
+        const dx = touch.clientX - touchDragStart.x;
+        const dy = touch.clientY - touchDragStart.y;
+        if (Math.sqrt(dx*dx + dy*dy) > TOUCH_DRAG_THRESHOLD) {
+          isTouchDragging = true;
         }
-      })
-      .on("touchstart", function(event, d) {
-        event.preventDefault();
-        const touch = event.touches && event.touches[0];
-        if (touch) {
-          touchDragStart = { x: touch.clientX, y: touch.clientY };
-        } else {
-          touchDragStart = null;
-        }
-        isTouchDragging = false;
-      })
-      .on("touchmove", function(event, d) {
-        if (!touchDragStart) return;
-        const touch = event.touches && event.touches[0];
-        if (touch) {
-          const dx = touch.clientX - touchDragStart.x;
-          const dy = touch.clientY - touchDragStart.y;
-          if (Math.sqrt(dx*dx + dy*dy) > TOUCH_DRAG_THRESHOLD) {
-            isTouchDragging = true;
-          }
-        }
-      })
-      .on("touchend", function(event, d) {
-        event.preventDefault();
-        if (isTouchDragging) {
-          // It was a drag, not a tap—do nothing
-          isTouchDragging = false;
-          touchDragStart = null;
-          return;
-        }
-        // ... existing tap/focus logic ...
-        const currentTime = Date.now();
-        const timeSinceLastTap = currentTime - lastTapTime;
-        if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
-          // Double tap detected - reset zoom
-          console.log('Double tap detected - resetting zoom');
-          resetZoom();
-        } else {
-          // Single tap - focus pair and zoom if not already zoomed
-          console.log('Single tap - focusing slice:', d.data.unitId);
-          const isCurrentlyZoomed = activeZoom !== null;
-          focusPair(d.data.unitId);
-          if (!isCurrentlyZoomed) {
-            console.log('Not zoomed - zooming to slice after rotation completes');
-            setTimeout(() => {
-              zoomToSlice(d.data.unitId);
-            }, styles.durations.stepRotation + 50);
-          } else {
-            console.log('Already zoomed - rotation only, no zoom translation');
-          }
-        }
-        lastTapTime = currentTime;
+      }
+    })
+    .on("touchend", function(event, d) {
+      event.preventDefault();
+      if (isTouchDragging) {
+        // It was a drag, not a tap—do nothing
         isTouchDragging = false;
         touchDragStart = null;
-      })
-      .on("touchcancel", function(event, d) {
-        // Just prevent default on cancel
-        event.preventDefault();
-      })
-      .on("mouseenter", function(event, d) {
-        // Set hovered cell for scroll-to-zoom
-        const parentClass = d3.select(this.parentNode).attr("class");
-        const ringType = parentClass.includes("outer") ? "outer" : 
-                        parentClass.includes("middle") ? "middle" : "inner";
-        setHoveredCell({ unitId: d.data.unitId, ringType: ringType });
-      })
-      .on("mouseleave", function(event, d) {
-        // Clear hovered cell
-        setHoveredCell(null);
-      });
-
-    pathsEnter.append("title")
-      .text(d => d.data.fullText);
-
-    paths.merge(pathsEnter)
-      .transition()
-      .duration(styles.durations.normal)
-      .attrTween("d", arcTween(arcGenerator))
-      .style("opacity", d => {
-        if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
+        return;
+      }
+      // ... existing tap/focus logic ...
+      const currentTime = Date.now();
+      const timeSinceLastTap = currentTime - lastTapTime;
+      if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
+        // Double tap detected - reset zoom
+        //console.log('Double tap detected - resetting zoom');
+        resetZoom();
+      } else {
+        // Single tap - focus pair and zoom if not already zoomed
+        //console.log('Single tap - focusing slice:', d.data.unitId);
+        const isCurrentlyZoomed = activeZoom !== null;
+        focusPair(d.data.unitId);
+        if (!isCurrentlyZoomed) {
+          //console.log('Not zoomed - zooming to slice after rotation completes');
+          setTimeout(() => {
+            zoomToSlice(d.data.unitId);
+          }, styles.durations.stepRotation + 50);
         }
-        const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-        return d.data.opacity * baseOpacity;
-      });
+      }
+      lastTapTime = currentTime;
+      isTouchDragging = false;
+      touchDragStart = null;
+    })
+    .on("touchcancel", function(event, d) {
+      // Just prevent default on cancel
+      event.preventDefault();
+    })
+    .on("mouseenter", function(event, d) {
+      // Set hovered cell for scroll-to-zoom
+      const parentClass = d3.select(this.parentNode).attr("class");
+      const ringType = parentClass.includes("outer") ? "outer" : 
+                      parentClass.includes("middle") ? "middle" : "inner";
+      setHoveredCell({ unitId: d.data.unitId, ringType: ringType });
+    })
+    .on("mouseleave", function(event, d) {
+      // Clear hovered cell
+      setHoveredCell(null);
+    });
 
-    paths.exit()
-      .transition()
-      .duration(styles.durations.normal)
-      .style("opacity", 0)
-      .remove();
+  pathsEnter.append("title")
+    .text(d => d.data.fullText);
 
-    updateLabels(labelsGroup, pieData, arcGenerator, ringType);
-  }
+  paths.merge(pathsEnter)
+    .transition()
+    .duration(styles.durations.normal)
+    .attrTween("d", arcTween(arcGenerator))
+    .style("opacity", d => {
+      if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+      return d.data.opacity * baseOpacity;
+    });
+
+  paths.exit()
+    .transition()
+    .duration(styles.durations.normal)
+    .style("opacity", 0)
+    .remove();
+
+  updateLabels(labelsGroup, pieData, arcGenerator, ringType);
+}
 
 
 
-  function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
-    const labels = labelsGroup.selectAll("text")
-      .data(pieData, d => d.data.name);
+function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
+  const labels = labelsGroup.selectAll("text")
+    .data(pieData, d => d.data.name);
 
-    const labelsEnter = labels.enter()
-      .append("text")
-      .attr("class", "cell-label")
-      .style("opacity", d => {
-        if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
-        }
-        return d.data.opacity;
-      })
-      .attr("transform", function(d) {
-        // Use the simple text transform function
-        return calculateTextTransform(d, arcGenerator);
-      })
-      .style("text-anchor", "middle")
-      .style("dominant-baseline", "central")
-      .style("font-family", styles.fonts.family)
-      .style("font-size", function(d) {
-        const baseSizes = styles.fonts.labels.baseSize;
-        return `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
-      })
-      .style("font-weight", styles.fonts.labels.weight)
-      .style("fill", function(d) {
-        const textColors = styles.colors.text;
-        if (ringType === "inner") return textColors.inner;
-        if (ringType === "outer") return textColors.outer;
-        return textColors.middle;
-      })
-      .style("pointer-events", "none")
-      .each(function(d) {
-        // Always apply text wrapping on create with up-to-date arc data
+  const labelsEnter = labels.enter()
+    .append("text")
+    .attr("class", "cell-label")
+    .style("opacity", d => {
+      if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      return d.data.opacity;
+    })
+    .attr("transform", function(d) {
+      // Use the simple text transform function
+      return calculateTextTransform(d, arcGenerator);
+    })
+    .style("text-anchor", "middle")
+    .style("dominant-baseline", "central")
+    .style("font-family", styles.fonts.family)
+    .style("font-size", function(d) {
+      const baseSizes = styles.fonts.labels.baseSize;
+      return `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+    })
+    .style("font-weight", styles.fonts.labels.weight)
+    .style("fill", function(d) {
+      const textColors = styles.colors.text;
+      if (ringType === "inner") return textColors.inner;
+      if (ringType === "outer") return textColors.outer;
+      return textColors.middle;
+    })
+    .style("pointer-events", "none")
+    .each(function(d) {
+      // Always apply text wrapping on create with up-to-date arc data
+      const text = d.data.fullText || d.data.name;
+      // Get latest arc data for this cell
+      let pieData;
+      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+      if (ringType === "outer") {
+        pieData = pie(dataToUse.outer);
+        d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+      } else if (ringType === "middle") {
+        pieData = pie(dataToUse.middle);
+        d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+      } else {
+        pieData = pie(dataToUse.inner);
+        d3.arc().innerRadius(30).outerRadius(centerRadius);
+      }
+      const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
+      const constraints = getTextConstraints(ringType, arcDatum);
+      wrapText(d3.select(this), text, constraints);
+    });
+
+  labels.merge(labelsEnter)
+    .transition()
+    .duration(styles.durations.normal)
+    .attr("transform", function(d) {
+      // Use the simple text transform function
+      return calculateTextTransform(d, arcGenerator);
+    })
+    .style("opacity", d => {
+      if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
+        return 0;
+      }
+      return d.data.opacity;
+    })
+    .on("end", function(d) {
+      // Apply text wrapping after transition completes with up-to-date arc data
+      if (d && d.data) {
         const text = d.data.fullText || d.data.name;
-        // Get latest arc data for this cell
         let pieData;
         const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
         if (ringType === "outer") {
@@ -6316,528 +6349,612 @@ function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstr
         const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
         const constraints = getTextConstraints(ringType, arcDatum);
         wrapText(d3.select(this), text, constraints);
-      });
-
-    labels.merge(labelsEnter)
-      .transition()
-      .duration(styles.durations.normal)
-      .attr("transform", function(d) {
-        // Use the simple text transform function
-        return calculateTextTransform(d, arcGenerator);
-      })
-      .style("opacity", d => {
-        if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-          return 0;
-        }
-        return d.data.opacity;
-      })
-      .on("end", function(d) {
-        // Apply text wrapping after transition completes with up-to-date arc data
-        if (d && d.data) {
-          const text = d.data.fullText || d.data.name;
-          let pieData;
-          const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-          if (ringType === "outer") {
-            pieData = pie(dataToUse.outer);
-            d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-          } else if (ringType === "middle") {
-            pieData = pie(dataToUse.middle);
-            d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-          } else {
-            pieData = pie(dataToUse.inner);
-            d3.arc().innerRadius(30).outerRadius(centerRadius);
-          }
-          const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-          const constraints = getTextConstraints(ringType, arcDatum);
-          wrapText(d3.select(this), text, constraints);
-        }
-      });
-
-    labels.exit()
-      .transition()
-      .duration(styles.durations.normal)
-      .style("opacity", 0)
-      .remove();
-  }
-
-  // Update all rings helper
-  function updateAllRings() {
-    // Use animation data if in step mode, otherwise use regular data
-    const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-    
-    updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
-    updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
-    updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
-  }
-
-  // ===== ARROW DRAWING FUNCTIONALITY =====
-  
-  // Create arrow marker definition using utilities
-  const defs = svg.append("defs");
-  
-  // Create arrowheads for all the colors we use
-  arrowUtilities.createArrowheadMarker(defs, "#666", "arrowhead-gray");
-  arrowUtilities.createArrowheadMarker(defs, "#16a34a", "arrowhead-green");
-  arrowUtilities.createArrowheadMarker(defs, "#dc2626", "arrowhead-red");
-  arrowUtilities.createArrowheadMarker(defs, "#8b5cf6", "arrowhead-purple");
-  arrowUtilities.createArrowheadMarker(defs, "#2563eb", "arrowhead-blue");
-
-  // Create arrow group
-  const arrowsGroup = contentGroup.append("g")
-    .attr("class", "arrows-group")
-    .style("pointer-events", "none");
-
-  // Arrow drawing functions
-  function getCellCentroid(unitId, ringType = 'middle') {
-    // Always use the stable data and arc generators, not animated ones
-    const dataToUse = nestedData; // Use stable data, not animationData
-    let pieData, arcGenerator;
-    
-    switch(ringType) {
-      case 'outer':
-        pieData = pie(dataToUse.outer);
-        // Create fresh arc generator with stable radii to avoid animation interference
-        arcGenerator = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-        break;
-      case 'middle':
-        pieData = pie(dataToUse.middle);
-        // Create fresh arc generator with stable radii to avoid animation interference
-        arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-        break;
-      case 'inner':
-        pieData = pie(dataToUse.inner);
-        // Create fresh arc generator with stable radii to avoid animation interference
-        arcGenerator = d3.arc().innerRadius(30).outerRadius(centerRadius);
-        break;
-      default:
-        pieData = pie(dataToUse.middle);
-        arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-    }
-    
-    // Find the specific cell data for this unitId
-    const cellData = pieData.find(d => d.data.unitId === unitId);
-    if (!cellData) return null;
-    
-    // Use D3's built-in centroid calculation with stable arc generator
-    const centroid = arcGenerator.centroid(cellData);
-    
-    // Calculate the actual radius of the centroid for debugging
-    const calculatedRadius = Math.sqrt(centroid[0] * centroid[0] + centroid[1] * centroid[1]);
-    
-    console.log(`Centroid for ${unitId} (${ringType}):`, {
-      x: centroid[0],
-      y: centroid[1],
-      radius: calculatedRadius,
-      expectedRadius: ringType === 'outer' ? (innerRadius + outerRadius) / 2 :
-                     ringType === 'middle' ? (innerInnerRadius + middleRadius) / 2 :
-                     ringType === 'inner' ? (30 + centerRadius) / 2 : 'unknown',
-      arcInnerRadius: arcGenerator.innerRadius()(),
-      arcOuterRadius: arcGenerator.outerRadius()()
+      }
     });
-    
-    return {
-      x: centroid[0],
-      y: centroid[1],
-      angle: (cellData.startAngle + cellData.endAngle) / 2
-    };
+
+  labels.exit()
+    .transition()
+    .duration(styles.durations.normal)
+    .style("opacity", 0)
+    .remove();
+}
+
+// Update all rings helper
+function updateAllRings() {
+  // Use animation data if in step mode, otherwise use regular data
+  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  
+  updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
+  updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
+  updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
+}
+
+// ===== ARROW DRAWING FUNCTIONALITY =====
+
+// Create arrow marker definition using utilities
+const defs = svg.append("defs");
+
+// Create arrowheads for all the colors we use
+arrowUtilities.createArrowheadMarker(defs, "#666", "arrowhead-gray");
+arrowUtilities.createArrowheadMarker(defs, "#16a34a", "arrowhead-green");
+arrowUtilities.createArrowheadMarker(defs, "#dc2626", "arrowhead-red");
+arrowUtilities.createArrowheadMarker(defs, "#8b5cf6", "arrowhead-purple");
+arrowUtilities.createArrowheadMarker(defs, "#2563eb", "arrowhead-blue");
+
+// Create arrow group
+const arrowsGroup = contentGroup.append("g")
+  .attr("class", "arrows-group")
+  .style("pointer-events", "none");
+
+// Arrow drawing functions
+function getCellCentroid(unitId, ringType = 'middle') {
+  // Always use the stable data and arc generators, not animated ones
+  const dataToUse = nestedData; // Use stable data, not animationData
+  let pieData, arcGenerator;
+  
+  switch(ringType) {
+    case 'outer':
+      pieData = pie(dataToUse.outer);
+      // Create fresh arc generator with stable radii to avoid animation interference
+      arcGenerator = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+      break;
+    case 'middle':
+      pieData = pie(dataToUse.middle);
+      // Create fresh arc generator with stable radii to avoid animation interference
+      arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+      break;
+    case 'inner':
+      pieData = pie(dataToUse.inner);
+      // Create fresh arc generator with stable radii to avoid animation interference
+      arcGenerator = d3.arc().innerRadius(30).outerRadius(centerRadius);
+      break;
+    default:
+      pieData = pie(dataToUse.middle);
+      arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
   }
   
-  function drawArrow(from, to, color = "#666", strokeWidth = 2, fromRing = 'middle', toRing = 'middle', delay = 0) {
-    const fromPos = getCellCentroid(from, fromRing);
-    const toPos = getCellCentroid(to, toRing);
-    
-    if (!fromPos || !toPos) return;
-    
-    // Use arrow utilities to calculate path
-    const arrowPath = arrowUtilities.calculateArrowPath(fromPos, toPos, 10);
-    const arrowheadId = arrowUtilities.getArrowheadId(color);
-    
-    // Draw the static path (without arrowhead initially)
-    const staticPath = arrowsGroup.append("path")
-      .attr("d", arrowPath.path)
-      .attr("stroke", color)
-      .attr("stroke-width", strokeWidth)
-      .attr("fill", "none")
-      .attr("opacity", 0.3)
-      .attr("stroke-dasharray", "3,3");
-    
-    // Create the animated arrowhead using SVG polygon for proper arrow shape
-    const animatedArrowhead = arrowsGroup.append("polygon")
-      .attr("points", "0,-3 8,0 0,3")  // Arrow shape pointing right
-      .attr("fill", color)
-      .attr("opacity", 0);
-    
-    // Animate the arrowhead along the path using the quadratic curve formula
-    animatedArrowhead
-      .transition()
-      .delay(delay)
-      .duration(1500)
-      .ease(d3.easeQuadInOut)
-      .attrTween("transform", function() {
-        return function(t) {
-          const point = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, t);
-          
-          // Calculate the angle for proper arrowhead orientation
-          const nextT = Math.min(t + 0.01, 1);
-          const nextPoint = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, nextT);
-          const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI;
-          
-          return `translate(${point.x}, ${point.y}) rotate(${angle})`;
-        };
-      })
-      .attr("opacity", 1)
-      .on("start", function() {
-        // Make the static path more visible when animation starts
-        staticPath.transition().duration(200).attr("opacity", 0.7);
-      })
-      .on("end", function() {
-        // Replace animated arrowhead with final arrow marker
-        animatedArrowhead.remove();
-        staticPath
-          .attr("marker-end", `url(#${arrowheadId})`)
-          .attr("stroke-dasharray", "none")
-          .transition()
-          .duration(300)
-          .attr("opacity", 0.7);
-      });
-  }
+  // Find the specific cell data for this unitId
+  const cellData = pieData.find(d => d.data.unitId === unitId);
+  if (!cellData) return null;
+  
+  // Use D3's built-in centroid calculation with stable arc generator
+  const centroid = arcGenerator.centroid(cellData);
+  
+  // Calculate the actual radius of the centroid for debugging
+  Math.sqrt(centroid[0] * centroid[0] + centroid[1] * centroid[1]);
   
 
   
-  function clearArrows() {
-    arrowsGroup.selectAll("*").remove();
-  }
+  return {
+    x: centroid[0],
+    y: centroid[1],
+    angle: (cellData.startAngle + cellData.endAngle) / 2
+  };
+}
+
+function drawArrow(from, to, color = "#666", strokeWidth = 2, fromRing = 'middle', toRing = 'middle', delay = 0) {
+  const fromPos = getCellCentroid(from, fromRing);
+  const toPos = getCellCentroid(to, toRing);
   
-  function drawAllArrows() {
-    clearArrows();
-    const connections = parseArrowConnections(arrowConnections, dialecticalData);
+  if (!fromPos || !toPos) return;
+  
+  // Use arrow utilities to calculate path
+  const arrowPath = arrowUtilities.calculateArrowPath(fromPos, toPos, 10);
+  const arrowheadId = arrowUtilities.getArrowheadId(color);
+  
+  // Draw the static path (without arrowhead initially)
+  const staticPath = arrowsGroup.append("path")
+    .attr("d", arrowPath.path)
+    .attr("stroke", color)
+    .attr("stroke-width", strokeWidth)
+    .attr("fill", "none")
+    .attr("opacity", 0.3)
+    .attr("stroke-dasharray", "3,3");
+  
+  // Create the animated arrowhead using SVG polygon for proper arrow shape
+  const animatedArrowhead = arrowsGroup.append("polygon")
+    .attr("points", "0,-3 8,0 0,3")  // Arrow shape pointing right
+    .attr("fill", color)
+    .attr("opacity", 0);
+  
+  // Animate the arrowhead along the path using the quadratic curve formula
+  animatedArrowhead
+    .transition()
+    .delay(delay)
+    .duration(1500)
+    .ease(d3.easeQuadInOut)
+    .attrTween("transform", function() {
+      return function(t) {
+        const point = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, t);
+        
+        // Calculate the angle for proper arrowhead orientation
+        const nextT = Math.min(t + 0.01, 1);
+        const nextPoint = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, nextT);
+        const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI;
+        
+        return `translate(${point.x}, ${point.y}) rotate(${angle})`;
+      };
+    })
+    .attr("opacity", 1)
+    .on("start", function() {
+      // Make the static path more visible when animation starts
+      staticPath.transition().duration(200).attr("opacity", 0.7);
+    })
+    .on("end", function() {
+      // Replace animated arrowhead with final arrow marker
+      animatedArrowhead.remove();
+      staticPath
+        .attr("marker-end", `url(#${arrowheadId})`)
+        .attr("stroke-dasharray", "none")
+        .transition()
+        .duration(300)
+        .attr("opacity", 0.7);
+    });
+}
+
+
+
+function clearArrows() {
+  arrowsGroup.selectAll("*").remove();
+}
+
+function drawAllArrows() {
+  clearArrows();
+  const connections = parseArrowConnections(arrowConnections, dialecticalData);
+  
+  connections.forEach((conn, index) => {
+    // Use arrow utilities to calculate color
+    const color = arrowUtilities.calculateArrowColor(conn.fromRing, conn.toRing, conn.from, conn.to);
     
-    connections.forEach((conn, index) => {
-      // Use arrow utilities to calculate color
-      const color = arrowUtilities.calculateArrowColor(conn.fromRing, conn.toRing, conn.from, conn.to);
+    // Stagger arrow animations with 300ms delay between each
+    const delay = index * 300;
+    drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+  });
+}
+
+// Step-by-step animation functions
+function initializeAnimationData() {
+  // Use the same order as dialecticalData for consistent positioning
+  const units = Object.keys(dialecticalData);
+  animationData = {
+    outer: units.map(unit => ({
+      name: `${unit} -`,
+      unitId: unit,
+      value: 0, // Start with 0 for step mode
+      opacity: 1,
+      fullText: dialecticalData[unit].negative
+    })),
+    middle: units.map(unit => ({
+      name: unit,
+      unitId: unit,
+      value: 0, // Start with 0 for step mode
+      opacity: 1,
+      fullText: dialecticalData[unit].statement
+    })),
+    inner: units.map(unit => ({
+      name: `${unit} +`,
+      unitId: unit,
+      value: 0, // Start with 0 for step mode
+      opacity: 1,
+      fullText: dialecticalData[unit].positive
+    }))
+  };
+}
+
+// Initialize build steps (generalized for any number of thesis/antithesis pairs)
+function initializeBuildStepsLocal() {
+  buildSteps = initializeBuildSteps(dialecticalData);
+  currentStep = 0;
+}
+
+// Reset build state (exact copy from HTML)
+function resetBuildState() {
+  // Reset all cells to visible in visibility state (for step mode)
+  cells.forEach(cell => {
+    cellVisibility[cell] = {
+      outer: false,  // Red (negative) - hidden initially
+      middle: true,  // White (parent) - visible  
+      inner: false   // Green (positive) - hidden initially
+    };
+  });
+  
+  // Initialize with all values at 0
+  initializeAnimationData();
+  
+  // Initial render with all zeros (will show nothing)
+  updateAllRings();
+}
+
+// Helper function to animate white cell text scaling
+function animateWhiteCellText(unitId) {
+  const whiteCellText = middleLabelsGroup.selectAll("text")
+    .filter(d => d.data.unitId === unitId);
+
+  // Save the original transform attribute
+  whiteCellText.each(function() {
+    const el = d3.select(this);
+    el.attr("_originalTransform", el.attr("transform") || "");
+  });
+
+  // Scale up by appending scale(3) to the transform attribute
+  whiteCellText.transition()
+    .duration(400)
+    .ease(d3.easeQuadOut)
+    .attr("transform", function() {
+      const orig = d3.select(this).attr("_originalTransform") || "";
+      return orig + " scale(3)";
+    })
+    .on("end", function() {
+      // Scale back down by restoring the original transform
+      d3.select(this).transition().delay(1000)
+        .duration(300)
+        .ease(d3.easeQuadIn)
+        .attr("transform", function() {
+          return d3.select(this).attr("_originalTransform") || "";
+        });
+    });
+}
+
+// Execute a single build step (exact copy from HTML)
+function executeStep(stepIndex) {
+  if (stepIndex < 0 || stepIndex >= buildSteps.length) return;
+  
+  const step = buildSteps[stepIndex];
+  
+  switch (step.type) {
+    case 'showWhite':
+      // Determine pair ID and which one comes first in build sequence
+      const isThesis = step.unitId.startsWith('T');
+      const pairId = isThesis ? step.unitId.replace('T', 'A') : step.unitId.replace('A', 'T');
       
-      // Stagger arrow animations with 300ms delay between each
-      const delay = index * 300;
-      drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-    });
-  }
-
-  // Step-by-step animation functions
-  function initializeAnimationData() {
-    // Use the same order as dialecticalData for consistent positioning
-    const units = Object.keys(dialecticalData);
-    animationData = {
-      outer: units.map(unit => ({
-        name: `${unit} -`,
-        unitId: unit,
-        value: 0, // Start with 0 for step mode
-        opacity: 1,
-        fullText: dialecticalData[unit].negative
-      })),
-      middle: units.map(unit => ({
-        name: unit,
-        unitId: unit,
-        value: 0, // Start with 0 for step mode
-        opacity: 1,
-        fullText: dialecticalData[unit].statement
-      })),
-      inner: units.map(unit => ({
-        name: `${unit} +`,
-        unitId: unit,
-        value: 0, // Start with 0 for step mode
-        opacity: 1,
-        fullText: dialecticalData[unit].positive
-      }))
-    };
-  }
-
-  // Initialize build steps (generalized for any number of thesis/antithesis pairs)
-  function initializeBuildStepsLocal() {
-    buildSteps = initializeBuildSteps(dialecticalData);
-    currentStep = 0;
-  }
-
-  // Reset build state (exact copy from HTML)
-  function resetBuildState() {
-    // Reset all cells to visible in visibility state (for step mode)
-    cells.forEach(cell => {
-      cellVisibility[cell] = {
-        outer: false,  // Red (negative) - hidden initially
-        middle: true,  // White (parent) - visible  
-        inner: false   // Green (positive) - hidden initially
-      };
-    });
-    
-    // Initialize with all values at 0
-    initializeAnimationData();
-    
-    // Initial render with all zeros (will show nothing)
-    updateAllRings();
-  }
-
-  // Execute a single build step (exact copy from HTML)
-  function executeStep(stepIndex) {
-    if (stepIndex < 0 || stepIndex >= buildSteps.length) return;
-    
-    const step = buildSteps[stepIndex];
-    
-    switch (step.type) {
-      case 'showWhite':
-        // Determine pair ID and which one comes first in build sequence
-        const isThesis = step.unitId.startsWith('T');
-        const pairId = isThesis ? step.unitId.replace('T', 'A') : step.unitId.replace('A', 'T');
+      // Find which cell appears first in the build sequence
+      const currentCellFirstStep = buildSteps.findIndex(s => s.unitId === step.unitId && s.type === 'showWhite');
+      const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
+      const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
+      
+      if (isFirstOfPair) {
+        // FIRST OF PAIR: Set data for both cells, but hide the second one
+        ["outer", "middle", "inner"].forEach(ringType => {
+          const dataArray = animationData[ringType];
+          // Set both cells' data values
+          const currentData = dataArray.find(d => d.unitId === step.unitId);
+          const pairData = dataArray.find(d => d.unitId === pairId);
+          if (currentData) currentData.value = 1;
+          if (pairData) pairData.value = 1;
+        });
         
-        // Find which cell appears first in the build sequence
-        const currentCellFirstStep = buildSteps.findIndex(s => s.unitId === step.unitId && s.type === 'showWhite');
-        const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
-        const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
+        // Set visibility for both (current visible, pair hidden)
+        cellVisibility[step.unitId].outer = true;
+        cellVisibility[step.unitId].inner = true;
+        cellVisibility[step.unitId].middle = true;
+        cellVisibility[pairId].outer = true;
+        cellVisibility[pairId].inner = true;
+        cellVisibility[pairId].middle = true;
         
-        if (isFirstOfPair) {
-          // FIRST OF PAIR: Set data for both cells, but hide the second one
+        // NOW rotate to center this slice at the top (after data is set up)
+        focusPair(step.unitId, styles.durations.stepRotation);
+        
+        // Update all rings with new data
+        changeData("outer", animationData.outer, outerArc);
+        changeData("middle", animationData.middle, middleArc);
+        changeData("inner", animationData.inner, innerArc);
+        
+        // Fix white cell text positioning after rotation completes
+        setTimeout(() => {
+          // Call changeData again with same data to recalculate text transforms
+          changeData("middle", animationData.middle, middleArc);
+          
+          // Animate white cell text scaling
+          animateWhiteCellText(step.unitId);
+        }, styles.durations.stepRotation + 150); // Slightly after rotation duration
+        
+        // Hide the pair cells and labels (set data opacity to 0)
+        setTimeout(() => {
+          // Set pair opacity to 0 in data
           ["outer", "middle", "inner"].forEach(ringType => {
             const dataArray = animationData[ringType];
-            // Set both cells' data values
-            const currentData = dataArray.find(d => d.unitId === step.unitId);
             const pairData = dataArray.find(d => d.unitId === pairId);
-            if (currentData) currentData.value = 1;
-            if (pairData) pairData.value = 1;
+            if (pairData) pairData.opacity = 0;
           });
           
-          // Set visibility for both (current visible, pair hidden)
-          cellVisibility[step.unitId].outer = true;
-          cellVisibility[step.unitId].inner = true;
-          cellVisibility[step.unitId].middle = true;
-          cellVisibility[pairId].outer = true;
-          cellVisibility[pairId].inner = true;
-          cellVisibility[pairId].middle = true;
-          
-          // NOW rotate to center this slice at the top (after data is set up)
-          rotateToSlice(step.unitId, styles.durations.stepRotation);
-          
-          // Update all rings with new data
+          // Update rings to reflect new opacity
           changeData("outer", animationData.outer, outerArc);
           changeData("middle", animationData.middle, middleArc);
           changeData("inner", animationData.inner, innerArc);
           
-          // Fix white cell text positioning after rotation completes
+          // Hide current cell's green/red segments for later showCell animation
+          hideCell(step.unitId, "outer");
+          hideCell(step.unitId, "inner");
+          
+          // Set opacity to 1 after hiding so they're ready for showCell
           setTimeout(() => {
-            // Call changeData again with same data to recalculate text transforms
-            changeData("middle", animationData.middle, middleArc);
-          }, styles.durations.stepRotation + 50); // Slightly after rotation duration
-          
-          // Hide the pair cells and labels (set data opacity to 0)
-          setTimeout(() => {
-            // Set pair opacity to 0 in data
-            ["outer", "middle", "inner"].forEach(ringType => {
-              const dataArray = animationData[ringType];
-              const pairData = dataArray.find(d => d.unitId === pairId);
-              if (pairData) pairData.opacity = 0;
-            });
-            
-            // Update rings to reflect new opacity
-            changeData("outer", animationData.outer, outerArc);
-            changeData("middle", animationData.middle, middleArc);
-            changeData("inner", animationData.inner, innerArc);
-            
-            // Hide current cell's green/red segments for later showCell animation
-            hideCell(step.unitId, "outer");
-            hideCell(step.unitId, "inner");
-            
-            // Set opacity to 1 after hiding so they're ready for showCell
-            setTimeout(() => {
-              outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-              innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-            }, styles.durations.stepRotation + 50);
-          }, 100);
-          
-        } else {
-          // SECOND OF PAIR: Just show the cells (data already set when first was shown)
-          // Set opacity to 1 in data
-          ["outer", "middle", "inner"].forEach(ringType => {
-            const dataArray = animationData[ringType];
-            const currentData = dataArray.find(d => d.unitId === step.unitId);
-            if (currentData) currentData.opacity = 1;
-          });
-          
-          // NOW rotate to center this slice at the top (after opacity is set)
-          rotateToSlice(step.unitId, styles.durations.stepRotation);
-          
-          // Update rings to reflect new opacity with smooth transition
-          changeData("outer", animationData.outer, outerArc);
+            outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+            innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+          }, styles.durations.stepRotation + 50);
+        }, 100);
+        
+      } else {
+        // SECOND OF PAIR: Just show the cells (data already set when first was shown)
+        // Set opacity to 1 in data
+        ["outer", "middle", "inner"].forEach(ringType => {
+          const dataArray = animationData[ringType];
+          const currentData = dataArray.find(d => d.unitId === step.unitId);
+          if (currentData) currentData.opacity = 1;
+        });
+        
+        // NOW rotate to center this slice at the top (after opacity is set)
+        focusPair(step.unitId, styles.durations.stepRotation);
+        
+        // Update rings to reflect new opacity with smooth transition
+        changeData("outer", animationData.outer, outerArc);
+        changeData("middle", animationData.middle, middleArc);
+        changeData("inner", animationData.inner, innerArc);
+        
+        // Fix white cell text positioning after rotation completes
+        setTimeout(() => {
+          // Call changeData again with same data to recalculate text transforms
           changeData("middle", animationData.middle, middleArc);
-          changeData("inner", animationData.inner, innerArc);
           
-          // Fix white cell text positioning after rotation completes
-          setTimeout(() => {
-            // Call changeData again with same data to recalculate text transforms
-            changeData("middle", animationData.middle, middleArc);
-          }, styles.durations.stepRotation + 50); // Slightly after rotation duration
+          // Animate white cell text scaling
+          animateWhiteCellText(step.unitId);
+        }, styles.durations.stepRotation + 50); // Slightly after rotation duration
+        
+        // Hide green/red segments for later showCell animation
+        setTimeout(() => {
+          hideCell(step.unitId, "outer");
+          hideCell(step.unitId, "inner");
           
-          // Hide green/red segments for later showCell animation
+          // Set opacity to 1 after hiding so they're ready for showCell
           setTimeout(() => {
-            hideCell(step.unitId, "outer");
-            hideCell(step.unitId, "inner");
-            
-            // Set opacity to 1 after hiding so they're ready for showCell
-            setTimeout(() => {
-              outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-              innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-            }, styles.durations.stepRotation + 50);
-          }, 100);
-        }
-        break;
-        
-      case 'showGreen':
-        // Show the inner cell (it should now expand from hidden state with full opacity)
-        showCell(step.unitId, "inner");
-        break;
-        
-      case 'showRed':
-        // Show the outer cell (it should now expand from hidden state with full opacity)
-        showCell(step.unitId, "outer");
-        break;
-    }
+            outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+            innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+          }, styles.durations.stepRotation + 50);
+        }, 100);
+      }
+      break;
+      
+    case 'showGreen':
+      // Show the inner cell (it should now expand from hidden state with full opacity)
+      showCell(step.unitId, "inner");
+      break;
+      
+    case 'showRed':
+      // Show the outer cell (it should now expand from hidden state with full opacity)
+      showCell(step.unitId, "outer");
+      break;
   }
+}
 
-  // Step animation functions (exact copy from HTML)
-  function startStepMode() {
-    isStepMode = true;
-    initializeBuildStepsLocal();
-    resetBuildState();
-    focusedPair = null;
-    resetZoom();
-    
-    // Hide coordinate system during step mode
-    coordinateGroup.style("display", "none");
+// Step animation functions (exact copy from HTML)
+function startStepMode() {
+  isStepMode = true;
+  initializeBuildStepsLocal();
+  resetBuildState();
+  focusedPair = null;
+  resetZoom();
+  
+  // Hide coordinate system during step mode
+  coordinateGroup.style("display", "none");
+}
+
+function stepForward() {
+  if (!isStepMode || currentStep >= buildSteps.length) return false;
+  
+  executeStep(currentStep);
+  currentStep++;
+  return true;
+}
+
+function stepBackward() {
+  if (!isStepMode || currentStep <= 0) return false;
+  
+  currentStep--;
+  
+  // Reset and rebuild up to current step
+  resetBuildState();
+  for (let i = 0; i < currentStep; i++) {
+    executeStep(i);
   }
+  return true;
+}
 
-  function stepForward() {
-    if (!isStepMode || currentStep >= buildSteps.length) return false;
-    
-    executeStep(currentStep);
-    currentStep++;
-    return true;
-  }
-
-  function stepBackward() {
-    if (!isStepMode || currentStep <= 0) return false;
-    
-    currentStep--;
-    
-    // Reset and rebuild up to current step
-    resetBuildState();
-    for (let i = 0; i < currentStep; i++) {
-      executeStep(i);
-    }
-    return true;
-  }
-
-  function resetToFull() {
-    isStepMode = false;
-    currentStep = 0;
-    animationData = {}; // Clear animation data
-    
-    // Show all cells
-    cells.forEach(cell => {
-      cellVisibility[cell] = {
-        outer: true,
-        middle: true,
-        inner: true
-      };
-    });
-    
-    // Reset focus and zoom
-    focusedPair = null;
-    resetZoom();
-    
-    // Reset wheel rotation to default position
-    setRotationDirectly(0);
-    
-    // Reset opacities and update with full data
-    ["outer", "middle", "inner"].forEach(ringType => {
-      nestedData[ringType].forEach(item => {
-        item.opacity = 1;
-      });
-    });
-    
-    updateAllRings();
-    
-    // Show coordinate system in full mode
-    coordinateGroup.style("display", "block");
-  }
-
-  function getCurrentStepInfo() {
-    if (!isStepMode) return null;
-    
-    const totalSteps = buildSteps.length;
-    if (currentStep === 0) {
-      return {
-        current: currentStep,
-        total: totalSteps,
-        unit: "none",
-        stepType: "start",
-        canStepForward: currentStep < totalSteps,
-        canStepBackward: false
-      };
-    }
-    
-    const step = buildSteps[currentStep - 1];
-    const stepTypeMap = {
-      'showWhite': 'statement',
-      'showGreen': 'positive', 
-      'showRed': 'negative'
+function resetToFull() {
+  isStepMode = false;
+  currentStep = 0;
+  animationData = {}; // Clear animation data
+  
+  // Show all cells
+  cells.forEach(cell => {
+    cellVisibility[cell] = {
+      outer: true,
+      middle: true,
+      inner: true
     };
-    
+  });
+  
+  // Reset focus and zoom
+  focusedPair = null;
+  resetZoom();
+  
+  // Reset wheel rotation to default position
+  setRotationDirectly(0);
+  
+  // Reset opacities and update with full data
+  ["outer", "middle", "inner"].forEach(ringType => {
+    nestedData[ringType].forEach(item => {
+      item.opacity = 1;
+    });
+  });
+  
+  updateAllRings();
+  
+  // Show coordinate system in full mode
+  coordinateGroup.style("display", "block");
+}
+
+function getCurrentStepInfo() {
+  if (!isStepMode) return null;
+  
+  const totalSteps = buildSteps.length;
+  if (currentStep === 0) {
     return {
       current: currentStep,
       total: totalSteps,
-      unit: step.unitId,
-      stepType: stepTypeMap[step.type],
+      unit: "none",
+      stepType: "start",
       canStepForward: currentStep < totalSteps,
-      canStepBackward: currentStep > 0
+      canStepBackward: false
     };
   }
-
-  // Initialize - start in full mode
-  resetToFull();
-  rotateToSlice("T1");
   
-  // Draw initial arrows
-  //drawAllArrows();
+  const step = buildSteps[currentStep - 1];
+  const stepTypeMap = {
+    'showWhite': 'statement',
+    'showGreen': 'positive', 
+    'showRed': 'negative'
+  };
+  
+  return {
+    current: currentStep,
+    total: totalSteps,
+    unit: step.unitId,
+    stepType: stepTypeMap[step.type],
+    canStepForward: currentStep < totalSteps,
+    canStepBackward: currentStep > 0
+  };
+}
 
-  // --- MAKE CHART REACTIVE INITIALLY ---
-  updateChartValue();
+// Initialize - start in full mode
+resetToFull();
+rotateToSlice("T1");
 
-  // Return the svg node with exposed methods (Observable pattern)
-  return Object.assign(svg.node(), {
-    focusPair,
-    get focusedPair() { return focusedPair; },
-    cells,
-    resetZoom,
-    zoomToCell,
-    zoomToSlice,
-    rotateToSlice,
-    rotate: (angle) => {
-      setRotationDirectly(angle);
-    },
-    // Step animation methods
-    startStepMode,
-    stepForward,
-    stepBackward,
-    resetToFull,
-    getCurrentStepInfo,
-    // Arrow control methods
-    drawAllArrows,
-    clearArrows,
-    drawArrow,
-    getCellCentroid
+// Draw initial arrows
+//drawAllArrows();
+
+// --- MAKE CHART REACTIVE INITIALLY ---
+updateChartValue();
+
+// Return the svg node with exposed methods (Observable pattern)
+return Object.assign(svg.node(), {
+  focusPair,
+  get focusedPair() { return focusedPair; },
+  cells,
+  resetZoom,
+  zoomToCell,
+  zoomToSlice,
+  rotateToSlice,
+  rotate: (angle) => {
+    setRotationDirectly(angle);
+  },
+  // Step animation methods
+  startStepMode,
+  stepForward,
+  stepBackward,
+  resetToFull,
+  getCurrentStepInfo,
+  // Arrow control methods
+  drawAllArrows,
+  clearArrows,
+  drawArrow,
+  getCellCentroid
+});
+})()
+)}
+
+function _stepControls(html,$0){return(
+(() => {
+  const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
+    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;">
+      <button id="start" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Start Step Mode</button>
+      <button id="prev" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; display: none;" disabled>Previous</button>
+      <span id="counter" style="margin: 0 10px; font-weight: bold;">Step 0 of 24</span>
+      <button id="next" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;" disabled>Next</button>
+      <button id="reset" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Show All</button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <label for="rotation-slider" style="font-weight: bold;">Rotation:</label>
+      <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1" 
+             style="width: 200px; cursor: pointer;" />
+      <span id="rotation-value" style="min-width: 40px; font-family: monospace;">0°</span>
+      <button id="rotation-reset" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 12px;">Reset</button>
+    </div>
+  </div>`;
+
+  const startBtn = container.querySelector('#start');
+  // const prevBtn = container.querySelector('#prev'); // Hidden - commenting out
+  const nextBtn = container.querySelector('#next');
+  const resetBtn = container.querySelector('#reset');
+  const counter = container.querySelector('#counter');
+  const rotationSlider = container.querySelector('#rotation-slider');
+  const rotationValue = container.querySelector('#rotation-value');
+  const rotationResetBtn = container.querySelector('#rotation-reset');
+
+  function updateUI() {
+    const stepInfo = $0.getCurrentStepInfo();
+    
+    if (stepInfo) {
+      // In step mode
+      counter.textContent = `Step ${stepInfo.current} of ${stepInfo.total} (${stepInfo.unit} ${stepInfo.stepType})`;
+      // prevBtn.disabled = !stepInfo.canStepBackward; // Hidden - commenting out
+      nextBtn.disabled = !stepInfo.canStepForward;
+      startBtn.disabled = true;
+      resetBtn.disabled = false;
+    } else {
+      // In full mode
+      counter.textContent = "Full View";
+      // prevBtn.disabled = true; // Hidden - commenting out
+      nextBtn.disabled = true;
+      startBtn.disabled = false;
+      resetBtn.disabled = true;
+    }
+  }
+
+  startBtn.addEventListener('click', () => {
+    $0.startStepMode();
+    updateUI();
   });
+
+  // prevBtn.addEventListener('click', () => {
+  //   viewof chart.stepBackward();
+  //   updateUI();
+  // }); // Hidden - commenting out
+
+  nextBtn.addEventListener('click', () => {
+    $0.stepForward();
+    updateUI();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    $0.resetToFull();
+    updateUI();
+  });
+
+  // Rotation slider event listeners
+  rotationSlider.addEventListener('input', (e) => {
+    const degrees = parseInt(e.target.value);
+    const radians = (degrees * Math.PI) / 180;
+    $0.rotate(radians);
+    rotationValue.textContent = `${degrees}°`;
+  });
+
+  rotationResetBtn.addEventListener('click', () => {
+    rotationSlider.value = 0;
+    $0.rotate(0);
+    rotationValue.textContent = '0°';
+  });
+
+  // Initialize UI
+  updateUI();
+
+  // Return the container with a value property for viewof
+  container.value = "step-controls";
+  return container;
 })()
 )}
 
 function _focusedSlice(chart)
 { 
-  console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
+  //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
   
   return chart.clickedSlice; }
 
@@ -6845,7 +6962,7 @@ function _focusedSlice(chart)
 function _topSlice(chart,dialecticalData)
 {// Get current rotation
     const currentRotation = chart.currentRotation;
-    console.log(`topSlice current rotation at ntbk level: ${currentRotation}`);
+    //console.log(`topSlice current rotation at ntbk level: ${currentRotation}`)
     
     // Calculate which slice is at the top (0 degrees)
     const units = Object.keys(dialecticalData);
@@ -6973,97 +7090,6 @@ function _topSliceTracker(html,chart,dialecticalData){return(
     container.topUnitId = units[sliceIndex] || null;
   };
   
-  return container;
-})()
-)}
-
-function _stepControls(html,$0){return(
-(() => {
-  const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
-    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;">
-      <button id="start" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Start Step Mode</button>
-      <button id="prev" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; display: none;" disabled>Previous</button>
-      <span id="counter" style="margin: 0 10px; font-weight: bold;">Step 0 of 24</span>
-      <button id="next" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;" disabled>Next</button>
-      <button id="reset" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Show All</button>
-    </div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <label for="rotation-slider" style="font-weight: bold;">Rotation:</label>
-      <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1" 
-             style="width: 200px; cursor: pointer;" />
-      <span id="rotation-value" style="min-width: 40px; font-family: monospace;">0°</span>
-      <button id="rotation-reset" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 12px;">Reset</button>
-    </div>
-  </div>`;
-
-  const startBtn = container.querySelector('#start');
-  // const prevBtn = container.querySelector('#prev'); // Hidden - commenting out
-  const nextBtn = container.querySelector('#next');
-  const resetBtn = container.querySelector('#reset');
-  const counter = container.querySelector('#counter');
-  const rotationSlider = container.querySelector('#rotation-slider');
-  const rotationValue = container.querySelector('#rotation-value');
-  const rotationResetBtn = container.querySelector('#rotation-reset');
-
-  function updateUI() {
-    const stepInfo = $0.getCurrentStepInfo();
-    
-    if (stepInfo) {
-      // In step mode
-      counter.textContent = `Step ${stepInfo.current} of ${stepInfo.total} (${stepInfo.unit} ${stepInfo.stepType})`;
-      // prevBtn.disabled = !stepInfo.canStepBackward; // Hidden - commenting out
-      nextBtn.disabled = !stepInfo.canStepForward;
-      startBtn.disabled = true;
-      resetBtn.disabled = false;
-    } else {
-      // In full mode
-      counter.textContent = "Full View";
-      // prevBtn.disabled = true; // Hidden - commenting out
-      nextBtn.disabled = true;
-      startBtn.disabled = false;
-      resetBtn.disabled = true;
-    }
-  }
-
-  startBtn.addEventListener('click', () => {
-    $0.startStepMode();
-    updateUI();
-  });
-
-  // prevBtn.addEventListener('click', () => {
-  //   viewof chart.stepBackward();
-  //   updateUI();
-  // }); // Hidden - commenting out
-
-  nextBtn.addEventListener('click', () => {
-    $0.stepForward();
-    updateUI();
-  });
-
-  resetBtn.addEventListener('click', () => {
-    $0.resetToFull();
-    updateUI();
-  });
-
-  // Rotation slider event listeners
-  rotationSlider.addEventListener('input', (e) => {
-    const degrees = parseInt(e.target.value);
-    const radians = (degrees * Math.PI) / 180;
-    $0.rotate(radians);
-    rotationValue.textContent = `${degrees}°`;
-  });
-
-  rotationResetBtn.addEventListener('click', () => {
-    rotationSlider.value = 0;
-    $0.rotate(0);
-    rotationValue.textContent = '0°';
-  });
-
-  // Initialize UI
-  updateUI();
-
-  // Return the container with a value property for viewof
-  container.value = "step-controls";
   return container;
 })()
 )}
@@ -7798,10 +7824,10 @@ function define(runtime, observer) {
   main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","d3"], _arrowControls);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
+  main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);
-  main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
   main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
   main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","chart","parseArrowConnections","viewof chart"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", _arrowConnections);
