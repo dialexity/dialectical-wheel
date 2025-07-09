@@ -4828,7 +4828,7 @@ function _styles(){return(
       hub: "#ffff7a", // Khaki
       rings: { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" },
       text: { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" },
-      strokes: { default: "white", middleRing: "white", zoom: null },
+      strokes: { default: "#000", middleRing: "#000", zoom: null },
       axis: {
         positive: { fill: "#C6E5B3", stroke: "#2d5a2d" },
         neutral:  { fill: "white",   stroke: "#333" },
@@ -4849,8 +4849,8 @@ function _styles(){return(
     },
     // Strokes
     strokes: {
-      defaultWidth: 2,
-      middleRingWidth: 1.5,
+      defaultWidth: 1,
+      middleRingWidth: 1,
       zoomWidth: 0,
       axisCircleWidth: 1.5
     },
@@ -5398,7 +5398,7 @@ function calculateTextTransform(d, arcGenerator, currentRotationRadians = null) 
   
   // DISABLE text flipping when focused to avoid confusion
   // Only flip text if we're NOT in focus mode (focusedPair is null)
-  if (!focusedPair && normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
+  if (normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
     textRotationDegrees += 180;
   }
   
@@ -5700,7 +5700,7 @@ function showCell(unitId, ringType) {
       group = innerGroup;
       labelsGroup = innerLabelsGroup;
       startRadius = 0;
-      endInnerRadius = 0;
+      endInnerRadius = styles.radii.hub;
       endOuterRadius = centerRadius;
       break;
   }
@@ -6141,6 +6141,9 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .attr("fill", d => colorScale(d.data.unitId))
     .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
     .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+    .attr("stroke-dasharray", "1,3") // Dotted border
+    .attr("stroke-linecap", "round")
+    .attr("stroke-opacity", 0.3)
     .style("opacity", d => {
       if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
         return 0;
@@ -6561,36 +6564,6 @@ function resetBuildState() {
   updateAllRings();
 }
 
-// Helper function to animate white cell text scaling
-function animateWhiteCellText(unitId) {
-  const whiteCellText = middleLabelsGroup.selectAll("text")
-    .filter(d => d.data.unitId === unitId);
-
-  // Save the original transform attribute
-  whiteCellText.each(function() {
-    const el = d3.select(this);
-    el.attr("_originalTransform", el.attr("transform") || "");
-  });
-
-  // Scale up by appending scale(3) to the transform attribute
-  whiteCellText.transition()
-    .duration(400)
-    .ease(d3.easeQuadOut)
-    .attr("transform", function() {
-      const orig = d3.select(this).attr("_originalTransform") || "";
-      return orig + " scale(3)";
-    })
-    .on("end", function() {
-      // Scale back down by restoring the original transform
-      d3.select(this).transition().delay(1000)
-        .duration(300)
-        .ease(d3.easeQuadIn)
-        .attr("transform", function() {
-          return d3.select(this).attr("_originalTransform") || "";
-        });
-    });
-}
-
 // Execute a single build step (exact copy from HTML)
 function executeStep(stepIndex) {
   if (stepIndex < 0 || stepIndex >= buildSteps.length) return;
@@ -6634,15 +6607,7 @@ function executeStep(stepIndex) {
         changeData("outer", animationData.outer, outerArc);
         changeData("middle", animationData.middle, middleArc);
         changeData("inner", animationData.inner, innerArc);
-        
-        // Fix white cell text positioning after rotation completes
-        setTimeout(() => {
-          // Call changeData again with same data to recalculate text transforms
-          changeData("middle", animationData.middle, middleArc);
-          
-          // Animate white cell text scaling
-          animateWhiteCellText(step.unitId);
-        }, styles.durations.stepRotation + 150); // Slightly after rotation duration
+      
         
         // Hide the pair cells and labels (set data opacity to 0)
         setTimeout(() => {
@@ -6686,15 +6651,6 @@ function executeStep(stepIndex) {
         changeData("middle", animationData.middle, middleArc);
         changeData("inner", animationData.inner, innerArc);
         
-        // Fix white cell text positioning after rotation completes
-        setTimeout(() => {
-          // Call changeData again with same data to recalculate text transforms
-          changeData("middle", animationData.middle, middleArc);
-          
-          // Animate white cell text scaling
-          animateWhiteCellText(step.unitId);
-        }, styles.durations.stepRotation + 50); // Slightly after rotation duration
-        
         // Hide green/red segments for later showCell animation
         setTimeout(() => {
           hideCell(step.unitId, "outer");
@@ -6706,6 +6662,17 @@ function executeStep(stepIndex) {
             innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
           }, styles.durations.stepRotation + 50);
         }, 100);
+      }
+      // --- Ensure middle labels use fresh data and arc after step ---
+      {
+        const latestPieData = pie(animationData.middle);
+        const latestArcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+        const currentRotation = getCurrentRotationFromDOM();
+        middleLabelsGroup.selectAll("text")
+          .data(latestPieData, d => d.data.unitId)
+          .attr("transform", function(d) {
+            return calculateTextTransform(d, latestArcGen, currentRotation);
+          });
       }
       break;
       
@@ -7256,78 +7223,90 @@ function _transformToNestedPieData(){return(
 }
 )}
 
-function _wrapText(tryWrapWithLineBreaks,truncateWithEllipses){return(
+function _wrapText(styles,tryWrapWithLineBreaks,truncateWithEllipses){return(
 (textElement, text, constraints) => {
-  const { maxWidth, maxHeight, ringType, arcData } = constraints;
-  
+  const { midWidth, maxHeight, ringType, arcData } = constraints;
+  // New: also get angle, innerRadius, outerRadius
+  const angle = arcData.endAngle - arcData.startAngle;
+  let innerRadius, outerRadius;
+  if (ringType === "outer") {
+    innerRadius = styles.radii.middleOuter;
+    outerRadius = styles.radii.outer;
+  } else if (ringType === "middle") {
+    innerRadius = styles.radii.middleInner;
+    outerRadius = styles.radii.middleOuter;
+  } else {
+    innerRadius = styles.radii.hub;
+    outerRadius = styles.radii.middleInner;
+  }
+
   // Clear any existing content
   textElement.selectAll("tspan").remove();
   textElement.text("");
-  
-  // Calculate cell dimensions for better fitting
-  const cellAngle = arcData.endAngle - arcData.startAngle;
-  const isNarrowCell = cellAngle < Math.PI / 6; // Less than 30 degrees
-  
+
   // Step 1: Try natural line breaks with original font size
-  let result = tryWrapWithLineBreaks(textElement, text, maxWidth, maxHeight, isNarrowCell);
-  
+  let result = tryWrapWithLineBreaks(
+    textElement, text, maxHeight, angle, innerRadius, outerRadius
+  );
   if (result.success) {
     return result;
   }
-  
+
   // Step 2: Try font resizing (reduce font size progressively)
   const originalFontSize = parseFloat(textElement.style("font-size"));
   const minFontSize = Math.max(4, originalFontSize * 0.5); // Don't go below 4px or 50% of original
-  
   for (let fontSize = originalFontSize * 0.9; fontSize >= minFontSize; fontSize -= 0.5) {
     textElement.style("font-size", fontSize + "px");
     textElement.selectAll("tspan").remove();
     textElement.text("");
-    
-    result = tryWrapWithLineBreaks(textElement, text, maxWidth, maxHeight, isNarrowCell);
+    result = tryWrapWithLineBreaks(
+      textElement, text, maxHeight, angle, innerRadius, outerRadius
+    );
     if (result.success) {
       return result;
     }
   }
-  
-  // Step 3: Truncate with ellipses at minimum font size
+
+  // Step 3: Truncate with ellipses at minimum font size (fallback: use outermost arc length)
   textElement.style("font-size", minFontSize + "px");
   textElement.selectAll("tspan").remove();
   textElement.text("");
-  
-  return truncateWithEllipses(textElement, text, maxWidth, maxHeight, isNarrowCell);
+  const maxWidth = angle * ((innerRadius + outerRadius) / 2) * 0.85;
+  return truncateWithEllipses(textElement, text, maxWidth, maxHeight, false);
 }
 )}
 
 function _tryWrapWithLineBreaks(){return(
-(textElement, text, maxWidth, maxHeight, isNarrowCell) => {
+(textElement, text, maxHeight, angle, innerRadius, outerRadius) => {
   const fontSize = parseFloat(textElement.style("font-size"));
   const lineHeight = fontSize * 1.2;
   const maxLines = Math.floor(maxHeight / lineHeight);
-  
   if (maxLines < 1) {
     return { success: false };
   }
-  
   const words = text.split(/\s+/);
   let lines = [];
   let currentLine = [];
-  
   // Create a temporary tspan to measure text
   const tempTspan = textElement.append("tspan").attr("x", 0).attr("dy", 0);
-  
+  let lineIdx = 0;
+  // Calculate margin factor proportional to inner/outer radius
+  const margin = (innerRadius / outerRadius);
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
     const testLine = [...currentLine, word];
+    // Calculate the radius for this line (outermost for first line, then inward)
+    let radius = outerRadius - (lineIdx + 0.5) * lineHeight;
+    if (radius < innerRadius) radius = innerRadius;
+    // Chord length at this radius
+    const chordLen = 2 * radius * Math.sin(angle / 2) * margin;
     tempTspan.text(testLine.join(" "));
-    
-    if (tempTspan.node().getComputedTextLength() > maxWidth && currentLine.length > 0) {
+    if (tempTspan.node().getComputedTextLength() > chordLen && currentLine.length > 0) {
       // Current line is full, start a new line
       lines.push(currentLine.join(" "));
       currentLine = [word];
-      
+      lineIdx++;
       if (lines.length >= maxLines) {
-        // We've hit the line limit
         tempTspan.remove();
         return { success: false };
       }
@@ -7335,31 +7314,25 @@ function _tryWrapWithLineBreaks(){return(
       currentLine.push(word);
     }
   }
-  
   // Add the last line if there are remaining words
   if (currentLine.length > 0) {
     lines.push(currentLine.join(" "));
   }
-  
   tempTspan.remove();
-  
-  // Check if we fit within the line limit
   if (lines.length > maxLines) {
     return { success: false };
   }
-  
   // Calculate total text height for centering
   const totalHeight = lines.length * lineHeight;
   const offsetY = -(totalHeight - lineHeight) / 2; // Center the text block
-  
-  // Create the actual tspans with proper centering
+  // Create the actual tspans with proper centering and per-line width
   lines.forEach((line, index) => {
     textElement.append("tspan")
       .attr("x", 0)
       .attr("dy", index === 0 ? offsetY : lineHeight)
       .text(line);
+    // Optionally, set a data attribute for debugging: tspan.attr("data-chordwidth", chordLen);
   });
-  
   return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
 }
 )}
@@ -7828,7 +7801,7 @@ function define(runtime, observer) {
   main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","chart","parseArrowConnections","viewof chart"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", _arrowConnections);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", _transformToNestedPieData);
-  main.variable(observer("wrapText")).define("wrapText", ["tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
+  main.variable(observer("wrapText")).define("wrapText", ["styles","tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
   main.variable(observer("getTextConstraints")).define("getTextConstraints", ["styles"], _getTextConstraints);
