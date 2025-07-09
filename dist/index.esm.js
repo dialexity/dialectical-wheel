@@ -4810,7 +4810,7 @@ function _width(){return(
 500
 )}
 
-function _styles(selectedFont){return(
+function _styles(){return(
 {
     // Dimensions
     width: 500,
@@ -4837,7 +4837,6 @@ function _styles(selectedFont){return(
     },
     // Fonts
     fonts: {
-      family: selectedFont,
       labels: {
         baseSize: { outer: 8, middle: 10, inner: 8 },
         weight: "600",
@@ -7021,7 +7020,7 @@ function _parseArrowConnections(){return(
 }
 )}
 
-function _dotScriptEditor(html,dialecticalData,arrowConnections,chart,parseArrowConnections,$0){return(
+function _dotScriptEditor(html,dialecticalData,arrowConnections,$0,parseArrowConnections){return(
 (() => {
   const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
     <div style="margin-bottom: 10px; font-weight: bold;">DOT Script Editor</div>
@@ -7049,7 +7048,7 @@ function _dotScriptEditor(html,dialecticalData,arrowConnections,chart,parseArrow
   
   // Function to draw arrows from custom connections
   function drawCustomArrows(customConnections) {
-    chart.clearArrows();
+    $0.clearArrows();
     const connections = parseArrowConnections(customConnections, dialecticalData);
     
     connections.forEach((conn, index) => {
@@ -7747,7 +7746,7 @@ function define(runtime, observer) {
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("dialecticalData")).define("dialecticalData", _dialecticalData);
   main.variable(observer("width")).define("width", _width);
-  main.variable(observer("styles")).define("styles", ["selectedFont"], _styles);
+  main.variable(observer("styles")).define("styles", _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","d3"], _arrowControls);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
@@ -7756,7 +7755,7 @@ function define(runtime, observer) {
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);
   main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
-  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","chart","parseArrowConnections","viewof chart"], _dotScriptEditor);
+  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","viewof chart","parseArrowConnections"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", _arrowConnections);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles","tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);

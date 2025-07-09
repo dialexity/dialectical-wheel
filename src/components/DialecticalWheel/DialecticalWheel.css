@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
 .dialectical-wheel-container {
   display: flex;
   flex-direction: column;
@@ -7,6 +9,7 @@
   max-width: 100vw;
   overflow-x: hidden;
   box-sizing: border-box;
+  font-family: 'Roboto Slab', serif;
 }
 
 .dialectical-wheel-container .chart {
@@ -161,4 +164,9 @@
 .dialectical-wheel-container svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Apply Roboto Slab font to SVG text elements */
+.dialectical-wheel-container svg text {
+  font-family: 'Roboto Slab', serif;
 } 
