@@ -5257,11 +5257,11 @@ const dragCircle = rotationGroup.append("circle")
 // Create zoom behavior (disable panning, only allow programmatic zoom)
 const zoom = d3.zoom()
   .scaleExtent([1, 8])
-  .filter(event => false) // Disable all zoom interactions
+  .filter(event => true) // Disable all zoom interactions
   .on("zoom", zoomed);
 
 // FIXED: Bind zoom to svg - D3 zoom needs to control the main element
-svg.call(zoom);
+//zoomGroup.call(zoom);
 
 // Drag behavior for rotation with mobile optimization
 let dragStartAngle = 0;
@@ -5281,77 +5281,15 @@ const drag = d3.drag()
 svg.style("touch-action", "none")  // Prevent default touch behaviors
    .style("user-select", "none");   // Prevent text selection
 
-// Add scroll-to-zoom functionality
-let hoveredCell = null;
-
 // Track hover state on cells
 function setHoveredCell(cell) {
-  hoveredCell = cell;
 }
 
 // Add wheel event listener for scroll-to-zoom
 svg.on('wheel', function(event) {
-  event.preventDefault();
-  
-  if (hoveredCell) {
-    // Scroll forward (negative deltaY) = zoom to cell
-    // Scroll backward (positive deltaY) = reset zoom
-    if (event.deltaY < 0) {
-      // Scrolling forward - zoom to hovered cell (same as cmd+click)
-      // But only if we're not already zoomed into this cell
-      
-      // Check if we're already zoomed into the hovered cell
-      let isAlreadyZoomedToThisCell = false;
-      if (activeZoom && activeZoom.data && activeZoom.data.unitId === hoveredCell.unitId) {
-        // Find which ring the activeZoom belongs to
-        const zoomedPath = svg.selectAll('path').nodes().find(path => path.__data__ === activeZoom);
-        if (zoomedPath) {
-          const parentClass = d3.select(zoomedPath.parentNode).attr("class");
-          const zoomedRingType = parentClass.includes("outer") ? "outer" : 
-                                parentClass.includes("middle") ? "middle" : "inner";
-          isAlreadyZoomedToThisCell = (zoomedRingType === hoveredCell.ringType);
-        }
-      }
-      
-      if (!isAlreadyZoomedToThisCell) {
-        //console.log('Scroll forward on cell - zooming in');
-        
-        // Find the actual path element for this cell
-        const allPaths = svg.selectAll('path').nodes();
-        let targetPath = null;
-        
-        allPaths.forEach(path => {
-          const pathData = path.__data__;
-          if (pathData && pathData.data && pathData.data.unitId === hoveredCell.unitId) {
-            const parentClass = d3.select(path.parentNode).attr("class");
-            if ((hoveredCell.ringType === "outer" && parentClass.includes("outer")) ||
-                (hoveredCell.ringType === "middle" && parentClass.includes("middle")) ||
-                (hoveredCell.ringType === "inner" && parentClass.includes("inner"))) {
-              targetPath = path;
-            }
-          }
-        });
-        
-        if (targetPath) {
-          // Create mock event for zoomToCell (same as cmd+click)
-          const mockEvent = {
-            currentTarget: targetPath
-          };
-          zoomToCell(mockEvent, targetPath.__data__);
-        }
-      }
-    } else if (event.deltaY > 0) {
-      // Scrolling backward - reset zoom
-      //console.log('Scroll backward on cell - resetting zoom');
-      resetZoom();
-    }
-  } else {
-    // No cell hovered - scroll backward still resets zoom
-    if (event.deltaY > 0) {
-      //console.log('Scroll backward (no hover) - resetting zoom');
-      resetZoom();
-    }
-  }
+
+  //DISABLE SCROLL-TO-ZOOM
+  return;
 });
 
 // FIXED: Apply drag behavior to the rotationGroup so it scales with zoom
@@ -6125,11 +6063,11 @@ function zoomed(event) {
   // The text bounds are handled by CSS and SVG scaling naturally
   
   // Only update font size if needed (commented out the expensive rewrapping)
-  zoomGroup.selectAll("text.cell-label")
+  /*zoomGroup.selectAll("text.cell-label")
     .style("font-size", function() {
       const baseSize = styles.fonts.labels.zoomBaseSize;
       return baseSize + "px"; // Keep consistent size during zoom
-    });
+    });*/
 }
 
 // Update ring function
@@ -6161,16 +6099,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
       if (event.metaKey || event.ctrlKey) {
         zoomToCell(event, d);
       } else {
-        // Match touch behavior: focus pair and zoom to slice if not already zoomed
-        //console.log('Mouse click - focusing slice:', d.data.unitId);
-        const isCurrentlyZoomed = activeZoom !== null;
         focusPair(d.data.unitId);
-        if (!isCurrentlyZoomed) {
-          //console.log('Not zoomed - zooming to slice after rotation completes');
-          setTimeout(() => {
-            zoomToSlice(d.data.unitId);
-          }, styles.durations.stepRotation + 50);
-        }
       }
     })
     .on("touchstart", function(event, d) {
@@ -6210,16 +6139,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
         //console.log('Double tap detected - resetting zoom');
         resetZoom();
       } else {
-        // Single tap - focus pair and zoom if not already zoomed
-        //console.log('Single tap - focusing slice:', d.data.unitId);
-        const isCurrentlyZoomed = activeZoom !== null;
         focusPair(d.data.unitId);
-        if (!isCurrentlyZoomed) {
-          //console.log('Not zoomed - zooming to slice after rotation completes');
-          setTimeout(() => {
-            zoomToSlice(d.data.unitId);
-          }, styles.durations.stepRotation + 50);
-        }
       }
       lastTapTime = currentTime;
       isTouchDragging = false;
@@ -6232,13 +6152,11 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .on("mouseenter", function(event, d) {
       // Set hovered cell for scroll-to-zoom
       const parentClass = d3.select(this.parentNode).attr("class");
-      const ringType = parentClass.includes("outer") ? "outer" : 
+      parentClass.includes("outer") ? "outer" : 
                       parentClass.includes("middle") ? "middle" : "inner";
-      setHoveredCell({ unitId: d.data.unitId, ringType: ringType });
+      setHoveredCell({ unitId: d.data.unitId});
     })
     .on("mouseleave", function(event, d) {
-      // Clear hovered cell
-      setHoveredCell(null);
     });
 
   pathsEnter.append("title")
