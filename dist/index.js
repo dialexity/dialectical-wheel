@@ -4814,7 +4814,7 @@ function _width(){return(
 500
 )}
 
-function _styles(){return(
+function _styles(selectedFont){return(
 {
     // Dimensions
     width: 500,
@@ -4841,7 +4841,7 @@ function _styles(){return(
     },
     // Fonts
     fonts: {
-      family: "Arial, sans-serif",
+      family: selectedFont,
       labels: {
         baseSize: { outer: 8, middle: 10, inner: 8 },
         weight: "600",
@@ -7788,12 +7788,52 @@ function _longPressUtilities(d3){return(
 })()
 )}
 
+function _selectedFont(Inputs){return(
+Inputs.select(
+  [
+    "Source Serif Pro",
+    "Source Sans Pro",
+    "Alegreya",
+    "Inter",
+    "Lato",
+    "Laila",
+    "Merriweather",
+    "PT Serif",
+    "Roboto Slab",
+    "Rubik",
+    "Crimson Text"
+  ],
+  {
+    label: "Desired font",
+    // options:,
+    value: "Roboto Slab"
+  }
+)
+)}
+
+function _parseFont(selectedFont){return(
+selectedFont.split(" ").join("+")
+)}
+
+function _style(html,parseFont,selectedFont){return(
+html`
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap">
+
+<style>
+  body, svg {
+        font-family: '${selectedFont}', serif;
+        /* font-size: 48px; */
+ }
+</style>
+`
+)}
+
 function define(runtime, observer) {
   const main = runtime.module();
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("dialecticalData")).define("dialecticalData", _dialecticalData);
   main.variable(observer("width")).define("width", _width);
-  main.variable(observer("styles")).define("styles", _styles);
+  main.variable(observer("styles")).define("styles", ["selectedFont"], _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","d3"], _arrowControls);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
@@ -7813,6 +7853,10 @@ function define(runtime, observer) {
   main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
   main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", _initializeBuildSteps);
   main.variable(observer("longPressUtilities")).define("longPressUtilities", ["d3"], _longPressUtilities);
+  main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _selectedFont);
+  main.variable(observer("selectedFont")).define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
+  main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
+  main.variable(observer("style")).define("style", ["html","parseFont","selectedFont"], _style);
   return main;
 }
 
