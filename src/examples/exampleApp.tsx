@@ -27,6 +27,8 @@ function App() {
   });
   const [arrowConnections, setArrowConnections] = useState<string>("T1 -> A1\nT2 -> A2");
   const [chart, setChart] = useState<any>(null);
+  const [topSlice, setTopSlice] = useState<any>(null);
+  const [focusedSlice, setFocusedSlice] = useState<any>(null);
 
   // TODO: Load initial dialecticalData from external source or props.
 
@@ -36,9 +38,11 @@ function App() {
       <DialecticalWheel 
         dialecticalData={dialecticalData}
         arrowConnections={arrowConnections}
-        width="100%"
-        height="100%"
+        style={{ width: '100%', height: '100%' }}
         onChartReady={setChart}
+        onTopSliceChange={setTopSlice}
+        onFocusedSliceChange={setFocusedSlice}
+        debug={false}
       />
 
       {/* External Controls */}

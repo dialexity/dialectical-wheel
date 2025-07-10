@@ -1,12 +1,23 @@
 # Dialectical Wheel
 
-A React component library for creating interactive dialectical wheel visualizations. Explore thesis-antithesis relationships through an intuitive, interactive wheel interface.
+A React component library for creating interactive dialectical wheel visualizations. Explore thesis-antithesis relationships through an intuitive, interactive wheel interface built with TypeScript and D3.js.
+
+## Features
+
+- 🎯 **Interactive Dialectical Wheels** - Visualize thesis-antithesis relationships
+- 🎨 **Customizable Styling** - Separate layout and font CSS for easy customization
+- 📱 **Responsive Design** - Works on desktop and mobile devices
+- 🔧 **TypeScript Support** - Full type safety and IntelliSense
+- 🚀 **Zero Build Step** - Direct source imports for instant development
+- 🎭 **Observable Integration** - Built on Observable notebooks for powerful data visualization
 
 ## Installation
 
 ```bash
 npm install dialectical-wheel
 ```
+
+**Note:** This library uses source files directly, so no build step is required for development.
 
 ## Quick Start
 
@@ -15,184 +26,191 @@ import React from 'react';
 import { DialecticalWheel } from 'dialectical-wheel';
 
 function App() {
+  const dialecticalData = {
+    "T1": {
+      "statement": "Invest in renewable energy",
+      "positive": "Reduces carbon emissions",
+      "negative": "High initial costs"
+    },
+    "A1": {
+      "statement": "Focus on fossil fuels",
+      "positive": "Lower immediate costs",
+      "negative": "Environmental damage"
+    },
+    "T2": {
+      "statement": "Government regulation",
+      "positive": "Ensures compliance",
+      "negative": "Reduces innovation"
+    },
+    "A2": {
+      "statement": "Free market approach",
+      "positive": "Encourages innovation",
+      "negative": "May ignore externalities"
+    }
+  };
+
   return (
     <DialecticalWheel 
-      numPairs={4}
-      title="Win-Win"
-      centerLabel="Core"
+      dialecticalData={dialecticalData}
+      arrowConnections="T1 -> A1\nT2 -> A2"
+      style={{ width: '600px', height: '400px' }}
+      debug={true}
     />
   );
 }
 ```
 
-## Components
+## Core Components
 
 ### DialecticalWheel
 
-The main interactive wheel component.
+The main interactive wheel component that renders dialectical relationships.
 
 **Props:**
-- `numPairs` (number): Number of thesis/antithesis pairs (default: 4)
-- `title` (string): Wheel title (default: "Win-Win")
-- `centerLabel` (string): Center circle label (default: "Core")
-- `sliceSequence` (array): Custom slice sequence for first half
-- `pairTexts` (object): Custom pair text data
-- `detailedSlices` (object): SVG content for detailed slices
+- `dialecticalData` (object): Required. Object containing thesis/antithesis statements with positive/negative points
+- `arrowConnections` (string): Optional. Connection notation for linking statements (e.g., "T1 -> A1\nT2 -> A2")
+- `style` (object): Optional. CSS styles for the container
+- `onChartReady` (function): Optional. Callback when chart is initialized
+- `onTopSliceChange` (function): Optional. Callback when top slice changes
+- `onFocusedSliceChange` (function): Optional. Callback when focused slice changes
+- `debug` (boolean): Optional. Show debug information
 
 **Example:**
 ```jsx
-import { DialecticalWheel } from 'dialectical-wheel';
-
 <DialecticalWheel 
-  numPairs={3}
-  title="Decision Analysis"
-  centerLabel="Choice"
-  sliceSequence={[
-    { pair: 0, type: 'thesis' },
-    { pair: 1, type: 'antithesis' },
-    { pair: 2, type: 'thesis' }
-  ]}
+  dialecticalData={{
+    "T1": {
+      "statement": "Centralized control",
+      "positive": "Clear direction",
+      "negative": "Bureaucratic overhead"
+    },
+    "A1": {
+      "statement": "Distributed autonomy",
+      "positive": "Flexibility",
+      "negative": "Coordination challenges"
+    },
+    "T2": {
+      "statement": "Structured planning",
+      "positive": "Predictable outcomes",
+      "negative": "Rigid approach"
+    },
+    "A2": {
+      "statement": "Emergent strategy",
+      "positive": "Adaptive",
+      "negative": "Unpredictable"
+    }
+  }}
+  arrowConnections="T1 -> A1\nT2 -> A2"
+  onChartReady={(chart) => console.log('Chart ready:', chart)}
+  debug={true}
 />
 ```
 
-### ExploreComponent
-
-Component for exploring wisdom unit data with card-based UI.
-
-**Props:**
-- `userMessage` (string): Original user message
-- `wisdomUnits` (array): Array of wisdom unit objects
-- `currentApiCycle` (object): Current API cycle data
-- `onEdit` (function): Edit callback function
-
-## Hooks
-
-### useDialecticalWheelWithCycles
-
-React hook for complete API workflow with cycles support.
-
-```jsx
-import { useDialecticalWheelWithCycles } from 'dialectical-wheel';
-
-function MyComponent() {
-  const {
-    sessionId,
-    wheels,
-    wisdomUnits,
-    cycles,
-    loading,
-    error,
-    createNew,
-    clearSession
-  } = useDialecticalWheelWithCycles(
-    "Should we invest in renewable energy?",
-    3, // numberOfThoughts
-    7  // componentLength
-  );
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <DialecticalWheel 
-      numPairs={wisdomUnits.length}
-      pairTexts={pairTexts}
-    />
-  );
-}
-```
-
-### useDialecticalWheel
-
-Basic wheel management hook without cycles.
-
-### useManualWheel
-
-Hook for manual wheel creation with custom data.
-
-## Services
-
-### WisdomService
-
-Static class with API methods for session management and wheel creation.
-
-```jsx
-import { WisdomService } from 'dialectical-wheel';
-
-// Create session
-const session = await WisdomService.createSession("Your question");
-
-// Auto-build wheel
-const wheel = await WisdomService.autoBuildWheel(
-  session.session_id, 
-  3, // numberOfThoughts
-  7  // componentLength
-);
-
-// Get wisdom units
-const wisdomUnits = WisdomService.transformApiWisdomUnits(
-  wheel.wheels[0].wisdom_units
-);
-```
-
-## Utilities
-
-### Wisdom Unit Creation
-
-```jsx
-import { createWisdomUnit, createComponent } from 'dialectical-wheel';
-
-const wisdomUnit = createWisdomUnit(
-  {
-    tPlus: createComponent("Positive thesis"),
-    t: createComponent("Central thesis"),
-    tMinus: createComponent("Negative thesis")
-  },
-  {
-    aPlus: createComponent("Positive antithesis"),
-    a: createComponent("Central antithesis"),
-    aMinus: createComponent("Negative antithesis")
-  }
-);
-```
-
-### Slice Generation
-
-```jsx
-import { createSliceAtAngle, generatePairTextsFromWisdomUnits } from 'dialectical-wheel';
-
-// Generate SVG slice
-const slice = createSliceAtAngle(sliceData, 'slice-0', 45);
-
-// Convert wisdom units to pair texts
-const pairTexts = generatePairTextsFromWisdomUnits(wisdomUnits);
-```
 
 ## Styling
 
-The components come with default CSS styling. You can override styles by importing your own CSS after the component styles:
+The components come with default CSS styling that is automatically imported. The styling is split into two files:
+
+- **Layout styles**: `DialecticalWheel.css` - Responsive layout and component styling
+- **Font styles**: `DialecticalWheel-fonts.css` - Font family imports and text styling
+
+### Customizing Fonts
+
+To use different fonts, you can override the font CSS:
+
+```css
+/* Override the default Ubuntu Mono font */
+.dialectical-wheel-container {
+  font-family: 'Inter', sans-serif;
+}
+
+.dialectical-wheel-container svg text {
+  font-family: 'Inter', sans-serif;
+}
+```
+
+### Custom Styling
 
 ```jsx
-import 'dialectical-wheel/dist/index.css'; // Component styles
+import { DialecticalWheel } from 'dialectical-wheel';
 import './my-custom-styles.css'; // Your overrides
 ```
 
-## API Integration
+## Data Format
 
-The library includes built-in API integration for dialectical analysis services:
+### Dialectical Data Structure
 
-```jsx
-// Complete workflow
-const result = await WisdomService.createSessionAndAutoBuildWheelWithCycles(
-  "Your dialectical question",
-  3, // number of thoughts
-  7  // component length
-);
+```javascript
+const dialecticalData = {
+  "T1": {
+    "statement": "Central thesis statement",
+    "positive": "Positive aspect",
+    "negative": "Negative aspect"
+  },
+  "A1": {
+    "statement": "Opposing statement",
+    "positive": "Positive aspect",
+    "negative": "Negative aspect"
+  },
+  "T2": {
+    "statement": "Another thesis",
+    "positive": "Positive aspect",
+    "negative": "Negative aspect"
+  },
+  "A2": {
+    "statement": "Another antithesis",
+    "positive": "Positive aspect",
+    "negative": "Negative aspect"
+  }
+  // ... more statements
+};
 ```
+
+### Arrow Connections
+
+Use connection notation to link statements:
+
+```javascript
+// Connect T1 to A1, and T2 to A2
+const arrowConnections = "T1 -> A1\nT2 -> A2";
+
+// Multiple connections
+const arrowConnections = "T1 -> A1\nT2 -> A2\nA1 -> T2"; // Complex flow
+```
+
+## Development
+
+This library uses source files directly, making development much simpler:
+
+```bash
+# Clone the repository
+git clone https://github.com/dialexity/dialectical-wheel.git
+cd dialectical-wheel
+
+# Install dependencies
+npm install
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Testing
+npm test
+```
+
+No build step is required - changes are reflected immediately when importing the source files.
 
 ## TypeScript Support
 
-TypeScript definitions are included in the package.
+TypeScript definitions are included in the package. The library is written in TypeScript and exports source files directly, providing full type safety and IntelliSense support.
+
+## Browser Support
+
+- Modern browsers with ES6+ support
+- Mobile browsers (iOS Safari, Chrome Mobile)
+- Responsive design for all screen sizes
 
 ## License
 
