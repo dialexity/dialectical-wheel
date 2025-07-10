@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:ital@0;1&display=swap');
+
+/* Font family for the dialectical wheel container */
+.dialectical-wheel-container {
+  font-family: 'Ubuntu Mono', monospace;
+}
+
+/* Font family for SVG text elements */
+.dialectical-wheel-container svg text {
+  font-family: 'Ubuntu Mono', monospace;
+} 

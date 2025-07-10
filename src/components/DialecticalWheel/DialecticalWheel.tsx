@@ -2,6 +2,8 @@ import {Runtime, Inspector} from '@observablehq/runtime';
 import React, {useEffect, useRef, useState} from 'react';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
+//import './DialecticalWheel.css';
+import './DialecticalWheel-fonts.css';
 
 export interface DialecticalWheelProps {
   dialecticalData: any;
