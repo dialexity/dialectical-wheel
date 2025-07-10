@@ -4838,7 +4838,7 @@ function _styles(){return(
     // Fonts
     fonts: {
       labels: {
-        baseSize: { outer: 8, middle: 10, inner: 8 },
+        baseSize: { outer: 8, middle: 8, inner: 8 },
         weight: "600",
         zoomBaseSize: 8,
         zoomMinSize: 6,
@@ -5390,6 +5390,9 @@ const outerGroup = contentGroup.append("g").attr("class", "outer-ring");
 const middleGroup = contentGroup.append("g").attr("class", "middle-ring");
 const innerGroup = contentGroup.append("g").attr("class", "inner-ring");
 
+// Initialize data
+const nestedData = transformToNestedPieData(dialecticalData);
+
 // Create groups for labels (in content group)
 const outerLabelsGroup = contentGroup.append("g").attr("class", "outer-labels");
 const middleLabelsGroup = contentGroup.append("g").attr("class", "middle-labels");
@@ -5420,27 +5423,46 @@ for (let i = 0; i < numSlices; i++) {
     .attr("class", "coordinate-number")
     .attr("x", x)
     .attr("y", y)
+    .attr("data-slice-index", i)
     .style("text-anchor", "middle")
     .style("dominant-baseline", "central")
     .style("font-family", styles.fonts.family)
     .style("font-size", `${styles.fonts.coordinates.size}px`)
     .style("font-weight", styles.fonts.coordinates.weight)
     .style("fill", styles.colors.text.coordinates)
-    .text(i + 1);
+    .text(i < numSlices / 2 ? (i + 1) : (i - numSlices / 2 + 1));
 }
 
 // Add axis symbols at the center of each ring layer
 const ringRadii = [
-  (styles.radii.hub + centerRadius) / 2,                // Inner ring center
-  (innerInnerRadius + middleRadius) / 2,  // Middle ring center
-  (innerRadius + outerRadius) / 2         // Outer ring center
+  centerRadius,                // Inner ring center
+  middleRadius,  // Middle ring center
+  outerRadius        // Outer ring center
 ];
-
-const symbols = ["a", "b", "c"]; // Positive, neutral, negative
 const axisColors = [styles.colors.axis.positive, styles.colors.axis.neutral, styles.colors.axis.negative];
 
 // Function to update axis positions based on focus
 function updateAxisPositions(focusedUnitId = null) {
+  // If not focused, only update coordinate number opacities
+  if (!focusedPair) {
+    const units = Object.keys(dialecticalData);
+    const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+    const middleData = dataToUse.middle;
+    coordinateGroup.selectAll("text.coordinate-number").each(function() {
+      const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
+      const unitId = units[sliceIndex];
+      if (unitId) {
+        const sliceData = middleData.find(d => d.unitId === unitId);
+        const opacity = sliceData ? sliceData.opacity : 1;
+        d3.select(this)
+          .transition()
+          .duration(styles.durations.normal)
+          .style("opacity", opacity);
+      }
+    });
+    return;
+  }
+
   // Remove existing axis elements
   coordinateGroup.selectAll(".coordinate-circle").remove();
   coordinateGroup.selectAll(".coordinate-symbol").remove();
@@ -5478,10 +5500,20 @@ function updateAxisPositions(focusedUnitId = null) {
   // Create axis on both sides of the wheel
   const axisAngles = [axisAngle, axisAngle + Math.PI]; // Both sides
   
-  axisAngles.forEach(angle => {
+  axisAngles.forEach((angle, sideIndex) => {
     ringRadii.forEach((radius, ringIndex) => {
-      const x = radius * Math.cos(angle);
-      const y = radius * Math.sin(angle);
+      const angleOffset = 8 / radius; // 8px arc length at this radius
+      const rotatedAngle = angle + angleOffset;
+      const x = (radius-8) * Math.cos(rotatedAngle);
+      const y = (radius-8) * Math.sin(rotatedAngle);
+      
+      // Determine which half of the wheel this axis is in
+      // Normalize angle to [0, 2π] and determine if it's in first or second half
+      let normalizedAngle = ((angle + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const isFirstHalf = normalizedAngle < Math.PI;
+      
+      // Choose symbols based on which half of the wheel
+      const symbols = isFirstHalf ? ["T+", "T", "T-"] : ["A+", "A", "A-"];
       
       // Create a group for this axis element (circle + symbol)
       const axisGroup = coordinateGroup.append("g")
@@ -5494,8 +5526,16 @@ function updateAxisPositions(focusedUnitId = null) {
         .attr("cy", y)
         .attr("r", 8)
         .style("fill", axisColors[ringIndex].fill)
-        .style("stroke", axisColors[ringIndex].stroke)
-        .style("stroke-width", styles.strokes.axisCircleWidth);
+        .style("opacity", 0);
+
+      axisGroup.append("circle")
+        .attr("class", "coordinate-circle")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", 8)
+        .style("fill", "#000")
+        .style("opacity", 0.1);
+
       
       // Add symbol text within the same group, perfectly centered
       axisGroup.append("text")
@@ -5511,6 +5551,26 @@ function updateAxisPositions(focusedUnitId = null) {
         .style("pointer-events", "none") // Prevent text from interfering with interactions
         .text(symbols[ringIndex]);
     });
+  });
+  
+  // Update coordinate number opacities based on slice data
+  const units = Object.keys(dialecticalData);
+  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  const middleData = dataToUse.middle;
+  
+  coordinateGroup.selectAll("text.coordinate-number").each(function() {
+    const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
+    const unitId = units[sliceIndex];
+    
+    if (unitId) {
+      const sliceData = middleData.find(d => d.unitId === unitId);
+      const opacity = sliceData ? sliceData.opacity : 1;
+      
+      d3.select(this)
+        .transition()
+        .duration(styles.durations.normal)
+        .style("opacity", opacity);
+    }
   });
 }
 
@@ -5531,7 +5591,7 @@ const innerColor = d3.scaleOrdinal()
   .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner));
 
 // Initialize data
-const nestedData = transformToNestedPieData(dialecticalData);
+//const nestedData = transformToNestedPieData(dialecticalData);
 
 // Arc tween function
 function arcTween(arcGenerator) {
@@ -5762,7 +5822,11 @@ function changeData(ringType, newData, arcGenerator) {
       }
       return d.data.opacity;
     });
+  
+
 }
+
+
 
 // Focus pair function
 function focusPair(clickedUnitId) {
@@ -5794,7 +5858,7 @@ function focusPair(clickedUnitId) {
       });
     });
     // Reset axes to default positions
-    //updateAxisPositions();
+    updateAxisPositions();
   } else {
     focusedPair = { thesis, antithesis };
     
@@ -5827,6 +5891,7 @@ function focusPair(clickedUnitId) {
   } else {
     updateAllRings();
   }
+  
   // --- MAKE CHART REACTIVE: update .value and dispatch input event ---
   clickedSlice = clickedUnitId; 
   updateChartValue();
@@ -6081,6 +6146,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .attr("stroke-dasharray", "1,3") // Dotted border
     .attr("stroke-linecap", "round")
     .attr("stroke-opacity", 0.3)
+    .style("cursor", "pointer")
     .style("opacity", d => {
       if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
         return 0;
@@ -7714,12 +7780,14 @@ Inputs.select(
     "PT Serif",
     "Roboto Slab",
     "Rubik",
-    "Crimson Text"
+    "Crimson Text",
+    "Cascadia Mono",
+    "Ubuntu Mono"
   ],
   {
     label: "Desired font",
     // options:,
-    value: "Roboto Slab"
+    value: "Ubuntu Mono"
   }
 )
 )}
@@ -7739,6 +7807,10 @@ html`
  }
 </style>
 `
+)}
+
+function _fontCDN(parseFont){return(
+`https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap`
 )}
 
 function define(runtime, observer) {
@@ -7770,6 +7842,7 @@ function define(runtime, observer) {
   main.variable(observer("selectedFont")).define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
   main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
   main.variable(observer("style")).define("style", ["html","parseFont","selectedFont"], _style);
+  main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   return main;
 }
 
