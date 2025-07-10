@@ -5439,37 +5439,47 @@ const ringRadii = [
   middleRadius,  // Middle ring center
   outerRadius        // Outer ring center
 ];
+
+//const symbols = ["T+", "T", "T-"]; // Positive, neutral, negative
 const axisColors = [styles.colors.axis.positive, styles.colors.axis.neutral, styles.colors.axis.negative];
+
+function updateCoordinateNumbersOpacities() {
+  // Update coordinate number opacities based on slice data
+  const units = Object.keys(dialecticalData);
+  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  const middleData = dataToUse.middle;
+  
+  coordinateGroup.selectAll("text.coordinate-number").each(function() {
+    const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
+    const unitId = units[sliceIndex];
+    
+    if (unitId) {
+      const sliceData = middleData.find(d => d.unitId === unitId);
+      const opacity = sliceData ? sliceData.opacity : 1;
+      
+      d3.select(this)
+        .transition()
+        .duration(styles.durations.normal)
+        .style("opacity", opacity);
+    }
+  });
+}
 
 // Function to update axis positions based on focus
 function updateAxisPositions(focusedUnitId = null) {
   // If not focused, only update coordinate number opacities
   if (!focusedPair) {
-    const units = Object.keys(dialecticalData);
-    const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-    const middleData = dataToUse.middle;
-    coordinateGroup.selectAll("text.coordinate-number").each(function() {
-      const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
-      const unitId = units[sliceIndex];
-      if (unitId) {
-        const sliceData = middleData.find(d => d.unitId === unitId);
-        const opacity = sliceData ? sliceData.opacity : 1;
-        d3.select(this)
-          .transition()
-          .duration(styles.durations.normal)
-          .style("opacity", opacity);
-      }
-    });
+    updateCoordinateNumbersOpacities();
     return;
   }
-
-  // Remove existing axis elements
-  coordinateGroup.selectAll(".coordinate-circle").remove();
-  coordinateGroup.selectAll(".coordinate-symbol").remove();
   
   let axisAngle;
   
   if (focusedUnitId) {
+    // Remove existing axis elements
+    coordinateGroup.selectAll(".coordinate-circle").remove();
+    coordinateGroup.selectAll(".coordinate-symbol").remove();
+
     // When focused, position axis at the left edge of the focused slice
     // Choose which data to use based on current mode (same as other functions)
     const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
@@ -5487,14 +5497,8 @@ function updateAxisPositions(focusedUnitId = null) {
       axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
     }
   } else {
-    // Default: axis that bisects wheel, separating first half from second half
-    const units = Object.keys(dialecticalData);
-    const numSlices = units.length;
-    const angleStep = (2 * Math.PI) / numSlices;
-    
-    // For even number of slices, position axis between middle slices
-    // For 8 slices: between slice 4 and 5 (indices 3 and 4)
-    axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
+    updateCoordinateNumbersOpacities();
+    return;
   }
   
   // Create axis on both sides of the wheel
@@ -5507,13 +5511,10 @@ function updateAxisPositions(focusedUnitId = null) {
       const x = (radius-8) * Math.cos(rotatedAngle);
       const y = (radius-8) * Math.sin(rotatedAngle);
       
-      // Determine which half of the wheel this axis is in
-      // Normalize angle to [0, 2π] and determine if it's in first or second half
-      let normalizedAngle = ((angle + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-      const isFirstHalf = normalizedAngle < Math.PI;
-      
-      // Choose symbols based on which half of the wheel
-      const symbols = isFirstHalf ? ["T+", "T", "T-"] : ["A+", "A", "A-"];
+      // Choose symbols based on the focused unit ID
+             const logos = [["T+", "T", "T-"], ["A+", "A", "A-"]];
+
+      const symbols = focusedUnitId.startsWith('T') ? logos[sideIndex] : logos[1 - sideIndex];
       
       // Create a group for this axis element (circle + symbol)
       const axisGroup = coordinateGroup.append("g")
@@ -5553,25 +5554,7 @@ function updateAxisPositions(focusedUnitId = null) {
     });
   });
   
-  // Update coordinate number opacities based on slice data
-  const units = Object.keys(dialecticalData);
-  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-  const middleData = dataToUse.middle;
-  
-  coordinateGroup.selectAll("text.coordinate-number").each(function() {
-    const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
-    const unitId = units[sliceIndex];
-    
-    if (unitId) {
-      const sliceData = middleData.find(d => d.unitId === unitId);
-      const opacity = sliceData ? sliceData.opacity : 1;
-      
-      d3.select(this)
-        .transition()
-        .duration(styles.durations.normal)
-        .style("opacity", opacity);
-    }
-  });
+  updateCoordinateNumbersOpacities();
 }
 
 // Initialize axes
