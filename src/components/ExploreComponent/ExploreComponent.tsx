@@ -21,7 +21,7 @@ interface ApiCycle {
 interface ExploreComponentProps {
   userMessage?: string;
   wisdomUnits: WisdomUnit[];
-  currentApiCycle?: ApiCycle;
+  currentApiCycle?: any;
   onEdit: () => void;
 }
 
