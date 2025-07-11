@@ -3,25 +3,6 @@
 // Export all components
 export { DialecticalWheel, ArrowControls, StepControls } from './components';
 
-// Export all services and hooks
-export { 
-  WisdomService, 
-  useDialecticalWheel, 
-  useDialecticalWheelWithCycles, 
-  useManualWheel 
-} from './services';
-
-// Export specialized hooks
-export { useNodeConnections } from './components/DialecticalWheel/hooks/useNodeConnections';
-export { useWheelSlices } from './components/DialecticalWheel/hooks/useWheelSlices';
-
-// Export all utilities
-export { 
-  SliceAtAngle,
-  generatePairTextsFromWisdomUnits,
-  defaultPairTexts
-} from './utils';
-
 // Export types
 export * from './types';
 
