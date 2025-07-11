@@ -6,12 +6,12 @@ import notebook from '@dialexity/dialectical-wheel';
 import './DialecticalWheel-fonts.css';
 
 export interface DialecticalWheelProps {
-  dialecticalData: any;
+  dialecticalData: Record<string, any>;
   arrowConnections?: string;
   style?: React.CSSProperties;
   onChartReady?: (chart: any) => void;
-  onTopSliceChange?: (topSlice: any) => void;
-  onFocusedSliceChange?: (focusedSlice: any) => void;
+  onTopSliceChange?: (topSlice: string) => void;
+  onFocusedSliceChange?: (focusedSlice: string) => void;
   debug?: boolean;
 }
 
@@ -26,14 +26,14 @@ export default function DialecticalWheel({
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
-  const [chart, setChart] = useState<any>(null);
-  const [runtime, setRuntime] = useState<any>(null);
+  //const [chart, setChart] = useState<any>(null);
+  //const [runtime, setRuntime] = useState<any>(null);
   
   useEffect(() => {
     console.log('Loading Observable notebook from local npm package...');
     
     const runtime = new Runtime();
-    setRuntime(runtime);
+    //setRuntime(runtime);
     
     const main = runtime.module(notebook, (name: string) => {
       if (name === 'viewof chart') {
@@ -43,7 +43,7 @@ export default function DialecticalWheel({
           }
           fulfilled(value: any) {
             // The chart value IS the SVG node with methods attached
-            setChart(value);
+            //setChart(value);
             if (onChartReady) onChartReady(value);
             return super.fulfilled(value);
           }
@@ -73,8 +73,8 @@ export default function DialecticalWheel({
     
     return () => {
       setModule(null);
-      setChart(null);
-      setRuntime(null);
+      //setChart(null);
+      //setRuntime(null);
       runtime.dispose();
     };
   }, []);

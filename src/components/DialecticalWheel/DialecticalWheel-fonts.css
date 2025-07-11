@@ -3,10 +3,10 @@
 
 /* Font family for the dialectical wheel container */
 .dialectical-wheel-container {
-  font-family: 'Ubuntu Mono', monospace;
+  font-family: 'Roboto Slab', serif;
 }
 
 /* Font family for SVG text elements */
 .dialectical-wheel-container svg text {
-  font-family: 'Ubuntu Mono', monospace;
+  font-family: 'Roboto Slab', serif;
 } 
