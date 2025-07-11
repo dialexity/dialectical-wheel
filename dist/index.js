@@ -5273,11 +5273,6 @@ function updateCoordinateNumbersOpacities() {
 
 // Function to update axis positions based on focus
 function updateAxisPositions(focusedUnitId = null) {
-  // If not focused, only update coordinate number opacities
-  if (!focusedPair) {
-    updateCoordinateNumbersOpacities();
-    return;
-  }
   
   let axisAngle;
   
@@ -5316,6 +5311,8 @@ function updateAxisPositions(focusedUnitId = null) {
       const rotatedAngle = angle + angleOffset;
       const x = (radius-8) * Math.cos(rotatedAngle);
       const y = (radius-8) * Math.sin(rotatedAngle);
+      const x2 = (radius) * Math.cos(angle);
+      const y2 = (radius) * Math.sin(angle);
       
       // Choose symbols based on the focused unit ID
              const logos = [["T+", "T", "T-"], ["A+", "A", "A-"]];
@@ -5326,22 +5323,47 @@ function updateAxisPositions(focusedUnitId = null) {
       const axisGroup = coordinateGroup.append("g")
         .attr("class", "axis-element");
       
-      // Create circle background within the group
-      axisGroup.append("circle")
-        .attr("class", "coordinate-circle")
-        .attr("cx", x)
-        .attr("cy", y)
-        .attr("r", 8)
-        .style("fill", axisColors[ringIndex].fill)
-        .style("opacity", 0);
+      // Determine which unit ID to use for clipping (partner unit for opposite side)
+      const clipUnitId = sideIndex === 0 ? focusedUnitId : 
+        (focusedUnitId.startsWith('T') ? focusedUnitId.replace('T', 'A') : focusedUnitId.replace('A', 'T'));
+      
+      // Create a unique clip path ID for this axis element
+      const clipId = `clip-${clipUnitId}-${sideIndex}-${ringIndex}`;
+      
+      // Create clip path that matches the cell shape
+      const clipPath = defs.append("clipPath")
+        .attr("id", clipId);
+      
+      // Add the cell path to the clip path
+      clipPath.append("path")
+        .attr("d", function() {
+          // Get the cell data for this unit and ring
+          const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+          let pieData, arcGen;
+          if (ringIndex === 0) { // inner ring
+            pieData = pie(dataToUse.inner);
+            arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(centerRadius);
+          } else if (ringIndex === 1) { // middle ring
+            pieData = pie(dataToUse.middle);
+            arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
+          } else { // outer ring
+            pieData = pie(dataToUse.outer);
+            arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+          }
+          const cellData = pieData.find(d => d.data.unitId === clipUnitId);
+          return cellData ? arcGen(cellData) : "";
+        });
+      
+      // Create circle background within the group (clipped to cell)
 
       axisGroup.append("circle")
         .attr("class", "coordinate-circle")
-        .attr("cx", x)
-        .attr("cy", y)
-        .attr("r", 8)
+        .attr("cx", x2)
+        .attr("cy", y2)
+        .attr("r", 20)
         .style("fill", "#000")
-        .style("opacity", 0.1);
+        .style("opacity", 0.1)
+        .style("clip-path", `url(#${clipId})`);
 
       
       // Add symbol text within the same group, perfectly centered
@@ -5351,7 +5373,7 @@ function updateAxisPositions(focusedUnitId = null) {
         .attr("y", y)
         .style("text-anchor", "middle")
         .style("dominant-baseline", "central")
-        .style("font-family", styles.fonts.family)
+        .style("font-family", "monospace")
         .style("font-size", "10px") // Slightly smaller for better fit in 8px radius circle
         .style("font-weight", styles.fonts.coordinates.weight)
         .style("fill", axisColors[ringIndex].stroke)
@@ -6525,6 +6547,8 @@ function resetToFull() {
   
   // Show coordinate system in full mode
   coordinateGroup.style("display", "block");
+  updateAxisPositions(cells[0]);
+  rotateToSlice(cells[0]);
 }
 
 function getCurrentStepInfo() {
@@ -6561,7 +6585,8 @@ function getCurrentStepInfo() {
 
 // Initialize - start in full mode
 resetToFull();
-rotateToSlice("T1");
+rotateToSlice(cells[0]);
+updateAxisPositions(cells[0]);
 
 // Draw initial arrows
 //drawAllArrows();
@@ -7576,7 +7601,7 @@ Inputs.select(
   {
     label: "Desired font",
     // options:,
-    value: "Ubuntu Mono"
+    value: "Roboto Slab"
   }
 )
 )}
