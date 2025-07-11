@@ -1,3 +1,0 @@
-export { default as ArrowControls } from './ArrowControls';
-export { default as StepControls } from './StepControls';
-//# sourceMappingURL=index.d.ts.map
