@@ -1,12 +1,37 @@
 import React, { useState } from 'react';
 
-const ExploreComponent = ({ 
+interface StatementUnit {
+  statement?: string;
+}
+
+interface WisdomUnit {
+  t?: StatementUnit;
+  tPlus?: StatementUnit;
+  tMinus?: StatementUnit;
+  a?: StatementUnit;
+  aPlus?: StatementUnit;
+  aMinus?: StatementUnit;
+}
+
+interface ApiCycle {
+  rawSequence?: string[];
+  probability: number;
+}
+
+interface ExploreComponentProps {
+  userMessage?: string;
+  wisdomUnits: WisdomUnit[];
+  currentApiCycle?: ApiCycle;
+  onEdit: () => void;
+}
+
+const ExploreComponent: React.FC<ExploreComponentProps> = ({ 
   userMessage, 
   wisdomUnits, 
   currentApiCycle, 
   onEdit 
 }) => {
-  const [currentUnitIndex, setCurrentUnitIndex] = useState(0);
+  const [currentUnitIndex, setCurrentUnitIndex] = useState<number>(0);
 
   const currentUnit = wisdomUnits[currentUnitIndex];
 
@@ -18,8 +43,17 @@ const ExploreComponent = ({
     setCurrentUnitIndex(prev => prev < wisdomUnits.length - 1 ? prev + 1 : 0);
   };
 
-  const getComponentCards = (unit) => {
-    const cards = [];
+  interface ComponentCard {
+    id: string;
+    text: string;
+    label: string;
+    color: string;
+    textColor: string;
+    type: 'thesis' | 'antithesis';
+  }
+
+  const getComponentCards = (unit: WisdomUnit): ComponentCard[] => {
+    const cards: ComponentCard[] = [];
     
     // THESIS components (green)
 
