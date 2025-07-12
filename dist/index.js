@@ -4622,7 +4622,7 @@ function _styles(){return(
     width: 500,
     height: 500,
     radii: {
-      outer: 220,
+      outer: 200,
       middleOuter: 150,
       middleInner: 100,
       inner: 100,
@@ -4644,7 +4644,7 @@ function _styles(){return(
     // Fonts
     fonts: {
       labels: {
-        baseSize: { outer: 8, middle: 8, inner: 8 },
+        baseSize: { outer: 10, middle: 10, inner: 8 },
         weight: "600",
         zoomBaseSize: 8,
         zoomMinSize: 6,
@@ -5315,9 +5315,9 @@ function updateAxisPositions(focusedUnitId = null) {
       const y2 = (radius) * Math.sin(angle);
       
       // Choose symbols based on the focused unit ID
-             const logos = [["T+", "T", "T-"], ["A+", "A", "A-"]];
+      const signs = ["+", "", "-"];
 
-      const symbols = focusedUnitId.startsWith('T') ? logos[sideIndex] : logos[1 - sideIndex];
+      //const symbols = focusedUnitId.startsWith('T') ? logos[sideIndex] : logos[1 - sideIndex];
       
       // Create a group for this axis element (circle + symbol)
       const axisGroup = coordinateGroup.append("g")
@@ -5373,12 +5373,12 @@ function updateAxisPositions(focusedUnitId = null) {
         .attr("y", y)
         .style("text-anchor", "middle")
         .style("dominant-baseline", "central")
-        .style("font-family", "monospace")
-        .style("font-size", "10px") // Slightly smaller for better fit in 8px radius circle
+        .style("font-family", "Monaco, monospace")
+        .style("font-size", "8px") // Slightly smaller for better fit in 8px radius circle
         .style("font-weight", styles.fonts.coordinates.weight)
         .style("fill", axisColors[ringIndex].stroke)
         .style("pointer-events", "none") // Prevent text from interfering with interactions
-        .text(symbols[ringIndex]);
+        .text(clipUnitId + signs[ringIndex]);
     });
   });
   
@@ -7610,13 +7610,13 @@ function _parseFont(selectedFont){return(
 selectedFont.split(" ").join("+")
 )}
 
-function _style(html,parseFont,selectedFont){return(
+function _style(html,parseFont){return(
 html`
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap">
 
 <style>
   body, svg {
-        font-family: '${selectedFont}', serif;
+        font-family: "Arial", sans-serif;
         /* font-size: 48px; */
  }
 </style>
@@ -7655,7 +7655,7 @@ function define(runtime, observer) {
   main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _selectedFont);
   main.variable(observer("selectedFont")).define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
   main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
-  main.variable(observer("style")).define("style", ["html","parseFont","selectedFont"], _style);
+  main.variable(observer("style")).define("style", ["html","parseFont"], _style);
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   return main;
 }
