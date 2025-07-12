@@ -4619,11 +4619,11 @@ function _width(){return(
 function _styles(){return(
 {
     // Dimensions
-    width: 600,
-    height: 600,
+    width: 500,
+    height: 500,
     radii: {
-      outer: 270,
-      middleOuter: 200,
+      outer: 200,
+      middleOuter: 150,
       middleInner: 100,
       inner: 100,
       hub: 30,
@@ -4644,7 +4644,7 @@ function _styles(){return(
     // Fonts
     fonts: {
       labels: {
-        baseSize: { outer: 10, middle: 12, inner: 8 },
+        baseSize: { outer: 10, middle: 10, inner: 8 },
         weight: "600",
         zoomBaseSize: 8,
         zoomMinSize: 6,
