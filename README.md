@@ -2,6 +2,8 @@
 
 A React component library for creating interactive dialectical wheel visualizations. Explore thesis-antithesis relationships through an intuitive, interactive wheel interface built with TypeScript and D3.js.
 
+This is a wrapper for the [ObservableHQ Dialectical Wheel notebook](https://observablehq.com/@dialexity/dialectical-wheel)
+
 ## Features
 
 - 🎯 **Interactive Dialectical Wheels** - Visualize thesis-antithesis relationships
@@ -106,155 +108,8 @@ The main interactive wheel component that renders dialectical relationships.
 />
 ```
 
-### ExploreComponent
 
-Component for exploring wisdom unit data with card-based UI. Provides a detailed view of thesis-antithesis relationships with positive/negative aspects.
 
-**Props:**
-- `userMessage` (string): Original user message
-- `wisdomUnits` (array): Array of wisdom unit objects
-- `currentApiCycle` (object): Current API cycle data
-- `onEdit` (function): Edit callback function
-
-**Example:**
-```jsx
-import { ExploreComponent } from 'dialectical-wheel';
-
-<ExploreComponent 
-  userMessage="Should we invest in renewable energy?"
-  wisdomUnits={wisdomUnits}
-  currentApiCycle={currentCycle}
-  onEdit={() => console.log('Edit clicked')}
-/>
-```
-
-## Services & Hooks
-
-### WisdomService
-
-Static class with comprehensive API methods for session management and wheel creation.
-
-```jsx
-import { WisdomService } from 'dialectical-wheel';
-
-// Create session and auto-build wheel
-const result = await WisdomService.createSessionAndAutoBuildWheel(
-  "Should we invest in renewable energy?",
-  3, // numberOfThoughts
-  7  // componentLength
-);
-
-// Transform API wisdom units
-const wisdomUnits = WisdomService.transformApiWisdomUnits(
-  result.wheels[0].wisdom_units
-);
-
-// Get wheel cycles
-const cycles = await WisdomService.getWheelCycles(sessionId);
-
-// Get session data
-const sessionData = await WisdomService.getSessionData(sessionId);
-```
-
-### useDialecticalWheelWithCycles
-
-React hook for complete API workflow with cycles support.
-
-```jsx
-import { useDialecticalWheelWithCycles } from 'dialectical-wheel';
-
-function MyComponent() {
-  const {
-    sessionId,
-    wheels,
-    wisdomUnits,
-    cycles,
-    loading,
-    error,
-    createNew,
-    clearSession
-  } = useDialecticalWheelWithCycles(
-    "Should we invest in renewable energy?",
-    3, // numberOfThoughts
-    7  // componentLength
-  );
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <DialecticalWheel 
-      dialecticalData={wisdomUnits}
-      arrowConnections="T1 -> A1\nT2 -> A2"
-    />
-  );
-}
-```
-
-### useDialecticalWheel
-
-Basic wheel management hook without cycles.
-
-```jsx
-import { useDialecticalWheel } from 'dialectical-wheel';
-
-function MyComponent() {
-  const {
-    sessionId,
-    wheels,
-    wisdomUnits,
-    loading,
-    error,
-    createNew
-  } = useDialecticalWheel(
-    "Should we invest in renewable energy?",
-    3, // numberOfThoughts
-    7  // componentLength
-  );
-
-  // ... rest of component
-}
-```
-
-### useManualWheel
-
-Hook for manual wheel creation with custom data.
-
-```jsx
-import { useManualWheel } from 'dialectical-wheel';
-
-function MyComponent() {
-  const {
-    sessionId,
-    wheels,
-    wisdomUnits,
-    loading,
-    error,
-    createNew
-  } = useManualWheel(
-    sessionId,
-    customWisdomUnitsData
-  );
-
-  // ... rest of component
-}
-```
-
-## API Integration
-
-The library includes built-in API integration for dialectical analysis services:
-
-```jsx
-// Complete workflow with cycles
-const result = await WisdomService.createSessionAndAutoBuildWheelWithCycles(
-  "Your dialectical question",
-  3, // number of thoughts
-  7  // component length
-);
-
-// Access the results
-const { sessionId, wheels, wisdomUnits, cycles } = result;
-```
 
 ## Styling
 

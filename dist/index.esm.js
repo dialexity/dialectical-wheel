@@ -4640,7 +4640,7 @@ function _styles(){return(
     // Fonts
     fonts: {
       labels: {
-        baseSize: { outer: 10, middle: 10, inner: 8 },
+        baseSize: { outer: 10, middle: 10, inner: 10 },
         weight: "600",
         zoomBaseSize: 8,
         zoomMinSize: 6,
@@ -5503,7 +5503,7 @@ function showCell(unitId, ringType) {
     case "inner":
       group = innerGroup;
       labelsGroup = innerLabelsGroup;
-      startRadius = 0;
+      startRadius = centerRadius;
       endInnerRadius = styles.radii.hub;
       endOuterRadius = centerRadius;
       break;
@@ -5526,31 +5526,42 @@ function showCell(unitId, ringType) {
         return arcGen(currentData);
       };
     })
-    .style("opacity", d3.interpolate(0, ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8))
-    .on("end", function(d) {
-      // After animation completes, ensure text content is properly wrapped with up-to-date arc data
+    .style("opacity", d3.interpolate(0, ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8));
+    
+  
+  // Show label with position animation
+  labelsGroup.selectAll("text")
+    .filter(d => d.data.unitId === unitId)
+    .style("font-size", function() {
+      // Set font size immediately when text becomes visible
+      const baseSizes = styles.fonts.labels.baseSize;
+      return `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+    })
+    .each(function(d) {
+      // Do text wrapping immediately with current data
       const textElement = d3.select(this);
+      const baseSizes = styles.fonts.labels.baseSize;
+      textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
       textElement.selectAll("tspan").remove();
       const text = d.data.fullText || d.data.name;
+      
+      // Use the current data (either animationData if in step mode, or nestedData otherwise)
+      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
       let pieData;
       if (ringType === "outer") {
-        pieData = pie(nestedData.outer);
+        pieData = pie(dataToUse.outer);
         d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
       } else if (ringType === "middle") {
-        pieData = pie(nestedData.middle);
+        pieData = pie(dataToUse.middle);
         d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
       } else {
-        pieData = pie(nestedData.inner);
+        pieData = pie(dataToUse.inner);
         d3.arc().innerRadius(30).outerRadius(centerRadius);
       }
       const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
       const constraints = getTextConstraints(ringType, arcDatum);
       wrapText(textElement, text, constraints);
-    });
-  
-  // Show label with position animation
-  labelsGroup.selectAll("text")
-    .filter(d => d.data.unitId === unitId)
+    })
     .transition()
     .duration(styles.durations.stepRotation)
     .ease(d3.easeExpOut)
@@ -5566,27 +5577,7 @@ function showCell(unitId, ringType) {
         return calculateTextTransform(currentData, arcGen);
       };
     })
-    .style("opacity", 1)
-    .on("end", function(d) {
-      // After animation completes, ensure text content is properly wrapped with up-to-date arc data
-      const textElement = d3.select(this);
-      textElement.selectAll("tspan").remove();
-      const text = d.data.fullText || d.data.name;
-      let pieData;
-      if (ringType === "outer") {
-        pieData = pie(nestedData.outer);
-        d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-      } else if (ringType === "middle") {
-        pieData = pie(nestedData.middle);
-        d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-      } else {
-        pieData = pie(nestedData.inner);
-        d3.arc().innerRadius(30).outerRadius(centerRadius);
-      }
-      const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-      const constraints = getTextConstraints(ringType, arcDatum);
-      wrapText(textElement, text, constraints);
-    });
+    .style("opacity", 1);
 }
 
 // Change data function for smooth value transitions
@@ -6087,6 +6078,11 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
     .style("pointer-events", "none")
     .each(function(d) {
       // Always apply text wrapping on create with up-to-date arc data
+      const textElement = d3.select(this);
+      // Ensure font size is set before wrapping
+      const baseSizes = styles.fonts.labels.baseSize;
+      textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+      
       const text = d.data.fullText || d.data.name;
       // Get latest arc data for this cell
       let pieData;
@@ -6103,7 +6099,7 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
       }
       const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
       const constraints = getTextConstraints(ringType, arcDatum);
-      wrapText(d3.select(this), text, constraints);
+      wrapText(textElement, text, constraints);
     });
 
   labels.merge(labelsEnter)
@@ -6122,6 +6118,11 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
     .on("end", function(d) {
       // Apply text wrapping after transition completes with up-to-date arc data
       if (d && d.data) {
+        const textElement = d3.select(this);
+        // Ensure font size is set before wrapping
+        const baseSizes = styles.fonts.labels.baseSize;
+        textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+        
         const text = d.data.fullText || d.data.name;
         let pieData;
         const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
@@ -6137,7 +6138,7 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
         }
         const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
         const constraints = getTextConstraints(ringType, arcDatum);
-        wrapText(d3.select(this), text, constraints);
+        wrapText(textElement, text, constraints);
       }
     });
 
@@ -6371,18 +6372,18 @@ function executeStep(stepIndex) {
       const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
       const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
       
-      if (isFirstOfPair) {
-        // FIRST OF PAIR: Set data for both cells, but hide the second one
+      // Helper function to set up data for first of pair
+      function setupFirstOfPair() {
+        // Set data values for both cells
         ["outer", "middle", "inner"].forEach(ringType => {
           const dataArray = animationData[ringType];
-          // Set both cells' data values
           const currentData = dataArray.find(d => d.unitId === step.unitId);
           const pairData = dataArray.find(d => d.unitId === pairId);
           if (currentData) currentData.value = 1;
           if (pairData) pairData.value = 1;
         });
         
-        // Set visibility for both (current visible, pair hidden)
+        // Set visibility for both cells
         cellVisibility[step.unitId].outer = true;
         cellVisibility[step.unitId].inner = true;
         cellVisibility[step.unitId].middle = true;
@@ -6390,71 +6391,29 @@ function executeStep(stepIndex) {
         cellVisibility[pairId].inner = true;
         cellVisibility[pairId].middle = true;
         
-        // NOW rotate to center this slice at the top (after data is set up)
-        focusPair(step.unitId, styles.durations.stepRotation);
-        
-        // Update all rings with new data
-        changeData("outer", animationData.outer, outerArc);
-        changeData("middle", animationData.middle, middleArc);
-        changeData("inner", animationData.inner, innerArc);
-      
-        
-        // Hide the pair cells and labels (set data opacity to 0)
+        // Hide pair cells after initial setup
         setTimeout(() => {
-          // Set pair opacity to 0 in data
           ["outer", "middle", "inner"].forEach(ringType => {
             const dataArray = animationData[ringType];
             const pairData = dataArray.find(d => d.unitId === pairId);
             if (pairData) pairData.opacity = 0;
           });
-          
-          // Update rings to reflect new opacity
-          changeData("outer", animationData.outer, outerArc);
-          changeData("middle", animationData.middle, middleArc);
-          changeData("inner", animationData.inner, innerArc);
-          
-          // Hide current cell's green/red segments for later showCell animation
-          hideCell(step.unitId, "outer");
-          hideCell(step.unitId, "inner");
-          
-          // Set opacity to 1 after hiding so they're ready for showCell
-          setTimeout(() => {
-            outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-            innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-          }, styles.durations.stepRotation + 50);
+          updateAllRings();
         }, 100);
-        
-      } else {
-        // SECOND OF PAIR: Just show the cells (data already set when first was shown)
-        // Set opacity to 1 in data
+      }
+      
+      // Helper function to set up data for second of pair
+      function setupSecondOfPair() {
+        // Just set opacity for current cell (data already set)
         ["outer", "middle", "inner"].forEach(ringType => {
           const dataArray = animationData[ringType];
           const currentData = dataArray.find(d => d.unitId === step.unitId);
           if (currentData) currentData.opacity = 1;
         });
-        
-        // NOW rotate to center this slice at the top (after opacity is set)
-        focusPair(step.unitId, styles.durations.stepRotation);
-        
-        // Update rings to reflect new opacity with smooth transition
-        changeData("outer", animationData.outer, outerArc);
-        changeData("middle", animationData.middle, middleArc);
-        changeData("inner", animationData.inner, innerArc);
-        
-        // Hide green/red segments for later showCell animation
-        setTimeout(() => {
-          hideCell(step.unitId, "outer");
-          hideCell(step.unitId, "inner");
-          
-          // Set opacity to 1 after hiding so they're ready for showCell
-          setTimeout(() => {
-            outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-            innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-          }, styles.durations.stepRotation + 50);
-        }, 100);
       }
-      // --- Ensure middle labels use fresh data and arc after step ---
-      {
+      
+      // Helper function to apply text wrapping
+      function applyTextWrapping() {
         const latestPieData = pie(animationData.middle);
         const latestArcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
         const currentRotation = getCurrentRotationFromDOM();
@@ -6462,8 +6421,46 @@ function executeStep(stepIndex) {
           .data(latestPieData, d => d.data.unitId)
           .attr("transform", function(d) {
             return calculateTextTransform(d, latestArcGen, currentRotation);
-          });
+          })
+          .each(function(d) {
+          const textElement = d3.select(this);
+          // Set the font size explicitly before wrapping
+          const baseSizes = styles.fonts.labels.baseSize;
+          textElement.style("font-size", `${baseSizes.middle}px`);
+          textElement.selectAll("tspan").remove();
+          const text = d.data.fullText || d.data.name;
+          const arcDatum = latestPieData.find(p => p.data.unitId === d.data.unitId);
+          const constraints = getTextConstraints("middle", arcDatum);
+          wrapText(textElement, text, constraints);
+        });
       }
+      
+      // Helper function to hide and restore segments
+      function hideAndRestoreSegments() {
+        setTimeout(() => {
+          hideCell(step.unitId, "outer");
+          hideCell(step.unitId, "inner");
+          
+          setTimeout(() => {
+            outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+            innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+          }, styles.durations.stepRotation + 50);
+        }, 100);
+      }
+      
+      // Execute the appropriate setup
+      if (isFirstOfPair) {
+        setupFirstOfPair();
+      } else {
+        setupSecondOfPair();
+      }
+      
+      // Common operations for both branches
+      focusPair(step.unitId, styles.durations.stepRotation);
+      updateAllRings();
+      applyTextWrapping();
+      hideAndRestoreSegments();
+
       break;
       
     case 'showGreen':
@@ -7077,55 +7074,105 @@ function _tryWrapWithLineBreaks(){return(
   if (maxLines < 1) {
     return { success: false };
   }
-  const words = text.split(/\s+/);
-  let lines = [];
-  let currentLine = [];
+  
   // Create a temporary tspan to measure text
   const tempTspan = textElement.append("tspan").attr("x", 0).attr("dy", 0);
+  
+  // Calculate margin proportional to inner/outer radius
+  const margin = 0.8;
+  
+  // Convert text to word queue
+  const wordQueue = text.split(/\s+/);
+  const lines = [];
+  let currentLine = [];
   let lineIdx = 0;
-  // Calculate margin factor proportional to inner/outer radius
-  const margin = (innerRadius / outerRadius);
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const testLine = [...currentLine, word];
-    // Calculate the radius for this line (outermost for first line, then inward)
-    let radius = outerRadius - (lineIdx + 0.5) * lineHeight;
+  
+  // Helper function to get chord length for a given line index
+  const getChordLength = (lineIndex) => {
+
+    let radius = outerRadius - (lineIndex + 0.5) * lineHeight;
     if (radius < innerRadius) radius = innerRadius;
-    // Chord length at this radius
-    const chordLen = 2 * radius * Math.sin(angle / 2) * margin;
-    tempTspan.text(testLine.join(" "));
-    if (tempTspan.node().getComputedTextLength() > chordLen && currentLine.length > 0) {
-      // Current line is full, start a new line
+
+    const bestAngle = Math.acos(radius / outerRadius);
+
+    console.log(`radius: ${radius}, bestAngle: ${bestAngle*2}, angle: ${angle}`);
+
+    return 2 * radius * Math.sin(Math.min(bestAngle, angle/2)) * margin;
+  };
+  
+  // Helper function to test if a line fits
+  const testLineFit = (line, lineIndex) => {
+    tempTspan.text(line.join(" "));
+    return tempTspan.node().getComputedTextLength() <= getChordLength(lineIndex);
+  };
+  
+  // Main processing loop
+  while (wordQueue.length > 0 && lines.length < maxLines) {
+    const word = wordQueue[0];
+    const testLine = [...currentLine, word];
+    
+    // Test if adding this word to current line works
+    if (testLineFit(testLine, lineIdx)) {
+      // Word fits, add it to current line
+      currentLine.push(word);
+      wordQueue.shift(); // Remove word from queue
+    } else if (currentLine.length > 0) {
+      // Current line is full, commit it and start new line
       lines.push(currentLine.join(" "));
-      currentLine = [word];
+      currentLine = [];
       lineIdx++;
+      
+      // Check if we've exceeded max lines
       if (lines.length >= maxLines) {
         tempTspan.remove();
         return { success: false };
       }
-    } else {
+      
+      // Test if the word fits on the new line
+      if (!testLineFit([word], lineIdx)) {
+        // Word doesn't fit on any line - this approach won't work
+        tempTspan.remove();
+        return { success: false };
+      }
+      
+      // Word fits on new line, add it
       currentLine.push(word);
+      wordQueue.shift();
+    } else {
+      // Single word doesn't fit on current line and we have no previous words
+      // This means the word is too long for any line - fail
+      tempTspan.remove();
+      return { success: false };
     }
   }
+  
   // Add the last line if there are remaining words
   if (currentLine.length > 0) {
     lines.push(currentLine.join(" "));
   }
-  tempTspan.remove();
-  if (lines.length > maxLines) {
+  
+  // Check if we still have words left (meaning we ran out of lines)
+  if (wordQueue.length > 0) {
+    tempTspan.remove();
     return { success: false };
   }
+  
+  tempTspan.remove();
+  
   // Calculate total text height for centering
   const totalHeight = lines.length * lineHeight;
   const offsetY = -(totalHeight - lineHeight) / 2; // Center the text block
+  
   // Create the actual tspans with proper centering and per-line width
   lines.forEach((line, index) => {
+    getChordLength(index);
     textElement.append("tspan")
       .attr("x", 0)
       .attr("dy", index === 0 ? offsetY : lineHeight)
       .text(line);
     // Optionally, set a data attribute for debugging: tspan.attr("data-chordwidth", chordLen);
   });
+  
   return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
 }
 )}
