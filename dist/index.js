@@ -4945,9 +4945,9 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
 function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstraints,wrapText,arrowUtilities,parseArrowConnections,arrowConnections,initializeBuildSteps){return(
 (() => {
   
-  let isTouchDragging = false;
-  let touchDragStart = null;
-  const TOUCH_DRAG_THRESHOLD = 8;
+let isTouchDragging = false;
+let touchDragStart = null;
+const TOUCH_DRAG_THRESHOLD = 8;
 
 styles.height;
 const outerRadius = styles.radii.outer;
@@ -4965,13 +4965,14 @@ const svg = d3.create("svg")
 // State variables
 let focusedPair = null;
 let clickedSlice = null;
-let activeZoom = null;
+let clickedCell = null;
 let cellVisibility = {};
 
 function updateChartValue() {
 svg.node().value = {
   focusedPair,
   clickedSlice,
+  clickedCell,
   currentRotation: getCurrentRotationFromDOM()
 };
 svg.node().dispatchEvent(new CustomEvent("input"));
@@ -4999,15 +5000,6 @@ function setRotationDirectly(radians) {
   updateTextPositions(degrees);
   // Update chart value and dispatch event
   updateChartValue();
-}
-
-// Helper function to get rotated centroid using simple matrix transform
-function getRotatedCentroid(rawCentroid, currentRotation) {
-  // Simple rotation matrix: [x*cos - y*sin, x*sin + y*cos]
-  const rotatedX = rawCentroid[0] * Math.cos(currentRotation) - rawCentroid[1] * Math.sin(currentRotation);
-  const rotatedY = rawCentroid[0] * Math.sin(currentRotation) + rawCentroid[1] * Math.cos(currentRotation);
-  
-  return [rotatedX, rotatedY];
 }
 
 // Step-by-step animation state
@@ -5047,7 +5039,7 @@ const rotationGroup = zoomGroup.append("g").attr("class", "rotation-group");
 const contentGroup = rotationGroup.append("g").attr("class", "content-group");
 
 // Add large invisible circle for better mobile touch target (in rotation group so it rotates with wheel)
-const dragCircle = rotationGroup.append("circle")
+rotationGroup.append("circle")
   .attr("cx", 0)
   .attr("cy", 0)
   .attr("r", styles.radii.drag) // Larger than outerRadius for easier touch
@@ -5061,22 +5053,7 @@ const zoom = d3.zoom()
   .filter(event => true) // Disable all zoom interactions
   .on("zoom", zoomed);
 
-// FIXED: Bind zoom to svg - D3 zoom needs to control the main element
-//zoomGroup.call(zoom);
 
-// Drag behavior for rotation with mobile optimization
-let dragStartAngle = 0;
-let dragStartRotation = 0;
-
-const drag = d3.drag()
-  .filter(function(event) {
-    // Allow drag on touch devices and mouse
-    return !event.ctrlKey && !event.button;
-  })
-  .touchable(true)  // Explicitly enable touch support
-  .on("start", dragStarted)
-  .on("drag", dragged)
-  .on("end", dragEnded);
 
 // Apply mobile-friendly styles and drag behavior
 svg.style("touch-action", "none")  // Prevent default touch behaviors
@@ -5087,14 +5064,10 @@ function setHoveredCell(cell) {
 }
 
 // Add wheel event listener for scroll-to-zoom
-svg.on('wheel', function(event) {
 
-  //DISABLE SCROLL-TO-ZOOM
-  return;
-});
 
 // FIXED: Apply drag behavior to the rotationGroup so it scales with zoom
-rotationGroup.call(drag);
+//rotationGroup.call(drag);
 
 // ===== TOUCH BEHAVIOR: Focus + Zoom to Slice =====
 // Touch events now simply focus the pair and zoom to the entire slice
@@ -5188,7 +5161,9 @@ function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
       // Update text positions during transition
       updateTextPositions(degrees);
     };
-  }).on("end", updateChartValue);
+  }).on("end", function(){
+    updateChartValue();
+  });
 }
 
 // Create groups for each ring (in content group)
@@ -5205,7 +5180,7 @@ const middleLabelsGroup = contentGroup.append("g").attr("class", "middle-labels"
 const innerLabelsGroup = contentGroup.append("g").attr("class", "inner-labels");
 
 // Add yellow center circle (axle/hub) (in content group)
-contentGroup.append("circle")
+const centerCircle = contentGroup.append("circle")
   .attr("cx", 0)
   .attr("cy", 0)
   .attr("r", styles.radii.hub)  // Same as inner radius of green ring
@@ -5360,25 +5335,34 @@ function updateAxisPositions(focusedUnitId = null) {
         .attr("class", "coordinate-circle")
         .attr("cx", x2)
         .attr("cy", y2)
-        .attr("r", 20)
+        .attr("r", 0) // Start at 0 for a grow-in effect
         .style("fill", "#000")
-        .style("opacity", 0.1)
-        .style("clip-path", `url(#${clipId})`);
+        .style("opacity", 0)
+        .style("clip-path", `url(#${clipId})`)
+        .transition()
+        .duration(500)
+        .attr("r", 20)
+        .style("opacity", 0.1);
 
       
       // Add symbol text within the same group, perfectly centered
       axisGroup.append("text")
         .attr("class", "coordinate-symbol")
         .attr("x", x)
-        .attr("y", y)
+        .attr("y", y - 10) // Start above for a slide-in effect
         .style("text-anchor", "middle")
         .style("dominant-baseline", "central")
         .style("font-family", "Monaco, monospace")
-        .style("font-size", "8px") // Slightly smaller for better fit in 8px radius circle
+        .style("font-size", "8px")
         .style("font-weight", styles.fonts.coordinates.weight)
         .style("fill", axisColors[ringIndex].stroke)
-        .style("pointer-events", "none") // Prevent text from interfering with interactions
-        .text(clipUnitId + signs[ringIndex]);
+        .style("pointer-events", "none")
+        .style("opacity", 0)
+        .text(clipUnitId + signs[ringIndex])
+        .transition()
+        .duration(500)
+        .attr("y", y)
+        .style("opacity", 1);
     });
   });
   
@@ -5624,11 +5608,28 @@ function changeData(ringType, newData, arcGenerator) {
       }
       return d.data.opacity;
     });
-  
 
 }
 
+function unfocus() {
+  // Choose which data to modify
+  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
 
+  // Reset all opacities to 1
+  ["outer", "middle", "inner"].forEach(ringType => {
+    dataToModify[ringType].forEach(item => {
+      item.opacity = 1;
+    });
+  });
+
+  focusedPair = null;
+  clickedSlice = null;
+  clickedCell = null;
+  updateAxisPositions();
+  updateAllRings();
+  //updateOverlays();
+  updateChartValue();
+}
 
 // Focus pair function
 function focusPair(clickedUnitId) {
@@ -5640,15 +5641,36 @@ function focusPair(clickedUnitId) {
   const isAlreadyFocused = focusedPair && 
     focusedPair.thesis === thesis && 
     focusedPair.antithesis === antithesis;
+
+  // Check if clickedUnitId is within 90 degrees of 0 degrees (or 180 degrees)
+  const sliceData = pie(nestedData.middle).find(d => d.data.unitId === clickedUnitId);
+  const sliceAngle = (sliceData.startAngle + sliceData.endAngle)/2;
+  let visualAngle = (sliceAngle + getCurrentRotationFromDOM()) % (2 * Math.PI);
+  // Round down to the nearest degree (in radians)
+  visualAngle = Math.floor(visualAngle * 180 / Math.PI);
+  if(!(visualAngle <= 90 || visualAngle >= 270) && !isStepMode) {
+    clickedUnitId = pairId;
+    //console.log("is not within 90 degrees. visualAngle: " + visualAngle);
+  }
+
+
   
   // Choose which data to modify
   const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
   
   if (isAlreadyFocused) {
-    if(clickedUnitId != clickedSlice) {
+    if(isStepMode) {
       rotateToSlice(clickedUnitId);
       clickedSlice = clickedUnitId;
+      focusedPair = { thesis, antithesis };
       updateChartValue();
+      updateAxisPositions();
+      return;
+    }
+    if(clickedUnitId == clickedSlice) {
+      focusedPair = { thesis, antithesis };
+      updateChartValue();
+      updateAxisPositions();
       return;
     }
     focusedPair = null;
@@ -5700,89 +5722,10 @@ function focusPair(clickedUnitId) {
 }
 
 // Zoom functions
-function zoomToCell(event, d) {
-  if (activeZoom === d) return resetZoom();
-  
-  zoomGroup.selectAll("path").style("stroke-width", null);
-  
-  activeZoom = d;
-  d3.select(event.currentTarget)
-    .style("stroke", styles.colors.strokes.zoom)
-    .style("stroke-width", styles.strokes.zoomWidth);
-  
-  const parentClass = d3.select(event.currentTarget.parentNode).attr("class");
-  let arcGenerator;
-  
-  if (parentClass.includes("outer-ring")) {
-    arcGenerator = outerArc;
-  } else if (parentClass.includes("middle-ring")) {
-    arcGenerator = middleArc;
-  } else if (parentClass.includes("inner-ring")) {
-    arcGenerator = innerArc;
-  } else {
-    arcGenerator = middleArc;
-  }
-  
-  // NEW: Get raw centroid and apply current rotation to it using DOM transforms
-  const rawCentroid = arcGenerator.centroid(d);
-  const currentRotation = getCurrentRotationFromDOM();
-  
-  // Use DOM transforms to get rotated centroid (more efficient than manual math)
-  const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
-  
-  const scale = 3;
-  const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
-  
-  // Apply zoom transform to svg - D3 zoom controls the main element
-  svg.transition()
-    .duration(styles.durations.normal)
-    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-}
+
 
 // Function to zoom to entire slice (all three rings of a unitId)
-function zoomToSlice(unitId) {
-  // Choose which data to use based on current mode (same as other functions)
-  const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-  
-  // Use the middle ring to calculate the centroid for the entire slice
-  const pieData = pie(dataToUse.middle);
-  const sliceData = pieData.find(d => d.data.unitId === unitId);
-  
-  if (!sliceData) return;
-  
-  // Clear existing zoom styling
-  zoomGroup.selectAll("path").style("stroke-width", null);
-  
-  // NEW: Get raw centroid and apply current rotation to it using DOM transforms
-  const rawCentroid = middleArc.centroid(sliceData);
-  const currentRotation = getCurrentRotationFromDOM();
-  
-  // Use DOM transforms to get rotated centroid (more efficient than manual math)
-  const rotatedCentroid = getRotatedCentroid(rawCentroid, currentRotation);
-  
-  // Apply rotation to centroid: [x*cos - y*sin, x*sin + y*cos]
-  //const rotatedCentroidX = rotatedCentroid[0] * Math.cos(currentRotation) - rotatedCentroid[1] * Math.sin(currentRotation);
-  //const rotatedCentroidY = rotatedCentroid[0] * Math.sin(currentRotation) + rotatedCentroid[1] * Math.cos(currentRotation);
-  
-  // Set active zoom (use slice data for reference)
-  activeZoom = sliceData;
-  
-  // Highlight all three rings of this slice
-  [outerGroup, middleGroup, innerGroup].forEach(group => {
-    group.selectAll("path")
-      .filter(d => d.data.unitId === unitId)
-      .style("stroke", styles.colors.strokes.zoom)
-      .style("stroke-width", styles.strokes.zoomWidth);
-  });
-  
-  const scale = 2.1;
-  const translate = [-scale * rotatedCentroid[0], -scale * rotatedCentroid[1]];
-  
-  // Apply zoom transform to svg
-  svg.transition()
-    .duration(styles.durations.normal)
-    .call(zoom.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-}
+
 
 function resetZoom() {
   zoomGroup.selectAll("path.cell")  // Only apply to pie chart cells, not arrows
@@ -5794,7 +5737,6 @@ function resetZoom() {
       const ringType = d3.select(this.parentNode).attr("class");
       return ringType && ringType.includes("middle") ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth;
     });
-  activeZoom = null;
   
   // FIXED: Apply zoom reset to svg - D3 zoom controls the main element  
   svg.transition()
@@ -5802,61 +5744,7 @@ function resetZoom() {
     .call(zoom.transform, d3.zoomIdentity);
 }
 
-// ===== INITIALIZE LONG PRESS HANDLER =====
-// Now that zoomToCell is defined, initialize the long press handler
-// REMOVED: Long press not needed anymore - touch events do focus + zoom directly
-
-// Drag functions for rotation
-function dragStarted(event) {
-  // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
-  // Just use the event coordinates directly (they're relative to the rotationGroup)
-  dragStartAngle = Math.atan2(event.y, event.x);
-  dragStartRotation = getCurrentRotationFromDOM();
-  
-  // Change cursor during drag
-  dragCircle.style("cursor", "grabbing");
-}
-
-function dragged(event) {
-  // Since drag is now attached to rotationGroup, coordinates are already in the rotated space
-  // Just use the event coordinates directly
-  const currentAngle = Math.atan2(event.y, event.x);
-  
-  // Calculate rotation delta using shortest angular distance
-  let angleDelta = currentAngle - dragStartAngle;
-  
-  // Normalize angle delta to be between -π and π (shortest path)
-  while (angleDelta > Math.PI) angleDelta -= 2 * Math.PI;
-  while (angleDelta < -Math.PI) angleDelta += 2 * Math.PI;
-  
-  // Calculate new rotation (no state tracking - just apply directly)
-  const newRotation = dragStartRotation + angleDelta;
-  
-  // Apply rotation directly to DOM (no state tracking!)
-  const rotationDegrees = (newRotation * 180) / Math.PI;
-  rotationGroup.attr("transform", `rotate(${rotationDegrees})`);
-  
-  // PERFORMANCE FIX: Don't update text during drag!
-  // Text positions will be updated once at the end of drag for much smoother rotation
-  // The wheel geometry itself rotates smoothly without needing text recalculation
-}
-
-function dragEnded(event) {
-  // Restore cursor
-  dragCircle.style("cursor", "grab");
-  
-  // PERFORMANCE FIX: Single text update after drag ends
-  // Get current rotation and update text positions once
-  const currentRotation = getCurrentRotationFromDOM();
-  const rotationDegrees = (currentRotation * 180) / Math.PI;
-  updateTextPositions(rotationDegrees);
-  // Update chart value and dispatch event
-  updateChartValue();
-}
-let isUpdatingTransform = false;
-
 function updateTextPositions(rotationDegrees) {
-  isUpdatingTransform = true;
   
   // Convert degrees to radians once
   const currentRotationRadians = (rotationDegrees * Math.PI) / 180;
@@ -5900,8 +5788,6 @@ function updateTextPositions(rotationDegrees) {
       const y = parseFloat(d3.select(this).attr("y"));
       return `translate(${x}, ${y}) rotate(${counterRotationDegrees}) translate(${-x}, ${-y})`;
     });
-    
-    isUpdatingTransform = false;
   });
 }
 
@@ -5920,16 +5806,7 @@ function zoomed(event) {
       return (baseWidth / transform.k) + "px";
     });
   
-  // PERFORMANCE FIX: Don't rewrap text on every zoom event!
-  // Text wrapping should only happen when content changes, not during zoom
-  // The text bounds are handled by CSS and SVG scaling naturally
-  
-  // Only update font size if needed (commented out the expensive rewrapping)
-  /*zoomGroup.selectAll("text.cell-label")
-    .style("font-size", function() {
-      const baseSize = styles.fonts.labels.zoomBaseSize;
-      return baseSize + "px"; // Keep consistent size during zoom
-    });*/
+
 }
 
 // Update ring function
@@ -5948,7 +5825,6 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .attr("stroke-dasharray", "1,3") // Dotted border
     .attr("stroke-linecap", "round")
     .attr("stroke-opacity", 0.3)
-    .style("cursor", "pointer")
     .style("opacity", d => {
       if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
         return 0;
@@ -5959,10 +5835,34 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .attr("d", arcGenerator)
     .each(function(d) { this._current = d; })
     .on("click", function(event, d) {
-      if (event.metaKey || event.ctrlKey) {
-        zoomToCell(event, d);
-      } else {
-        focusPair(d.data.unitId);
+      if (event.metaKey || event.ctrlKey) ; else {
+        // Match touch behavior: focus pair and zoom to slice if not already zoomed
+        //console.log('Mouse click - focusing slice:', d.data.unitId);
+        //const isCurrentlyZoomed = activeZoom !== null;
+        // Remove highlight from all cells with the same unitId
+        d3.select(this.ownerSVGElement)
+          .selectAll("path.cell")
+          .style("stroke-dasharray", "1,3");
+        if(!focusedPair){
+          focusPair(d.data.unitId);
+          clickedCell = d.data;
+        }
+        else {
+          if(focusedPair.thesis != d.data.unitId && focusedPair.antithesis != d.data.unitId){
+            unfocus();
+            clickedCell = null;
+          }
+          else {
+            clickedCell = d.data;
+            d3.select(this)
+            .style("stroke-dasharray", "1,0");
+            if(clickedCell && clickedCell.name == d.data.name) {
+              d3.select(this)
+              .style("cursor", "default");
+            }
+          }
+        }
+        updateChartValue();
       }
     })
     .on("touchstart", function(event, d) {
@@ -6015,11 +5915,71 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .on("mouseenter", function(event, d) {
       // Set hovered cell for scroll-to-zoom
       const parentClass = d3.select(this.parentNode).attr("class");
-      parentClass.includes("outer") ? "outer" : 
+      const ringType = parentClass.includes("outer") ? "outer" : 
                       parentClass.includes("middle") ? "middle" : "inner";
       setHoveredCell({ unitId: d.data.unitId});
+
+      if(focusedPair && focusedPair.thesis[1] == d.data.unitId[1]) {
+        d3.select(this)
+        .style("stroke-dasharray", "1,0");
+        if(clickedCell && clickedCell.name != d.data.name) {
+          d3.select(this)
+          .style("cursor", "pointer");
+        }
+        else if(clickedCell && clickedCell.name == d.data.name) {
+          d3.select(this)
+          .style("cursor", "default");
+        }
+      }
+      else if(focusedPair && focusedPair.thesis[1] != d.data.unitId[1]){
+        d3.select(this)
+        .style("cursor", "default")
+        .style("opacity", 1);
+        let labelsGroup;
+        if (ringType === "outer") labelsGroup = outerLabelsGroup;
+        else if (ringType === "middle") labelsGroup = middleLabelsGroup;
+        else labelsGroup = innerLabelsGroup;
+        labelsGroup.selectAll("text")
+        .filter(text => text.data.unitId === d.data.unitId)
+        .style("opacity", 1);
+      }
+      else {
+        // Highlight all cells with the same unitId across all rings
+        d3.select(this.ownerSVGElement)
+        .selectAll("path.cell")
+        .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
+        .style("stroke-dasharray", "1,0")
+        .style("cursor", "pointer");
+      }
+      
     })
     .on("mouseleave", function(event, d) {
+
+      if(focusedPair && focusedPair.thesis[1] == d.data.unitId[1]) {
+        if(clickedCell && clickedCell.name != d.data.name) {
+          d3.select(this)
+          .style("stroke-dasharray", "1,3");
+        }
+      
+      }
+      else if(focusedPair && focusedPair.thesis[1] != d.data.unitId[1]) {
+        d3.select(this)
+        .style("opacity", 0.3);
+        let labelsGroup;
+        if (ringType === "outer") labelsGroup = outerLabelsGroup;
+        else if (ringType === "middle") labelsGroup = middleLabelsGroup;
+        else labelsGroup = innerLabelsGroup;
+        labelsGroup.selectAll("text")
+        .filter(text => text.data.unitId === d.data.unitId)
+        .style("opacity", 0.3);
+      }
+      else {
+        // Remove highlight from all cells with the same unitId
+        d3.select(this.ownerSVGElement)
+          .selectAll("path.cell")
+          .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
+          .style("stroke-dasharray", "1,3");
+      }
     });
 
   pathsEnter.append("title")
@@ -6179,6 +6139,16 @@ arrowUtilities.createArrowheadMarker(defs, "#2563eb", "arrowhead-blue");
 const arrowsGroup = contentGroup.append("g")
   .attr("class", "arrows-group")
   .style("pointer-events", "none");
+
+// Ensure yellow circle is beneath arrows
+centerCircle.lower();
+
+// Ensure arrows are above rings but below labels
+arrowsGroup.raise();
+outerLabelsGroup.raise();
+middleLabelsGroup.raise();
+innerLabelsGroup.raise();
+coordinateGroup.raise();
 
 // Arrow drawing functions
 function getCellCentroid(unitId, ringType = 'middle') {
@@ -6591,14 +6561,14 @@ updateAxisPositions(cells[0]);
 // --- MAKE CHART REACTIVE INITIALLY ---
 updateChartValue();
 
+
+
 // Return the svg node with exposed methods (Observable pattern)
 return Object.assign(svg.node(), {
   focusPair,
   get focusedPair() { return focusedPair; },
   cells,
   resetZoom,
-  zoomToCell,
-  zoomToSlice,
   rotateToSlice,
   rotate: (angle) => {
     setRotationDirectly(angle);
@@ -6708,6 +6678,29 @@ function _stepControls(html,$0){return(
   return container;
 })()
 )}
+
+function _8(chart){return(
+chart.focusedPair
+)}
+
+function _sliceNumber(Inputs,$0){return(
+Inputs.range([0,$0.cells.length-1],{value:0,step:1,label:"slice number"})
+)}
+
+function _10($0,sliceNumber){return(
+$0.focusPair($0.cells[sliceNumber])
+)}
+
+function _11(chart){return(
+chart.clickedCell
+)}
+
+function _clickedCellText(chart)
+{
+  if(chart.clickedCell) return chart.clickedCell.fullText;
+  return null;
+}
+
 
 function _focusedSlice(chart)
 { 
@@ -7078,95 +7071,77 @@ function _tryWrapWithLineBreaks(){return(
   if (maxLines < 1) {
     return { success: false };
   }
-  
+
   // Create a temporary tspan to measure text
   const tempTspan = textElement.append("tspan").attr("x", 0).attr("dy", 0);
-  
+
   // Calculate margin proportional to inner/outer radius
   const margin = 0.8;
-  
+
   // Convert text to word queue
-  const wordQueue = text.split(/\s+/);
+  const wordQueue = text.split(/([ -])/);
   const lines = [];
-  let currentLine = [];
   let lineIdx = 0;
-  
+
   // Helper function to get chord length for a given line index
   const getChordLength = (lineIndex) => {
-
     let radius = outerRadius - (lineIndex + 0.5) * lineHeight;
     if (radius < innerRadius) radius = innerRadius;
-
     const bestAngle = Math.acos(radius / outerRadius);
-
-    console.log(`radius: ${radius}, bestAngle: ${bestAngle*2}, angle: ${angle}`);
-
     return 2 * radius * Math.sin(Math.min(bestAngle, angle/2)) * margin;
   };
-  
-  // Helper function to test if a line fits
-  const testLineFit = (line, lineIndex) => {
-    tempTspan.text(line.join(" "));
-    return tempTspan.node().getComputedTextLength() <= getChordLength(lineIndex);
+
+  // Helper function to measure a line
+  const measureLine = (words) => {
+    tempTspan.text(words.join(""));
+    return tempTspan.node().getComputedTextLength();
   };
-  
-  // Main processing loop
-  while (wordQueue.length > 0 && lines.length < maxLines) {
-    const word = wordQueue[0];
-    const testLine = [...currentLine, word];
-    
-    // Test if adding this word to current line works
-    if (testLineFit(testLine, lineIdx)) {
-      // Word fits, add it to current line
-      currentLine.push(word);
-      wordQueue.shift(); // Remove word from queue
-    } else if (currentLine.length > 0) {
-      // Current line is full, commit it and start new line
-      lines.push(currentLine.join(" "));
-      currentLine = [];
-      lineIdx++;
-      
-      // Check if we've exceeded max lines
-      if (lines.length >= maxLines) {
-        tempTspan.remove();
-        return { success: false };
+
+  let i = 0;
+  while (i < wordQueue.length && lines.length < maxLines) {
+    let lo = 1;
+    let hi = wordQueue.length - i;
+    let bestFit = 0;
+    // Binary search for the max number of words that fit on this line
+    while (lo <= hi) {
+      let mid = Math.floor((lo + hi) / 2);
+      const candidate = wordQueue.slice(i, i + mid);
+      const width = measureLine(candidate);
+      if (width <= getChordLength(lineIdx)) {
+        bestFit = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
       }
-      
-      // Test if the word fits on the new line
-      if (!testLineFit([word], lineIdx)) {
-        // Word doesn't fit on any line - this approach won't work
-        tempTspan.remove();
-        return { success: false };
-      }
-      
-      // Word fits on new line, add it
-      currentLine.push(word);
-      wordQueue.shift();
-    } else {
-      // Single word doesn't fit on current line and we have no previous words
-      // This means the word is too long for any line - fail
+    }
+    if (bestFit === 0) {
+      // Single word doesn't fit on the line
       tempTspan.remove();
       return { success: false };
     }
+    lines.push(wordQueue.slice(i, i + bestFit).join(""));
+    i += bestFit;
+    lineIdx++;
   }
-  
-  // Add the last line if there are remaining words
-  if (currentLine.length > 0) {
-    lines.push(currentLine.join(" "));
+
+  // Add the last line if there are remaining words (shouldn't happen with this logic, but for safety)
+  if (i < wordQueue.length && lines.length < maxLines) {
+    lines.push(wordQueue.slice(i).join(""));
+    i = wordQueue.length;
   }
-  
-  // Check if we still have words left (meaning we ran out of lines)
-  if (wordQueue.length > 0) {
+
+  // If we still have words left, fail
+  if (i < wordQueue.length) {
     tempTspan.remove();
     return { success: false };
   }
-  
+
   tempTspan.remove();
-  
+
   // Calculate total text height for centering
   const totalHeight = lines.length * lineHeight;
   const offsetY = -(totalHeight - lineHeight) / 2; // Center the text block
-  
+
   // Create the actual tspans with proper centering and per-line width
   lines.forEach((line, index) => {
     getChordLength(index);
@@ -7176,7 +7151,7 @@ function _tryWrapWithLineBreaks(){return(
       .text(line);
     // Optionally, set a data attribute for debugging: tspan.attr("data-chordwidth", chordLen);
   });
-  
+
   return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
 }
 )}
@@ -7684,6 +7659,12 @@ function define(runtime, observer) {
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
+  main.variable(observer()).define(["chart"], _8);
+  main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs","viewof chart"], _sliceNumber);
+  main.variable(observer("sliceNumber")).define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
+  main.variable(observer()).define(["viewof chart","sliceNumber"], _10);
+  main.variable(observer()).define(["chart"], _11);
+  main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);

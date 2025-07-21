@@ -1,6 +1,6 @@
 {
   "name": "dialectical-wheel",
-  "version": "1.1.16",
+  "version": "1.1.17",
   "type": "module",
   "description": "React components for interactive dialectical wheel visualization",
   "main": "dist/index.js",
@@ -67,6 +67,6 @@
   "dependencies": {
     "@observablehq/runtime": "^5.9.9",
     "d3": "^7.8.5",
-    "@dialexity/dialectical-wheel": "https://api.observablehq.com/@dialexity/dialectical-wheel@968.tgz?v=3"
+    "@dialexity/dialectical-wheel": "https://api.observablehq.com/@dialexity/dialectical-wheel@1174.tgz?v=3"
   }
 }
