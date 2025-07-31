@@ -1276,7 +1276,7 @@ function requireFrom(resolver) {
       };
       script.async = true;
       script.src = url;
-      window.define = define$1;
+      window.define = define$2;
       document.head.appendChild(script);
     }));
     return module;
@@ -1330,7 +1330,7 @@ function isbuiltin(name) {
   return name === "exports" || name === "module";
 }
 
-function define$1(name, dependencies, factory) {
+function define$2(name, dependencies, factory) {
   const n = arguments.length;
   if (n < 2) factory = name, dependencies = [];
   else if (n < 3) factory = dependencies, dependencies = typeof name === "string" ? [] : name;
@@ -1351,7 +1351,7 @@ function define$1(name, dependencies, factory) {
   });
 }
 
-define$1.amd = {};
+define$2.amd = {};
 
 // TODO Allow this to be overridden using the Library’s resolver.
 const cdn = "https://cdn.observableusercontent.com/npm/";
@@ -4561,6 +4561,373 @@ function window_global(name) {
   return globalThis[name];
 }
 
+function _1$1(md){return(
+md`<div style="color: grey; font: 13px/25.5px var(--sans-serif); text-transform: uppercase;"><h1 style="display: none;">Color legend</h1><a href="https://d3js.org/">D3</a> › <a href="/@d3/gallery">Gallery</a></div>
+
+# Color legend
+
+A simple legend for a [color scale](/@d3/color-schemes). Supports [continuous](/@d3/continuous-scales), [sequential](/@d3/sequential-scales), [diverging](/@d3/diverging-scales), [quantize, quantile, threshold](/@d3/quantile-quantize-and-threshold-scales) and [ordinal](/@d3/d3-scaleordinal) scales. To use:
+
+~~~js
+import {Legend, Swatches} from "@d3/color-legend"
+~~~
+
+Then call the legend function as shown below. (For ordinal scales, also consider the swatches function.)`
+)}
+
+function _2(Legend,d3){return(
+Legend(d3.scaleSequential([0, 100], d3.interpolateViridis), {
+  title: "Temperature (°F)"
+})
+)}
+
+function _3(Legend,d3){return(
+Legend(d3.scaleSequentialSqrt([0, 1], d3.interpolateTurbo), {
+  title: "Speed (kts)"
+})
+)}
+
+function _4(Legend,d3){return(
+Legend(d3.scaleDiverging([-0.1, 0, 0.1], d3.interpolatePiYG), {
+  title: "Daily change",
+  tickFormat: "+%"
+})
+)}
+
+function _5(Legend,d3){return(
+Legend(d3.scaleDivergingSqrt([-0.1, 0, 0.1], d3.interpolateRdBu), {
+  title: "Daily change",
+  tickFormat: "+%"
+})
+)}
+
+function _6$1(Legend,d3){return(
+Legend(d3.scaleSequentialLog([1, 100], d3.interpolateBlues), {
+  title: "Energy (joules)",
+  ticks: 10
+})
+)}
+
+function _7(Legend,d3){return(
+Legend(d3.scaleSequentialQuantile(d3.range(100).map(() => Math.random() ** 2), d3.interpolateBlues), {
+  title: "Quantile",
+  tickFormat: ".2f"
+})
+)}
+
+function _8(Legend,d3){return(
+Legend(d3.scaleSqrt([-100, 0, 100], ["blue", "white", "red"]), {
+  title: "Temperature (°C)"
+})
+)}
+
+function _9(Legend,d3){return(
+Legend(d3.scaleQuantize([1, 10], d3.schemePurples[9]), {
+  title: "Unemployment rate (%)"
+})
+)}
+
+function _10(Legend,d3){return(
+Legend(d3.scaleQuantile(d3.range(1000).map(d3.randomNormal(100, 20)), d3.schemeSpectral[9]), {
+  title: "Height (cm)",
+  tickFormat: ".0f"
+})
+)}
+
+function _11$1(Legend,d3){return(
+Legend(d3.scaleThreshold([2.5, 3.1, 3.5, 3.9, 6, 7, 8, 9.5], d3.schemeRdBu[9]), {
+  title: "Unemployment rate (%)",
+  tickSize: 0
+})
+)}
+
+function _12(Legend,d3){return(
+Legend(d3.scaleOrdinal(["<10", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70-79", "≥80"], d3.schemeSpectral[10]), {
+  title: "Age (years)",
+  tickSize: 0
+})
+)}
+
+function _13(md){return(
+md`But wait, there’s more!
+
+How about swatches for ordinal color scales? Both variable-width swatches and [column layout](https://developer.mozilla.org/en-US/docs/Web/CSS/columns) are supported.`
+)}
+
+function _14$1(Swatches,d3){return(
+Swatches(d3.scaleOrdinal(["blueberries", "oranges", "apples"], d3.schemeCategory10))
+)}
+
+function _15(Swatches,d3){return(
+Swatches(d3.scaleOrdinal(["Wholesale and Retail Trade", "Manufacturing", "Leisure and hospitality", "Business services", "Construction", "Education and Health", "Government", "Finance", "Self-employed", "Other"], d3.schemeTableau10), {
+  columns: "180px"
+})
+)}
+
+function _16$1(md){return(
+md`---
+
+## Implementation`
+)}
+
+function _Legend(d3){return(
+function Legend(color, {
+  title,
+  tickSize = 6,
+  width = 320, 
+  height = 44 + tickSize,
+  marginTop = 18,
+  marginRight = 0,
+  marginBottom = 16 + tickSize,
+  marginLeft = 0,
+  ticks = width / 64,
+  tickFormat,
+  tickValues
+} = {}) {
+
+  function ramp(color, n = 256) {
+    const canvas = document.createElement("canvas");
+    canvas.width = n;
+    canvas.height = 1;
+    const context = canvas.getContext("2d");
+    for (let i = 0; i < n; ++i) {
+      context.fillStyle = color(i / (n - 1));
+      context.fillRect(i, 0, 1, 1);
+    }
+    return canvas;
+  }
+
+  const svg = d3.create("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("viewBox", [0, 0, width, height])
+      .style("overflow", "visible")
+      .style("display", "block");
+
+  let tickAdjust = g => g.selectAll(".tick line").attr("y1", marginTop + marginBottom - height);
+  let x;
+
+  // Continuous
+  if (color.interpolate) {
+    const n = Math.min(color.domain().length, color.range().length);
+
+    x = color.copy().rangeRound(d3.quantize(d3.interpolate(marginLeft, width - marginRight), n));
+
+    svg.append("image")
+        .attr("x", marginLeft)
+        .attr("y", marginTop)
+        .attr("width", width - marginLeft - marginRight)
+        .attr("height", height - marginTop - marginBottom)
+        .attr("preserveAspectRatio", "none")
+        .attr("xlink:href", ramp(color.copy().domain(d3.quantize(d3.interpolate(0, 1), n))).toDataURL());
+  }
+
+  // Sequential
+  else if (color.interpolator) {
+    x = Object.assign(color.copy()
+        .interpolator(d3.interpolateRound(marginLeft, width - marginRight)),
+        {range() { return [marginLeft, width - marginRight]; }});
+
+    svg.append("image")
+        .attr("x", marginLeft)
+        .attr("y", marginTop)
+        .attr("width", width - marginLeft - marginRight)
+        .attr("height", height - marginTop - marginBottom)
+        .attr("preserveAspectRatio", "none")
+        .attr("xlink:href", ramp(color.interpolator()).toDataURL());
+
+    // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
+    if (!x.ticks) {
+      if (tickValues === undefined) {
+        const n = Math.round(ticks + 1);
+        tickValues = d3.range(n).map(i => d3.quantile(color.domain(), i / (n - 1)));
+      }
+      if (typeof tickFormat !== "function") {
+        tickFormat = d3.format(tickFormat === undefined ? ",f" : tickFormat);
+      }
+    }
+  }
+
+  // Threshold
+  else if (color.invertExtent) {
+    const thresholds
+        = color.thresholds ? color.thresholds() // scaleQuantize
+        : color.quantiles ? color.quantiles() // scaleQuantile
+        : color.domain(); // scaleThreshold
+
+    const thresholdFormat
+        = tickFormat === undefined ? d => d
+        : typeof tickFormat === "string" ? d3.format(tickFormat)
+        : tickFormat;
+
+    x = d3.scaleLinear()
+        .domain([-1, color.range().length - 1])
+        .rangeRound([marginLeft, width - marginRight]);
+
+    svg.append("g")
+      .selectAll("rect")
+      .data(color.range())
+      .join("rect")
+        .attr("x", (d, i) => x(i - 1))
+        .attr("y", marginTop)
+        .attr("width", (d, i) => x(i) - x(i - 1))
+        .attr("height", height - marginTop - marginBottom)
+        .attr("fill", d => d);
+
+    tickValues = d3.range(thresholds.length);
+    tickFormat = i => thresholdFormat(thresholds[i], i);
+  }
+
+  // Ordinal
+  else {
+    x = d3.scaleBand()
+        .domain(color.domain())
+        .rangeRound([marginLeft, width - marginRight]);
+
+    svg.append("g")
+      .selectAll("rect")
+      .data(color.domain())
+      .join("rect")
+        .attr("x", x)
+        .attr("y", marginTop)
+        .attr("width", Math.max(0, x.bandwidth() - 1))
+        .attr("height", height - marginTop - marginBottom)
+        .attr("fill", color);
+
+    tickAdjust = () => {};
+  }
+
+  svg.append("g")
+      .attr("transform", `translate(0,${height - marginBottom})`)
+      .call(d3.axisBottom(x)
+        .ticks(ticks, typeof tickFormat === "string" ? tickFormat : undefined)
+        .tickFormat(typeof tickFormat === "function" ? tickFormat : undefined)
+        .tickSize(tickSize)
+        .tickValues(tickValues))
+      .call(tickAdjust)
+      .call(g => g.select(".domain").remove())
+      .call(g => g.append("text")
+        .attr("x", marginLeft)
+        .attr("y", marginTop + marginBottom - height - 6)
+        .attr("fill", "currentColor")
+        .attr("text-anchor", "start")
+        .attr("font-weight", "bold")
+        .attr("class", "title")
+        .text(title));
+
+  return svg.node();
+}
+)}
+
+function _legend(Legend){return(
+function legend({color, ...options}) {
+  return Legend(color, options);
+}
+)}
+
+function _Swatches(d3,htl){return(
+function Swatches(color, {
+  columns = null,
+  format,
+  unknown: formatUnknown,
+  swatchSize = 15,
+  swatchWidth = swatchSize,
+  swatchHeight = swatchSize,
+  marginLeft = 0
+} = {}) {
+  const id = `-swatches-${Math.random().toString(16).slice(2)}`;
+  const unknown = formatUnknown == null ? undefined : color.unknown();
+  const unknowns = unknown == null || unknown === d3.scaleImplicit ? [] : [unknown];
+  const domain = color.domain().concat(unknowns);
+  if (format === undefined) format = x => x === unknown ? formatUnknown : x;
+
+  if (columns !== null) return htl.html`<div style="display: flex; align-items: center; margin-left: ${+marginLeft}px; min-height: 33px; font: 10px sans-serif;">
+  <style>
+
+.${id}-item {
+  break-inside: avoid;
+  display: flex;
+  align-items: center;
+  padding-bottom: 1px;
+}
+
+.${id}-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - ${+swatchWidth}px - 0.5em);
+}
+
+.${id}-swatch {
+  width: ${+swatchWidth}px;
+  height: ${+swatchHeight}px;
+  margin: 0 0.5em 0 0;
+}
+
+  </style>
+  <div style=${{width: "100%", columns}}>${domain.map(value => {
+    const label = `${format(value)}`;
+    return htl.html`<div class=${id}-item>
+      <div class=${id}-swatch style=${{background: color(value)}}></div>
+      <div class=${id}-label title=${label}>${label}</div>
+    </div>`;
+  })}
+  </div>
+</div>`;
+
+  return htl.html`<div style="display: flex; align-items: center; min-height: 33px; margin-left: ${+marginLeft}px; font: 10px sans-serif;">
+  <style>
+
+.${id} {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1em;
+}
+
+.${id}::before {
+  content: "";
+  width: ${+swatchWidth}px;
+  height: ${+swatchHeight}px;
+  margin-right: 0.5em;
+  background: var(--color);
+}
+
+  </style>
+  <div>${domain.map(value => htl.html`<span class="${id}" style="--color: ${color(value)}">${format(value)}</span>`)}</div>`;
+}
+)}
+
+function _swatches(Swatches){return(
+function swatches({color, ...options}) {
+  return Swatches(color, options);
+}
+)}
+
+function define$1(runtime, observer) {
+  const main = runtime.module();
+  main.variable(observer()).define(["md"], _1$1);
+  main.variable(observer()).define(["Legend","d3"], _2);
+  main.variable(observer()).define(["Legend","d3"], _3);
+  main.variable(observer()).define(["Legend","d3"], _4);
+  main.variable(observer()).define(["Legend","d3"], _5);
+  main.variable(observer()).define(["Legend","d3"], _6$1);
+  main.variable(observer()).define(["Legend","d3"], _7);
+  main.variable(observer()).define(["Legend","d3"], _8);
+  main.variable(observer()).define(["Legend","d3"], _9);
+  main.variable(observer()).define(["Legend","d3"], _10);
+  main.variable(observer()).define(["Legend","d3"], _11$1);
+  main.variable(observer()).define(["Legend","d3"], _12);
+  main.variable(observer()).define(["md"], _13);
+  main.variable(observer()).define(["Swatches","d3"], _14$1);
+  main.variable(observer()).define(["Swatches","d3"], _15);
+  main.variable(observer()).define(["md"], _16$1);
+  main.variable(observer("Legend")).define("Legend", ["d3"], _Legend);
+  main.variable(observer("legend")).define("legend", ["Legend"], _legend);
+  main.variable(observer("Swatches")).define("Swatches", ["d3","htl"], _Swatches);
+  main.variable(observer("swatches")).define("swatches", ["Swatches"], _swatches);
+  return main;
+}
+
 function _1(md){return(
 md`# Dialectical Wheel with Arrows
 `
@@ -4573,7 +4940,7 @@ function _dialecticalData(){return(
       positive: "AI frees humans from repetitive tasks",
       negative: "AI replaces human workers entirely"
     },
-    T2: {
+    Ac: {
       statement: "Automation reduces labor costs",
       positive: "Lower costs benefit consumers",
       negative: "Cost savings don't reach workers"
@@ -4594,7 +4961,7 @@ function _dialecticalData(){return(
       positive: "AI enhances human creative potential",
       negative: "Over-reliance on AI reduces creativity"
     },
-    A2: {
+    Re: {
       statement: "Education adapts to AI integration",
       positive: "Skills training becomes more relevant",
       negative: "Educational systems lag behind technology"
@@ -4622,6 +4989,7 @@ function _styles(){return(
     width: 500,
     height: 500,
     radii: {
+      invisible: 250,
       outer: 200,
       middleOuter: 150,
       middleInner: 100,
@@ -4667,7 +5035,7 @@ function _styles(){return(
   }
 )}
 
-function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,$0,d3){return(
+function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,$0,isThesisType,d3){return(
 (() => {
   const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
     <div style="margin-bottom: 10px; font-weight: bold;">Arrow Connections</div>
@@ -4751,17 +5119,20 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
       let color = "#666";
       if (conn.fromRing !== 'middle' || conn.toRing !== 'middle') {
         if ((conn.fromRing === 'inner' && conn.toRing === 'inner') || 
-            (conn.fromRing === 'outer' && conn.toRing === 'outer')) {
+            (conn.fromRing === 'outer' && conn.toRing === 'outer') ||
+            (conn.fromRing === 'invisible' && conn.toRing === 'invisible')) {
           color = "#16a34a"; // Green for same polarity
         } else if ((conn.fromRing === 'inner' && conn.toRing === 'outer') || 
                    (conn.fromRing === 'outer' && conn.toRing === 'inner')) {
           color = "#dc2626"; // Red for opposite polarity
+        } else if (conn.fromRing === 'invisible' || conn.toRing === 'invisible') {
+          color = "#ff9500"; // Orange for invisible ring connections
         } else {
           color = "#8b5cf6"; // Purple for mixed connections
         }
       } else {
-        const fromIsThesis = conn.from.startsWith('T');
-        const toIsThesis = conn.to.startsWith('T');
+        const fromIsThesis = isThesisType(conn.from);
+        const toIsThesis = isThesisType(conn.to);
         if (fromIsThesis === toIsThesis) {
           color = "#2563eb"; // Blue for same type
         } else {
@@ -4790,8 +5161,8 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
         color = "#8b5cf6"; // Purple for mixed connections
       }
     } else {
-      const fromIsThesis = conn.from.startsWith('T');
-      const toIsThesis = conn.to.startsWith('T');
+          const fromIsThesis = isThesisType(conn.from);
+    const toIsThesis = isThesisType(conn.to);
       if (fromIsThesis === toIsThesis) {
         color = "#2563eb"; // Blue for same type
       } else {
@@ -4816,6 +5187,7 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
         case "#dc2626": return "arrowhead-red";
         case "#8b5cf6": return "arrowhead-purple";
         case "#2563eb": return "arrowhead-blue";
+        case "#ff9500": return "arrowhead-orange";
         default: return "arrowhead-gray";
       }
     }
@@ -4842,10 +5214,10 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
     
     const perpX = -dy / distance;
     const perpY = dx / distance;
-    const curvature = Math.min(distance * 0.2, 50);
+    const curvature = Math.min(distance * 0.4, 80);
     
-    const controlX = midX + perpX * curvature;
-    const controlY = midY + perpY * curvature;
+    const controlX = midX - perpX * curvature;
+    const controlY = midY - perpY * curvature;
     
     const path = `M ${fromShortened.x} ${fromShortened.y} Q ${controlX} ${controlY} ${toShortened.x} ${toShortened.y}`;
     
@@ -4894,7 +5266,6 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
   startStepsBtn.addEventListener('click', () => {
     updateArrowConnections();
     arrowStepMode = true;
-    arrowsVisible = true;
     currentArrowStep = 0;
     if (arrowsVisible) {
       $0.clearArrows();
@@ -4942,7 +5313,35 @@ function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalD
 })()
 )}
 
-function _chart(styles,d3,dialecticalData,transformToNestedPieData,getTextConstraints,wrapText,arrowUtilities,parseArrowConnections,arrowConnections,initializeBuildSteps){return(
+function _6(showFlow,$0)
+{
+  if(showFlow){
+    $0.drawFlow();
+  }
+}
+
+
+function _showFlow(Inputs){return(
+Inputs.toggle({label:"Show sequential flow"})
+)}
+
+function _isWhiteOutside(Inputs){return(
+Inputs.toggle({label: "Swap red and white layer"})
+)}
+
+function _whitesOnly(Inputs){return(
+Inputs.toggle({label: "White cells only"})
+)}
+
+function _TsOnly(Inputs){return(
+Inputs.toggle({label: "Ts only"})
+)}
+
+function _11(DOM,serialize,$0){return(
+DOM.download(() => serialize($0), undefined, "Save as SVG")
+)}
+
+function _chart(styles,d3,dialecticalData,transformToNestedPieData,getOppositePrefix,getTextConstraints,wrapText,isThesisType,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,initializeBuildSteps){return(
 (() => {
   
 let isTouchDragging = false;
@@ -5012,7 +5411,8 @@ let buildSteps = [];
 const cells = Object.keys(dialecticalData);
 cells.forEach(cell => {
   cellVisibility[cell] = {
-    outer: true,  // Start visible for normal mode
+    invisible: true,  // Start visible for normal mode
+    outer: true,  
     middle: true,
     inner: true
   };
@@ -5078,6 +5478,10 @@ const pie = d3.pie()
   .sort(null);
 
 // Create arc generators
+const invisibleArc = d3.arc()
+  .innerRadius(outerRadius)
+  .outerRadius(styles.radii.invisible);
+
 const outerArc = d3.arc()
   .innerRadius(innerRadius)
   .outerRadius(outerRadius);
@@ -5167,14 +5571,17 @@ function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
 }
 
 // Create groups for each ring (in content group)
+const invisibleGroup = contentGroup.append("g").attr("class", "invisible-ring");
 const outerGroup = contentGroup.append("g").attr("class", "outer-ring");
 const middleGroup = contentGroup.append("g").attr("class", "middle-ring");
 const innerGroup = contentGroup.append("g").attr("class", "inner-ring");
 
 // Initialize data
 const nestedData = transformToNestedPieData(dialecticalData);
+const originalNestedData = JSON.parse(JSON.stringify(nestedData)); // Keep original opacity values
 
 // Create groups for labels (in content group)
+const invisibleLabelsGroup = contentGroup.append("g").attr("class", "invisible-labels");
 const outerLabelsGroup = contentGroup.append("g").attr("class", "outer-labels");
 const middleLabelsGroup = contentGroup.append("g").attr("class", "middle-labels");
 const innerLabelsGroup = contentGroup.append("g").attr("class", "inner-labels");
@@ -5190,29 +5597,9 @@ const centerCircle = contentGroup.append("circle")
 const coordinateGroup = contentGroup.append("g").attr("class", "coordinate-system");
 
 // Add circumference numbers at slice centers
-const numSlices = Object.keys(dialecticalData).length;
-const angleStep = (2 * Math.PI) / numSlices;
-const numberRadius = outerRadius + 15;
+Object.keys(dialecticalData).length;
 
-// Place numbers at the center of each slice, starting from top and going clockwise
-for (let i = 0; i < numSlices; i++) {
-  const angle = (i * angleStep) + (angleStep / 2) - Math.PI / 2; // Center of slice, start at top
-  const x = numberRadius * Math.cos(angle);
-  const y = numberRadius * Math.sin(angle);
-  
-  coordinateGroup.append("text")
-    .attr("class", "coordinate-number")
-    .attr("x", x)
-    .attr("y", y)
-    .attr("data-slice-index", i)
-    .style("text-anchor", "middle")
-    .style("dominant-baseline", "central")
-    .style("font-family", styles.fonts.family)
-    .style("font-size", `${styles.fonts.coordinates.size}px`)
-    .style("font-weight", styles.fonts.coordinates.weight)
-    .style("fill", styles.colors.text.coordinates)
-    .text(i < numSlices / 2 ? (i + 1) : (i - numSlices / 2 + 1));
-}
+
 
 // Add axis symbols at the center of each ring layer
 const ringRadii = [
@@ -5222,7 +5609,7 @@ const ringRadii = [
 ];
 
 //const symbols = ["T+", "T", "T-"]; // Positive, neutral, negative
-const axisColors = [styles.colors.axis.positive, styles.colors.axis.neutral, styles.colors.axis.negative];
+const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
 
 function updateCoordinateNumbersOpacities() {
   // Update coordinate number opacities based on slice data
@@ -5288,19 +5675,17 @@ function updateAxisPositions(focusedUnitId = null) {
       const y = (radius-8) * Math.sin(rotatedAngle);
       const x2 = (radius) * Math.cos(angle);
       const y2 = (radius) * Math.sin(angle);
-      
-      // Choose symbols based on the focused unit ID
-      const signs = ["+", "", "-"];
 
       //const symbols = focusedUnitId.startsWith('T') ? logos[sideIndex] : logos[1 - sideIndex];
       
       // Create a group for this axis element (circle + symbol)
       const axisGroup = coordinateGroup.append("g")
         .attr("class", "axis-element");
+
+      let oppaciudad = 1;
       
       // Determine which unit ID to use for clipping (partner unit for opposite side)
-      const clipUnitId = sideIndex === 0 ? focusedUnitId : 
-        (focusedUnitId.startsWith('T') ? focusedUnitId.replace('T', 'A') : focusedUnitId.replace('A', 'T'));
+      let clipUnitId = sideIndex === 0 ? focusedUnitId : getOppositePrefix(focusedUnitId);
       
       // Create a unique clip path ID for this axis element
       const clipId = `clip-${clipUnitId}-${sideIndex}-${ringIndex}`;
@@ -5326,6 +5711,9 @@ function updateAxisPositions(focusedUnitId = null) {
             arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
           }
           const cellData = pieData.find(d => d.data.unitId === clipUnitId);
+          clipUnitId = cellData.data.name;
+          oppaciudad = cellData.data.opacity;
+          console.log(`cellData.data.name: ${cellData.data.name}, cellData.data.opacity: ${cellData.data.opacity}`);
           return cellData ? arcGen(cellData) : "";
         });
       
@@ -5355,14 +5743,14 @@ function updateAxisPositions(focusedUnitId = null) {
         .style("font-family", "Monaco, monospace")
         .style("font-size", "8px")
         .style("font-weight", styles.fonts.coordinates.weight)
-        .style("fill", axisColors[ringIndex].stroke)
+        .style("fill", axisColors[ringIndex])
         .style("pointer-events", "none")
         .style("opacity", 0)
-        .text(clipUnitId + signs[ringIndex])
+        .text(clipUnitId)
         .transition()
         .duration(500)
         .attr("y", y)
-        .style("opacity", 1);
+        .style("opacity", oppaciudad);
     });
   });
   
@@ -5373,6 +5761,10 @@ function updateAxisPositions(focusedUnitId = null) {
 updateAxisPositions();
 
 // Color scales
+const invisibleColor = d3.scaleOrdinal()
+  .domain(Object.keys(dialecticalData))
+  .range(Object.keys(dialecticalData).map(() => "transparent"));
+
 const outerColor = d3.scaleOrdinal()
   .domain(Object.keys(dialecticalData))
   .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer));
@@ -5407,6 +5799,11 @@ function hideCell(unitId, ringType) {
   
   let group, labelsGroup, targetRadius;
   switch(ringType) {
+    case "invisible":
+      group = invisibleGroup;
+      labelsGroup = invisibleLabelsGroup;
+      targetRadius = outerRadius;
+      break;
     case "outer":
       group = outerGroup;
       labelsGroup = outerLabelsGroup;
@@ -5436,7 +5833,11 @@ function hideCell(unitId, ringType) {
       
       return function(t) {
         let arcGen;
-        if (ringType === "outer") {
+        if (ringType === "invisible") {
+          const newInnerRadius = d3.interpolate(outerRadius, targetRadius)(t);
+          const newOuterRadius = d3.interpolate(styles.radii.invisible, targetRadius)(t);
+          arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
+        } else if (ringType === "outer") {
           const newInnerRadius = d3.interpolate(innerRadius, targetRadius)(t);
           const newOuterRadius = d3.interpolate(outerRadius, targetRadius)(t);
           arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
@@ -5474,6 +5875,13 @@ function showCell(unitId, ringType) {
   
   let group, labelsGroup, startRadius, endInnerRadius, endOuterRadius;
   switch(ringType) {
+    case "invisible":
+      group = invisibleGroup;
+      labelsGroup = invisibleLabelsGroup;
+      startRadius = outerRadius;
+      endInnerRadius = outerRadius;
+      endOuterRadius = styles.radii.invisible;
+      break;
     case "outer":
       group = outerGroup;
       labelsGroup = outerLabelsGroup;
@@ -5514,7 +5922,7 @@ function showCell(unitId, ringType) {
         return arcGen(currentData);
       };
     })
-    .style("opacity", d3.interpolate(0, ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8));
+    .style("opacity", d3.interpolate(0, ringType === "invisible" ? 1 : ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8));
     
   
   // Show label with position animation
@@ -5523,7 +5931,7 @@ function showCell(unitId, ringType) {
     .style("font-size", function() {
       // Set font size immediately when text becomes visible
       const baseSizes = styles.fonts.labels.baseSize;
-      return `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+      return `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
     })
     .each(function(d) {
       // Do text wrapping immediately with current data
@@ -5536,7 +5944,10 @@ function showCell(unitId, ringType) {
       // Use the current data (either animationData if in step mode, or nestedData otherwise)
       const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
       let pieData;
-      if (ringType === "outer") {
+      if (ringType === "invisible") {
+        pieData = pie(dataToUse.invisible);
+        d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
+      } else if (ringType === "outer") {
         pieData = pie(dataToUse.outer);
         d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
       } else if (ringType === "middle") {
@@ -5615,10 +6026,11 @@ function unfocus() {
   // Choose which data to modify
   const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
 
-  // Reset all opacities to 1
-  ["outer", "middle", "inner"].forEach(ringType => {
+  // Reset all opacities to original values
+  ["invisible", "outer", "middle", "inner"].forEach(ringType => {
     dataToModify[ringType].forEach(item => {
-      item.opacity = 1;
+      const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+      item.opacity = originalItem ? originalItem.opacity : 1;
     });
   });
 
@@ -5633,8 +6045,8 @@ function unfocus() {
 
 // Focus pair function
 function focusPair(clickedUnitId) {
-  const isThesis = clickedUnitId.startsWith('T');
-  const pairId = isThesis ? clickedUnitId.replace('T', 'A') : clickedUnitId.replace('A', 'T');
+  const isThesis = isThesisType(clickedUnitId);
+  const pairId = getOppositePrefix(clickedUnitId);
   const thesis = isThesis ? clickedUnitId : pairId;
   const antithesis = isThesis ? pairId : clickedUnitId;   
   
@@ -5642,8 +6054,11 @@ function focusPair(clickedUnitId) {
     focusedPair.thesis === thesis && 
     focusedPair.antithesis === antithesis;
 
+  // Choose which data to modify
+  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+
   // Check if clickedUnitId is within 90 degrees of 0 degrees (or 180 degrees)
-  const sliceData = pie(nestedData.middle).find(d => d.data.unitId === clickedUnitId);
+  const sliceData = pie(dataToModify.middle).find(d => d.data.unitId === clickedUnitId);
   const sliceAngle = (sliceData.startAngle + sliceData.endAngle)/2;
   let visualAngle = (sliceAngle + getCurrentRotationFromDOM()) % (2 * Math.PI);
   // Round down to the nearest degree (in radians)
@@ -5652,11 +6067,6 @@ function focusPair(clickedUnitId) {
     clickedUnitId = pairId;
     //console.log("is not within 90 degrees. visualAngle: " + visualAngle);
   }
-
-
-  
-  // Choose which data to modify
-  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
   
   if (isAlreadyFocused) {
     if(isStepMode) {
@@ -5675,10 +6085,11 @@ function focusPair(clickedUnitId) {
     }
     focusedPair = null;
     clickedSlice = null;
-    // Reset all opacities to 1
-    ["outer", "middle", "inner"].forEach(ringType => {
+    // Reset all opacities to original values
+    ["invisible", "outer", "middle", "inner"].forEach(ringType => {
       dataToModify[ringType].forEach(item => {
-        item.opacity = 1;
+        const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+        item.opacity = originalItem ? originalItem.opacity : 1;
       });
     });
     // Reset axes to default positions
@@ -5689,17 +6100,26 @@ function focusPair(clickedUnitId) {
     // Rotate to center the clicked slice at the top
     rotateToSlice(clickedUnitId, styles.durations.stepRotation);
     
-    // Dim all cells first
-    ["outer", "middle", "inner"].forEach(ringType => {
+    // Dim all cells first (but only if they were originally visible)
+    ["invisible", "outer", "middle", "inner"].forEach(ringType => {
       dataToModify[ringType].forEach(item => {
-        item.opacity = 0.3;
+        const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+        
+        // Only dim if originally visible (check value, not opacity)
+        if (originalItem && originalItem.value > 0) {
+          item.opacity = 0.3;
+        } else {
+          item.opacity = 0; // Keep hidden
+        }
       });
     });
-    // Highlight the focused pair
-    ["outer", "middle", "inner"].forEach(ringType => {
+    // Highlight the focused pair (restore original opacity)
+    ["invisible", "outer", "middle", "inner"].forEach(ringType => {
       dataToModify[ringType].forEach(item => {
         if (item.unitId === thesis || item.unitId === antithesis) {
-          item.opacity = 1;
+          const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+          const originalOpacity = originalItem ? originalItem.opacity : 1;
+          item.opacity = originalOpacity; // Restore original, don't force to 1
         }
       });
     });
@@ -5709,6 +6129,7 @@ function focusPair(clickedUnitId) {
   
   // Re-render with updated opacity
   if (isStepMode && Object.keys(animationData).length > 0) {
+    changeData("invisible", animationData.invisible, invisibleArc);
     changeData("outer", animationData.outer, outerArc);
     changeData("middle", animationData.middle, middleArc);
     changeData("inner", animationData.inner, innerArc);
@@ -5753,9 +6174,15 @@ function updateTextPositions(rotationDegrees) {
   requestAnimationFrame(() => {
     // PERFORMANCE: Update all cell text using the optimized transform function
     // Pass rotation to avoid repeated DOM queries
+    const invisibleTexts = invisibleLabelsGroup.selectAll("text");
     const outerTexts = outerLabelsGroup.selectAll("text");
     const middleTexts = middleLabelsGroup.selectAll("text");
     const innerTexts = innerLabelsGroup.selectAll("text");
+    
+    invisibleTexts.attr("transform", function(d) {
+      if (!d) return this.getAttribute("transform"); // Keep existing if no data
+      return calculateTextTransform(d, invisibleArc, currentRotationRadians);
+    });
     
     outerTexts.attr("transform", function(d) {
       if (!d) return this.getAttribute("transform"); // Keep existing if no data
@@ -5829,7 +6256,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
       if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
         return 0;
       }
-      const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+      const baseOpacity = ringType === "outer" || ringType === "invisible" ? 1 : ringType === "middle" ? 0.9 : 0.8;
       return d.data.opacity * baseOpacity;
     })
     .attr("d", arcGenerator)
@@ -5915,7 +6342,8 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .on("mouseenter", function(event, d) {
       // Set hovered cell for scroll-to-zoom
       const parentClass = d3.select(this.parentNode).attr("class");
-      const ringType = parentClass.includes("outer") ? "outer" : 
+      const ringType = parentClass.includes("invisible") ? "invisible" :
+                      parentClass.includes("outer") ? "outer" : 
                       parentClass.includes("middle") ? "middle" : "inner";
       setHoveredCell({ unitId: d.data.unitId});
 
@@ -5934,9 +6362,10 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
       else if(focusedPair && focusedPair.thesis[1] != d.data.unitId[1]){
         d3.select(this)
         .style("cursor", "default")
-        .style("opacity", 1);
+        .style("opacity", ringType === "invisible" ? 0.2 : 1); // Show invisible ring faintly on hover
         let labelsGroup;
-        if (ringType === "outer") labelsGroup = outerLabelsGroup;
+        if (ringType === "invisible") labelsGroup = invisibleLabelsGroup;
+        else if (ringType === "outer") labelsGroup = outerLabelsGroup;
         else if (ringType === "middle") labelsGroup = middleLabelsGroup;
         else labelsGroup = innerLabelsGroup;
         labelsGroup.selectAll("text")
@@ -5949,7 +6378,11 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
         .selectAll("path.cell")
         .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
         .style("stroke-dasharray", "1,0")
-        .style("cursor", "pointer");
+        .style("cursor", "pointer")
+        .style("opacity", function() {
+          const thisRingType = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null;
+          return thisRingType === "invisible" ? 0.2 : null; // Show invisible ring faintly on hover
+        });
       }
       
     })
@@ -5966,19 +6399,30 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
         d3.select(this)
         .style("opacity", 0.3);
         let labelsGroup;
-        if (ringType === "outer") labelsGroup = outerLabelsGroup;
+        if (ringType === "invisible") labelsGroup = invisibleLabelsGroup;
+        else if (ringType === "outer") labelsGroup = outerLabelsGroup;
         else if (ringType === "middle") labelsGroup = middleLabelsGroup;
         else labelsGroup = innerLabelsGroup;
         labelsGroup.selectAll("text")
         .filter(text => text.data.unitId === d.data.unitId)
         .style("opacity", 0.3);
+
+        if(ringType === "invisible"){
+          d3.select(this)
+          .style("opacity", 0);
+        }
       }
       else {
         // Remove highlight from all cells with the same unitId
         d3.select(this.ownerSVGElement)
           .selectAll("path.cell")
           .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
-          .style("stroke-dasharray", "1,3");
+          .style("stroke-dasharray", "1,3")
+          .style("opacity", function() {
+            const thisRingType = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null;
+            return thisRingType === "invisible" ? 0 : null; // Hide invisible ring when not hovering
+          });
+
       }
     });
 
@@ -5992,6 +6436,9 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     .style("opacity", d => {
       if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
         return 0;
+      }
+      if (ringType === "invisible") {
+        return 0; // Paths are invisible, only text shows
       }
       const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
       return d.data.opacity * baseOpacity;
@@ -6030,11 +6477,12 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
     .style("font-family", styles.fonts.family)
     .style("font-size", function(d) {
       const baseSizes = styles.fonts.labels.baseSize;
-      return `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+      return `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
     })
     .style("font-weight", styles.fonts.labels.weight)
     .style("fill", function(d) {
       const textColors = styles.colors.text;
+      if (ringType === "invisible") return 'black';
       if (ringType === "inner") return textColors.inner;
       if (ringType === "outer") return textColors.outer;
       return textColors.middle;
@@ -6045,13 +6493,16 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
       const textElement = d3.select(this);
       // Ensure font size is set before wrapping
       const baseSizes = styles.fonts.labels.baseSize;
-      textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+      textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
       
       const text = d.data.fullText || d.data.name;
       // Get latest arc data for this cell
       let pieData;
       const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-      if (ringType === "outer") {
+      if (ringType === "invisible") {
+        pieData = pie(dataToUse.invisible);
+        d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
+      } else if (ringType === "outer") {
         pieData = pie(dataToUse.outer);
         d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
       } else if (ringType === "middle") {
@@ -6085,12 +6536,15 @@ function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
         const textElement = d3.select(this);
         // Ensure font size is set before wrapping
         const baseSizes = styles.fonts.labels.baseSize;
-        textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+        textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
         
         const text = d.data.fullText || d.data.name;
         let pieData;
         const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-        if (ringType === "outer") {
+        if (ringType === "invisible") {
+          pieData = pie(dataToUse.invisible);
+          d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
+        } else if (ringType === "outer") {
           pieData = pie(dataToUse.outer);
           d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
         } else if (ringType === "middle") {
@@ -6118,6 +6572,7 @@ function updateAllRings() {
   // Use animation data if in step mode, otherwise use regular data
   const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
   
+  updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
   updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
   updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
   updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
@@ -6134,6 +6589,7 @@ arrowUtilities.createArrowheadMarker(defs, "#16a34a", "arrowhead-green");
 arrowUtilities.createArrowheadMarker(defs, "#dc2626", "arrowhead-red");
 arrowUtilities.createArrowheadMarker(defs, "#8b5cf6", "arrowhead-purple");
 arrowUtilities.createArrowheadMarker(defs, "#2563eb", "arrowhead-blue");
+arrowUtilities.createArrowheadMarker(defs, "#ff9500", "arrowhead-orange");
 
 // Create arrow group
 const arrowsGroup = contentGroup.append("g")
@@ -6145,6 +6601,7 @@ centerCircle.lower();
 
 // Ensure arrows are above rings but below labels
 arrowsGroup.raise();
+invisibleLabelsGroup.raise();
 outerLabelsGroup.raise();
 middleLabelsGroup.raise();
 innerLabelsGroup.raise();
@@ -6157,6 +6614,11 @@ function getCellCentroid(unitId, ringType = 'middle') {
   let pieData, arcGenerator;
   
   switch(ringType) {
+    case 'invisible':
+      pieData = pie(dataToUse.invisible);
+      // Create fresh arc generator with stable radii to avoid animation interference
+      arcGenerator = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
+      break;
     case 'outer':
       pieData = pie(dataToUse.outer);
       // Create fresh arc generator with stable radii to avoid animation interference
@@ -6276,33 +6738,31 @@ function drawAllArrows() {
   });
 }
 
+function drawFlow() {
+  clearArrows();
+  const connections = parseArrowConnections(flowConnections, dialecticalData);
+  
+  connections.forEach((conn, index) => {
+    // Use arrow utilities to calculate color
+    const color = arrowUtilities.calculateArrowColor(conn.fromRing, conn.toRing, conn.from, conn.to);
+    
+    // Stagger arrow animations with 300ms delay between each
+    const delay = index * 300;
+    drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+  });
+}
+
 // Step-by-step animation functions
 function initializeAnimationData() {
-  // Use the same order as dialecticalData for consistent positioning
-  const units = Object.keys(dialecticalData);
-  animationData = {
-    outer: units.map(unit => ({
-      name: `${unit} -`,
-      unitId: unit,
-      value: 0, // Start with 0 for step mode
-      opacity: 1,
-      fullText: dialecticalData[unit].negative
-    })),
-    middle: units.map(unit => ({
-      name: unit,
-      unitId: unit,
-      value: 0, // Start with 0 for step mode
-      opacity: 1,
-      fullText: dialecticalData[unit].statement
-    })),
-    inner: units.map(unit => ({
-      name: `${unit} +`,
-      unitId: unit,
-      value: 0, // Start with 0 for step mode
-      opacity: 1,
-      fullText: dialecticalData[unit].positive
-    }))
-  };
+  // Use transformToNestedPieData and then modify values for step mode
+  animationData = transformToNestedPieData(dialecticalData);
+  
+  // Set all values to 0 for step mode (start with empty slices)
+  ["invisible", "outer", "middle", "inner"].forEach(ringType => {
+    animationData[ringType].forEach(item => {
+      item.value = 0; // Start with 0 for step mode
+    });
+  });
 }
 
 // Initialize build steps (generalized for any number of thesis/antithesis pairs)
@@ -6316,6 +6776,7 @@ function resetBuildState() {
   // Reset all cells to visible in visibility state (for step mode)
   cells.forEach(cell => {
     cellVisibility[cell] = {
+      invisible: true,  // Always present but invisible
       outer: false,  // Red (negative) - hidden initially
       middle: true,  // White (parent) - visible  
       inner: false   // Green (positive) - hidden initially
@@ -6338,8 +6799,8 @@ function executeStep(stepIndex) {
   switch (step.type) {
     case 'showWhite':
       // Determine pair ID and which one comes first in build sequence
-      const isThesis = step.unitId.startsWith('T');
-      const pairId = isThesis ? step.unitId.replace('T', 'A') : step.unitId.replace('A', 'T');
+          isThesisType(step.unitId);
+    const pairId = getOppositePrefix(step.unitId);
       
       // Find which cell appears first in the build sequence
       const currentCellFirstStep = buildSteps.findIndex(s => s.unitId === step.unitId && s.type === 'showWhite');
@@ -6490,6 +6951,7 @@ function resetToFull() {
   // Show all cells
   cells.forEach(cell => {
     cellVisibility[cell] = {
+      invisible: true,
       outer: true,
       middle: true,
       inner: true
@@ -6503,10 +6965,11 @@ function resetToFull() {
   // Reset wheel rotation to default position
   setRotationDirectly(0);
   
-  // Reset opacities and update with full data
-  ["outer", "middle", "inner"].forEach(ringType => {
+  // Reset opacities to original values and update with full data
+  ["invisible", "outer", "middle", "inner"].forEach(ringType => {
     nestedData[ringType].forEach(item => {
-      item.opacity = 1;
+      const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+      item.opacity = originalItem ? originalItem.opacity : 1;
     });
   });
   
@@ -6581,9 +7044,18 @@ return Object.assign(svg.node(), {
   getCurrentStepInfo,
   // Arrow control methods
   drawAllArrows,
+  drawFlow,
   clearArrows,
   drawArrow,
-  getCellCentroid
+  getCellCentroid,
+  // Invisible ring utilities (for debugging)
+  toggleInvisibleRingBorders: () => {
+    // Toggle the visibility of invisible ring borders (not text)
+    const currentStyle = invisibleGroup.style("opacity");
+    const newOpacity = currentStyle === "0.2" ? "0" : "0.2";
+    invisibleGroup.style("opacity", newOpacity);
+    return newOpacity === "0.2" ? "Invisible ring borders are now visible" : "Invisible ring borders are now hidden";
+  }
 });
 })()
 )}
@@ -6679,7 +7151,7 @@ function _stepControls(html,$0){return(
 })()
 )}
 
-function _8(chart){return(
+function _14(chart){return(
 chart.focusedPair
 )}
 
@@ -6687,11 +7159,11 @@ function _sliceNumber(Inputs,$0){return(
 Inputs.range([0,$0.cells.length-1],{value:0,step:1,label:"slice number"})
 )}
 
-function _10($0,sliceNumber){return(
+function _16($0,sliceNumber){return(
 $0.focusPair($0.cells[sliceNumber])
 )}
 
-function _11(chart){return(
+function _17(chart){return(
 chart.clickedCell
 )}
 
@@ -6854,8 +7326,8 @@ function _parseArrowConnections(){return(
     line = line.split('//')[0].trim();
     if (!line) continue;
     
-    // Parse "A -> B" syntax, now supporting + and - suffixes
-    const match = line.match(/(\w+[+-]?)\s*->\s*(\w+[+-]?)/);
+    // Parse "A -> B" syntax, now supporting +, -, and i suffixes
+    const match = line.match(/(\w+[+-i]?)\s*->\s*(\w+[+-i]?)/);
     if (match) {
       const [, from, to] = match;
       
@@ -6867,6 +7339,9 @@ function _parseArrowConnections(){return(
         } else if (unit.endsWith('-')) {
           const unitId = unit.slice(0, -1);
           return dialecticalData[unitId] ? { unitId, ringType: 'outer' } : null;
+        } else if (unit.endsWith('i')) {
+          const unitId = unit.slice(0, -1);
+          return dialecticalData[unitId] ? { unitId, ringType: 'invisible' } : null;
         } else {
           return dialecticalData[unit] ? { unitId: unit, ringType: 'middle' } : null;
         }
@@ -6965,48 +7440,187 @@ function _dotScriptEditor(html,dialecticalData,arrowConnections,$0,parseArrowCon
 })()
 )}
 
-function _arrowConnections(){return(
-`
+function _arrowConnections(dialecticalData){return(
+(() => {
+  const units = Object.keys(dialecticalData);
+  let connections = [];
   
-  T3 -> T1  // Democratization enables job creation
-  A3 -> A1  // Concentration leads to unemployment
-
-  T2- -> T1+
+  // Create sequential chain: first -> second -> third -> fourth, etc.
+  for (let i = 0; i < units.length; i++) {
+    const current = units[i];
+    const next = units[(i + 1) % units.length]; // Wrap around to first after last
+    connections.push(`${current} -> ${next}  // Sequential flow`);
+  }
   
-  // Positive/Negative specific connections
-  T1+ -> T2+  // Positive aspects reinforce each other
-  T1- -> A1-  // Negative concerns align
-  A3- -> T1-  // Concentration risks vs job creation risks
-  T3+ -> A1+  // Democratization benefits vs unemployment benefits
-`
+  // Add some ring-specific connections for visual interest
+  for (let i = 0; i < Math.min(units.length, 4); i++) {
+    const current = units[i];
+    const next = units[(i + 1) % units.length];
+    if(current.value == 0 || next.value == 0) continue;
+    connections.push(`${current}+ -> ${next}+  // Positive chain`);
+    connections.push(`${current}- -> ${next}-  // Negative chain`);
+  }
+  
+  
+  
+  return connections.join('\n');
+})()
 )}
 
-function _transformToNestedPieData(){return(
-(dialecticalData) => {
+function _flowConnections(dialecticalData){return(
+(() => {
   const units = Object.keys(dialecticalData);
+  let connections = [];
+
+  // Add invisible ring connections
+  for (let i = 0; i < units.length; i++) {
+    const current = units[i];
+    const target = units[(i + 1) % units.length]; // Skip one for variety
+    connections.push(`${current}i -> ${target}i  // Flow sequence`);
+  }
+
+  return connections.join('\n');
+})()
+)}
+
+function _parseArrowConnectionsAsSourceTarget(){return(
+(dotScript, dialecticalData) => {
+  const connections = [];
+  const lines = dotScript.split('\n');
+  
+  for (let line of lines) {
+    // Remove comments and trim
+    line = line.split('//')[0].trim();
+    if (!line) continue;
+    
+    // Parse "A -> B" syntax, now supporting +, -, and i suffixes
+    const match = line.match(/(\w+[+-i]?)\s*->\s*(\w+[+-i]?)/);
+    if (match) {
+      const [, from, to] = match;
+      
+      // Extract unit ID and ring type
+      const parseUnit = (unit) => {
+        if (unit.endsWith('+')) {
+          const unitId = unit.slice(0, -1);
+          return dialecticalData[unitId] ? { unitId, ringType: 'positive' } : null;
+        } else if (unit.endsWith('-')) {
+          const unitId = unit.slice(0, -1);
+          return dialecticalData[unitId] ? { unitId, ringType: 'negative' } : null;
+        } else if (unit.endsWith('i')) {
+          const unitId = unit.slice(0, -1);
+          return dialecticalData[unitId] ? { unitId, ringType: 'invisible' } : null;
+        } else {
+          return dialecticalData[unit] ? { unitId: unit, ringType: 'statement' } : null;
+        }
+      };
+      
+      const fromParsed = parseUnit(from);
+      const toParsed = parseUnit(to);
+      
+      if (fromParsed && toParsed) {
+        // Determine connection type based on the relationship
+        let type = 'flow';
+        
+        // Same unit connections (statement to its positive/negative)
+        if (fromParsed.unitId === toParsed.unitId) {
+          if (fromParsed.ringType === 'statement' && toParsed.ringType === 'positive') {
+            type = 'support';
+          } else if (fromParsed.ringType === 'statement' && toParsed.ringType === 'negative') {
+            type = 'opposition';
+          } else if (fromParsed.ringType === 'positive' && toParsed.ringType === 'negative') {
+            type = 'tension';
+          }
+        }
+        // Different unit connections
+        else {
+          const fromIsThesis = fromParsed.unitId.startsWith('T');
+          const toIsThesis = toParsed.unitId.startsWith('T');
+          
+          // Same ring type connections
+          if (fromParsed.ringType === toParsed.ringType) {
+            if (fromParsed.ringType === 'statement') {
+              type = fromIsThesis === toIsThesis ? 'parallel' : 'dialectical';
+            } else if (fromParsed.ringType === 'positive') {
+              type = 'reinforcement';
+            } else if (fromParsed.ringType === 'negative') {
+              type = 'amplification';
+            } else if (fromParsed.ringType === 'invisible') {
+              type = 'structural';
+            }
+          }
+          // Cross-ring connections
+          else {
+            if ((fromParsed.ringType === 'positive' && toParsed.ringType === 'negative') ||
+                (fromParsed.ringType === 'negative' && toParsed.ringType === 'positive')) {
+              type = 'contradiction';
+            } else if (fromParsed.ringType === 'invisible' || toParsed.ringType === 'invisible') {
+              type = 'hidden';
+            } else {
+              type = 'synthesis';
+            }
+          }
+        }
+        
+        connections.push({ 
+          source: `${fromParsed.unitId}: ${dialecticalData[fromParsed.unitId].statement}`, 
+          target: `${toParsed.unitId}: ${dialecticalData[toParsed.unitId].statement}`,
+          type: type
+        });
+      }
+    }
+  }
+  
+  return connections;
+}
+)}
+
+function _27(isWhiteOutside,styles)
+{
+  if (isWhiteOutside) {
+  styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
+  styles.colors.text = { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" };
+} else {
+  styles.colors.rings = { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" };
+  styles.colors.text = { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" };
+}
+}
+
+
+function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){return(
+(dialecticalData, whiteOutside=isWhiteOutside, whiteOnly=whitesOnly, tOnly = TsOnly) => {
+  const units = Object.keys(dialecticalData);
+  const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
   return {
-    outer: units.map(unit => ({
-      name: `${unit} -`,
+    invisible: units.map((unit,index)=> ({
+      name: `${unit}i`,
       unitId: unit,
-      value: 1,
-      opacity: 1,
+      value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+      fullText: `${(index)%(Object.keys(dialecticalData).length/2)+1}`
+    })),
+    [outerKey]: units.map(unit => ({
+      name: `${unit}-`,
+      unitId: unit,
+      value: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
       fullText: dialecticalData[unit].negative
     })),
-    middle: units.map(unit => ({
+    [middleKey]: units.map(unit => ({
       name: unit,
       unitId: unit,
-      value: 1,
-      opacity: 1,
+      value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
       fullText: dialecticalData[unit].statement
     })),
     inner: units.map(unit => ({
-      name: `${unit} +`,
+      name: `${unit}+`,
       unitId: unit,
-      value: 1,
-      opacity: 1,
+      value: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
       fullText: dialecticalData[unit].positive
     }))
-  };
+  }
+  
 }
 )}
 
@@ -7249,7 +7863,10 @@ function _getTextConstraints(styles){return(
   
   // Calculate actual ring dimensions
   let innerRadius, outerRadius;
-  if (ringType === "outer") {
+  if (ringType === "invisible") {
+    innerRadius = styles.radii.outer; 
+    outerRadius = styles.radii.invisible;
+  } else if (ringType === "outer") {
     innerRadius = styles.radii.middleOuter; // innerRadius
     outerRadius = styles.radii.outer; // outerRadius
   } else if (ringType === "middle") {
@@ -7287,7 +7904,7 @@ function _getTextConstraints(styles){return(
 }
 )}
 
-function _arrowUtilities(){return(
+function _arrowUtilities(isThesisType){return(
 (() => {
   // Quadratic curve point calculation
   function getPointAlongQuadraticCurve(start, control, end, t) {
@@ -7318,6 +7935,7 @@ function _arrowUtilities(){return(
       case "#dc2626": return "arrowhead-red";
       case "#8b5cf6": return "arrowhead-purple";
       case "#2563eb": return "arrowhead-blue";
+      case "#ff9500": return "arrowhead-orange";
       default: return "arrowhead-gray";
     }
   }
@@ -7330,18 +7948,21 @@ function _arrowUtilities(){return(
     if (fromRing !== 'middle' || toRing !== 'middle') {
       // Ring-specific connections get special colors
       if ((fromRing === 'inner' && toRing === 'inner') || 
-          (fromRing === 'outer' && toRing === 'outer')) {
-        color = "#16a34a"; // Green for same polarity (+ to + or - to -)
+          (fromRing === 'outer' && toRing === 'outer') ||
+          (fromRing === 'invisible' && toRing === 'invisible')) {
+        color = "#16a34a"; // Green for same polarity (+ to + or - to - or i to i)
       } else if ((fromRing === 'inner' && toRing === 'outer') || 
                  (fromRing === 'outer' && toRing === 'inner')) {
         color = "#dc2626"; // Red for opposite polarity (+ to - or - to +)
+      } else if (fromRing === 'invisible' || toRing === 'invisible') {
+        color = "#ff9500"; // Orange for invisible ring connections
       } else {
         color = "#8b5cf6"; // Purple for mixed connections (statement to +/-)
       }
     } else {
       // Statement-level connections
-      const fromIsThesis = fromUnitId.startsWith('T');
-      const toIsThesis = toUnitId.startsWith('T');
+          const fromIsThesis = isThesisType(fromUnitId);
+    const toIsThesis = isThesisType(toUnitId);
       if (fromIsThesis === toIsThesis) {
         color = "#2563eb"; // Blue for same type (thesis-thesis or antithesis-antithesis)
       } else {
@@ -7372,13 +7993,13 @@ function _arrowUtilities(){return(
     const midX = (fromShortened.x + toShortened.x) / 2;
     const midY = (fromShortened.y + toShortened.y) / 2;
     
-    // Add curvature based on the perpendicular direction
+    // Add curvature based on the perpendicular direction (flipped)
     const perpX = -dy / distance;
     const perpY = dx / distance;
-    const effectiveCurvature = curvature || Math.min(distance * 0.2, 50);
+    const effectiveCurvature = curvature || Math.min(distance * 0.4, 80);
     
-    const controlX = midX + perpX * effectiveCurvature;
-    const controlY = midY + perpY * effectiveCurvature;
+    const controlX = midX - perpX * effectiveCurvature;
+    const controlY = midY - perpY * effectiveCurvature;
     
     return {
       path: `M ${fromShortened.x} ${fromShortened.y} Q ${controlX} ${controlY} ${toShortened.x} ${toShortened.y}`,
@@ -7402,24 +8023,38 @@ function _getPointAlongQuadraticCurve(arrowUtilities){return(
 arrowUtilities.getPointAlongQuadraticCurve
 )}
 
-function _initializeBuildSteps(){return(
+function _initializeBuildSteps(getOppositePrefix,isThesisType){return(
 (dialecticalData) => {
   const buildSteps = [];
   
   // Dynamically generate build sequence based on dialecticalData
   const units = Object.keys(dialecticalData);
-  const theses = units.filter(unit => unit.startsWith('T')).sort();
-  const antitheses = units.filter(unit => unit.startsWith('A')).sort();
   
-  // Create pairs by matching thesis/antithesis by number (T1↔A1, T2↔A2, etc.)
+  // Create pairs by iterating through first half of units and finding their opposites
   const buildSequence = [];
-  const numPairs = Math.min(theses.length, antitheses.length);
+  const processedUnits = new Set();
   
-  for (let i = 0; i < numPairs; i++) {
-    const thesis = theses[i];
-    const antithesis = antitheses[i];
-    buildSequence.push([thesis, antithesis]);
-  }
+  units.forEach(unitId => {
+    // Skip if we've already processed this unit as part of a pair
+    if (processedUnits.has(unitId)) return;
+    
+    // Find the opposite unit
+    const oppositeUnitId = getOppositePrefix(unitId);
+    
+    // Only proceed if the opposite exists in our data
+    if (units.includes(oppositeUnitId)) {
+      // Determine which is thesis/antithesis for consistent ordering
+      const isThesis = isThesisType(unitId);
+      const thesis = isThesis ? unitId : oppositeUnitId;
+      const antithesis = isThesis ? oppositeUnitId : unitId;
+      
+      buildSequence.push([thesis, antithesis]);
+      
+      // Mark both units as processed
+      processedUnits.add(unitId);
+      processedUnits.add(oppositeUnitId);
+    }
+  });
   
   buildSequence.forEach(([thesis, antithesis]) => {
     // Show thesis (T)
@@ -7618,12 +8253,13 @@ Inputs.select(
     "Rubik",
     "Crimson Text",
     "Cascadia Mono",
-    "Ubuntu Mono"
+    "Ubuntu Mono",
+    "Arial"
   ],
   {
     label: "Desired font",
     // options:,
-    value: "Roboto Slab"
+    value: "Arial"
   }
 )
 )}
@@ -7632,13 +8268,13 @@ function _parseFont(selectedFont){return(
 selectedFont.split(" ").join("+")
 )}
 
-function _style(html,parseFont){return(
+function _style(html,parseFont,selectedFont){return(
 html`
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap">
 
 <style>
   body, svg {
-        font-family: "Arial", sans-serif;
+        font-family: ${selectedFont}, sans-serif;
         /* font-size: 48px; */
  }
 </style>
@@ -7649,42 +8285,388 @@ function _fontCDN(parseFont){return(
 `https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap`
 )}
 
+function _serialize(NodeFilter)
+{
+  const xmlns = "http://www.w3.org/2000/xmlns/";
+  const xlinkns = "http://www.w3.org/1999/xlink";
+  const svgns = "http://www.w3.org/2000/svg";
+  return function serialize(svg) {
+    svg = svg.cloneNode(true);
+    const fragment = window.location.href + "#";
+    const walker = document.createTreeWalker(svg, NodeFilter.SHOW_ELEMENT);
+    while (walker.nextNode()) {
+      for (const attr of walker.currentNode.attributes) {
+        if (attr.value.includes(fragment)) {
+          attr.value = attr.value.replace(fragment, "#");
+        }
+      }
+    }
+    svg.setAttributeNS(xmlns, "xmlns", svgns);
+    svg.setAttributeNS(xmlns, "xmlns:xlink", xlinkns);
+    const serializer = new window.XMLSerializer;
+    const string = serializer.serializeToString(svg);
+    return new Blob([string], {type: "image/svg+xml"});
+  };
+}
+
+
+function _rasterize(DOM,serialize){return(
+function rasterize(svg) {
+  let resolve, reject;
+  const promise = new Promise((y, n) => (resolve = y, reject = n));
+  const image = new Image;
+  image.onerror = reject;
+  image.onload = () => {
+    const rect = svg.getBoundingClientRect();
+    const context = DOM.context2d(rect.width, rect.height);
+    context.drawImage(image, 0, 0, rect.width, rect.height);
+    context.canvas.toBlob(resolve);
+  };
+  image.src = URL.createObjectURL(serialize(svg));
+  return promise;
+}
+)}
+
+function _43(DOM,rasterize,$0){return(
+DOM.download(() => rasterize($0), undefined, "Save as PNG")
+)}
+
+function _fontsize(Inputs){return(
+Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
+)}
+
+function _graph(suits,d3,location,drag,fontsize,selectedFont,invalidation)
+{
+  const width = 928;
+  const height = 600;
+  const types = Array.from(new Set(suits.map(d => d.type)));
+  const nodes = Array.from(new Set(suits.flatMap(l => [l.source, l.target])), id => ({id}));
+  const links = suits.map(d => Object.create(d));
+
+  const color = d3.scaleOrdinal(types, d3.schemeCategory10);
+
+  const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+      .force("charge", d3.forceManyBody().strength(-800))
+      .force("x", d3.forceX())
+      .force("y", d3.forceY());
+
+  const svg = d3.create("svg")
+      .attr("viewBox", [-width / 2, -height / 2, width, height])
+      .attr("width", width)
+      .attr("height", height)
+      .attr("style", "max-width: 100%; height: auto; font: 12px sans-serif;");
+  
+  // Per-type markers
+  svg.append("defs").selectAll("marker")
+    .data(types)
+    .join("marker")
+      .attr("id", d => `arrow-${d}`)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 10)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+    .append("path")
+      .attr("fill", color)
+      .attr("d", "M0,-5L10,0L0,5");
+
+  const link = svg.append("g")
+      .attr("fill", "none")
+      .attr("stroke-width", 1.5)
+    .selectAll("path")
+    .data(links)
+    .join("path")
+      .attr("stroke", d => color(d.type))
+      .attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location)})`);
+
+  const node = svg.append("g")
+      .attr("fill", "currentColor")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-linejoin", "round")
+    .selectAll("g")
+    .data(nodes)
+    .join("g")
+      .call(drag(simulation));
+
+  // Function to wrap text and return dimensions
+  function wrapText(textElement, text, maxWidth = 120) {
+    const words = text.split(/\s+/);
+    const lineHeight = 1.2; // em
+    
+    textElement.selectAll("tspan").remove(); // Clear existing tspans
+    
+    // For very small widths, just split by character
+    if (maxWidth <= 10) {
+      const chars = text.split('');
+      textElement.selectAll("tspan")
+        .data(chars)
+        .join("tspan")
+          .attr("x", 0)
+          .attr("dy", (d, i) => i === 0 ? `${-((chars.length - 1) * lineHeight * 0.5)}em` : `${lineHeight}em`)
+          .attr("text-anchor", "middle")
+          .text(d => d);
+      
+      const bbox = textElement.node().getBBox();
+      return {
+        width: bbox.width,
+        height: bbox.height,
+        lineCount: chars.length
+      };
+    }
+    
+    // Estimate character width (rough approximation: 0.6 * font-size for average character)
+    const avgCharWidth = fontsize * 0.6; // 20px font size
+    const maxCharsPerLine = Math.max(1, Math.floor(maxWidth / avgCharWidth));
+    
+    const lines = [];
+    let currentLine = "";
+    
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + (currentLine ? " " : "") + word;
+      
+      // Simple character count based wrapping
+      if (testLine.length > maxCharsPerLine && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    
+    // If still no wrapping happened, force it by character count
+    if (lines.length === 1 && text.length > maxCharsPerLine) {
+      lines.length = 0;
+      for (let i = 0; i < text.length; i += maxCharsPerLine) {
+        lines.push(text.slice(i, i + maxCharsPerLine));
+      }
+    }
+    
+    // Create proper tspans for each line
+    textElement.selectAll("tspan")
+      .data(lines)
+      .join("tspan")
+        .attr("x", 0)
+        .attr("dy", (d, i) => i === 0 ? `${-((lines.length - 1) * lineHeight * 0.5)}em` : `${lineHeight}em`)
+        .attr("text-anchor", "middle")
+        .text(d => d);
+    
+    // Calculate actual dimensions
+    const bbox = textElement.node().getBBox();
+    return {
+      width: bbox.width,
+      height: bbox.height,
+      lineCount: lines.length
+    };
+  }
+
+  // Create text nodes with wrapping
+  node.append("text")
+      .attr("font-size", `${fontsize}px`)
+      .attr("font-family", selectedFont)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "central")
+      .attr("cursor", "grab")
+      .attr("fill", "black")
+      .attr("stroke", "white")
+      .attr("stroke-width", 3)
+      .attr("paint-order", "stroke");
+
+  // Calculate node dimensions after text wrapping
+  node.each(function(d) {
+    const textElement = d3.select(this.querySelector('text'));
+    const textDimensions = wrapText(textElement, d.id, 120); // Back to reasonable width
+    
+    const padding = 10; // Reduced padding since we're using actual text bounds
+    
+    // Store actual text dimensions for edge calculations
+    d.textWidth = textDimensions.width;
+    d.textHeight = textDimensions.height;
+    
+    // Make collision radius large enough to fully contain the text with padding
+    // Use the diagonal of the text bounding box plus padding for circular collision
+    d.radius = Math.sqrt((d.textWidth + padding * 2) ** 2 + (d.textHeight + padding * 2) ** 2) / 2;
+    
+    // Store rectangular bounds for more precise edge calculations
+    d.width = d.textWidth + padding * 2;
+    d.height = d.textHeight + padding * 2;
+  });
+
+  // Add collision detection after dimensions are calculated
+  simulation
+    .force("collide", d3.forceCollide()
+      .radius(d => d.radius)
+      .strength(1.0)
+      .iterations(3))
+    .force("charge", d3.forceManyBody().strength(-2e3))
+    .alpha(1)
+    .restart();
+
+  // Function to calculate link path using circular collision radius
+  function linkArc(d) {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance === 0) return "M0,0L0,0";
+    
+    // Use collision radius directly for both source and target
+    const buffer = 5; // Small buffer so arrows don't touch the collision boundary
+    const sourceEdgeDistance = d.source.radius*4 + buffer;
+    const targetEdgeDistance = d.target.radius*4 + buffer;
+    
+    const startX = d.source.x + (dx / distance) * sourceEdgeDistance;
+    const startY = d.source.y + (dy / distance) * sourceEdgeDistance;
+    const endX = d.target.x - (dx / distance) * targetEdgeDistance;
+    const endY = d.target.y - (dy / distance) * targetEdgeDistance;
+    
+    // Create slight curve for better visibility of multiple links
+    const dr = distance * 1;
+    
+    return `M${startX},${startY}A${dr},${dr} 0 0,1 ${endX},${endY}`;
+  }
+
+  simulation.on("tick", () => {
+    link.attr("d", linkArc);
+    node.attr("transform", d => `translate(${d.x},${d.y})`);
+  });
+
+  invalidation.then(() => simulation.stop());
+
+  return Object.assign(svg.node(), {scales: {color}});
+}
+
+
+function _drag(d3){return(
+simulation => {
+  
+  function dragstarted(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
+  
+  function dragged(event, d) {
+    d.fx = event.x;
+    d.fy = event.y;
+  }
+  
+  function dragended(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
+  
+  return d3.drag()
+      .on("start", dragstarted)
+      .on("drag", dragged)
+      .on("end", dragended);
+}
+)}
+
+function _suits(parseArrowConnectionsAsSourceTarget,flowConnections,dialecticalData){return(
+parseArrowConnectionsAsSourceTarget(flowConnections,dialecticalData)
+)}
+
+function _getOppositePrefix(){return(
+function getOppositePrefix(unitId) {
+  if (unitId.startsWith('Ac')) return unitId.replace('Ac', 'Re');
+  if (unitId.startsWith('T')) return unitId.replace('T', 'A');
+  if (unitId.startsWith('A')) return unitId.replace('A', 'T');
+  if (unitId.startsWith('Re')) return unitId.replace('Re', 'Ac');
+  return unitId; // fallback for unknown prefixes
+}
+)}
+
+function _getUnitType(){return(
+function getUnitType(unitId) {
+  if (unitId.startsWith('T') || unitId.startsWith('Re')) return 'thesis';
+  if (unitId.startsWith('A') || unitId.startsWith('Ac')) return 'antithesis';
+  return 'unknown'; // fallback for unknown prefixes
+}
+)}
+
+function _isThesisType(){return(
+function isThesisType(unitId) {
+  return unitId.startsWith('T') || unitId.startsWith('Re');
+}
+)}
+
+function _isAntithesisType(){return(
+function isAntithesisType(unitId) {
+  return unitId.startsWith('A') || unitId.startsWith('Ac');
+}
+)}
+
 function define(runtime, observer) {
   const main = runtime.module();
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("dialecticalData")).define("dialecticalData", _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", _styles);
-  main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","d3"], _arrowControls);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getTextConstraints","wrapText","arrowUtilities","parseArrowConnections","arrowConnections","initializeBuildSteps"], _chart);
+  main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","isThesisType","d3"], _arrowControls);
+  main.variable(observer()).define(["showFlow","viewof chart"], _6);
+  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
+  main.variable(observer("showFlow")).define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
+  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
+  main.variable(observer("isWhiteOutside")).define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
+  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
+  main.variable(observer("whitesOnly")).define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
+  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
+  main.variable(observer("TsOnly")).define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
+  main.variable(observer()).define(["DOM","serialize","viewof chart"], _11);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
-  main.variable(observer()).define(["chart"], _8);
+  main.variable(observer()).define(["chart"], _14);
   main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs","viewof chart"], _sliceNumber);
   main.variable(observer("sliceNumber")).define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
-  main.variable(observer()).define(["viewof chart","sliceNumber"], _10);
-  main.variable(observer()).define(["chart"], _11);
+  main.variable(observer()).define(["viewof chart","sliceNumber"], _16);
+  main.variable(observer()).define(["chart"], _17);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);
   main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
   main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","viewof chart","parseArrowConnections"], _dotScriptEditor);
-  main.variable(observer("arrowConnections")).define("arrowConnections", _arrowConnections);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", _transformToNestedPieData);
+  main.variable(observer("arrowConnections")).define("arrowConnections", ["dialecticalData"], _arrowConnections);
+  main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
+  main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
+  main.variable(observer()).define(["isWhiteOutside","styles"], _27);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside","whitesOnly","TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles","tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
   main.variable(observer("getTextConstraints")).define("getTextConstraints", ["styles"], _getTextConstraints);
-  main.variable(observer("arrowUtilities")).define("arrowUtilities", _arrowUtilities);
+  main.variable(observer("arrowUtilities")).define("arrowUtilities", ["isThesisType"], _arrowUtilities);
   main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
-  main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", _initializeBuildSteps);
+  main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", ["getOppositePrefix","isThesisType"], _initializeBuildSteps);
   main.variable(observer("longPressUtilities")).define("longPressUtilities", ["d3"], _longPressUtilities);
   main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _selectedFont);
   main.variable(observer("selectedFont")).define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
   main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
-  main.variable(observer("style")).define("style", ["html","parseFont"], _style);
+  main.variable(observer("style")).define("style", ["html","parseFont","selectedFont"], _style);
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
+  main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
+  main.variable(observer("rasterize")).define("rasterize", ["DOM","serialize"], _rasterize);
+  main.variable(observer()).define(["DOM","rasterize","viewof chart"], _43);
+  main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
+  main.variable(observer("fontsize")).define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
+  main.variable(observer("graph")).define("graph", ["suits","d3","location","drag","fontsize","selectedFont","invalidation"], _graph);
+  main.variable(observer("drag")).define("drag", ["d3"], _drag);
+  main.variable(observer("suits")).define("suits", ["parseArrowConnectionsAsSourceTarget","flowConnections","dialecticalData"], _suits);
+  const child1 = runtime.module(define$1);
+  main.import("Swatches", child1);
+  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", _getOppositePrefix);
+  main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
+  main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
+  main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);
   return main;
 }
 
