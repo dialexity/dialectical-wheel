@@ -81,6 +81,10 @@ export default function DialecticalWheel({
           constructor(node: any) {
             super(node);
           }
+          fulfilled(value: any) {
+            console.log('graph updated:', value);
+            return super.fulfilled(value);
+          }
         }(graphRef.current);
       }
       // Don't render the Observable controls - we'll use React components instead

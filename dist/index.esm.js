@@ -8919,7 +8919,13 @@ function DialecticalWheel(_ref) {
             return _callSuper(this, _class2, [node]);
           }
           _inherits(_class2, _Inspector2);
-          return _createClass(_class2);
+          return _createClass(_class2, [{
+            key: "fulfilled",
+            value: function fulfilled(value) {
+              console.log('graph updated:', value);
+              return _superPropGet(_class2, "fulfilled", this)([value]);
+            }
+          }]);
         }(Inspector))(graphRef.current);
       }
       // Don't render the Observable controls - we'll use React components instead
