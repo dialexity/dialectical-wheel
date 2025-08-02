@@ -1,30 +1,33 @@
 import {Runtime, Inspector} from '@observablehq/runtime';
-import React, {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
 //import './DialecticalWheel.css';
 import './DialecticalWheel-fonts.css';
+import type { DialecticalWheelProps } from '../../types';
 
-export interface DialecticalWheelProps {
-  dialecticalData: Record<string, any>;
-  arrowConnections?: string;
-  style?: React.CSSProperties;
-  onChartReady?: (chart: any) => void;
-  onTopSliceChange?: (topSlice: string) => void;
-  onFocusedSliceChange?: (focusedSlice: string) => void;
-  debug?: boolean;
-}
+
 
 export default function DialecticalWheel({
-  dialecticalData,
+  wisdomUnits,
+  componentOrder,
+  preferences = {
+    whitesOnly: false,
+    TsOnly: false,
+    isWhiteOutside: false,
+    showFlow: false,
+    graphView: false
+  },
   arrowConnections = '',
   style = {},
   onChartReady,
   onTopSliceChange,
   onFocusedSliceChange,
+  onClickedCellChange,
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
@@ -65,6 +68,21 @@ export default function DialecticalWheel({
           }
         };
       }
+      if (name === "clickedCellObject") {
+        return {
+          fulfilled(value: any) {
+            console.log('clickedCellObject updated:', value);
+            if (onClickedCellChange) onClickedCellChange(value);
+          }
+        };
+      }
+      if (name === "graph") {
+        return new class extends Inspector {
+          constructor(node: any) {
+            super(node);
+          }
+        }(graphRef.current);
+      }
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
@@ -83,18 +101,24 @@ export default function DialecticalWheel({
   useEffect(() => {
     if (module) {
       try {
-        module.redefine('dialecticalData', dialecticalData);
+        //module.redefine('dialecticalData', dialecticalData);
         module.redefine('arrowConnections', arrowConnections);
+        module.redefine('wisdomUnits', wisdomUnits);
+        module.redefine('componentOrder', componentOrder);
+        module.redefine('whitesOnly', preferences.whitesOnly);
+        module.redefine('TsOnly', preferences.TsOnly);
+        module.redefine('isWhiteOutside', preferences.isWhiteOutside);
+        module.redefine('showFlow', preferences.showFlow);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [dialecticalData, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, arrowConnections, module]);
 
   return (
     <div className="dialectical-wheel-wrapper">
       <div 
-        ref={chartRef} 
+        ref={preferences.graphView ? graphRef : chartRef} 
         className="chart-container"
         style={{
           borderRadius: '8px',
@@ -113,7 +137,7 @@ export default function DialecticalWheel({
           fontSize: '12px',
           color: '#666'
         }}>
-          Debug: {Object.keys(dialecticalData).length} entries passed: {Object.keys(dialecticalData).join(', ')}<br/>
+          Debug: {wisdomUnits.length} entries passed: {componentOrder.join(', ')}<br/>
           Using local npm package: @dialexity/dialectical-wheel
         </div>
       )}

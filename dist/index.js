@@ -143,7 +143,7 @@ function _superPropBase(t, o) {
 }
 function _superPropGet(t, o, e, r) {
   var p = _get(_getPrototypeOf(t.prototype ), o, e);
-  return 2 & r && "function" == typeof p ? function (t) {
+  return "function" == typeof p ? function (t) {
     return p.apply(e, t);
   } : p;
 }
@@ -4634,7 +4634,7 @@ Legend(d3.scaleQuantile(d3.range(1000).map(d3.randomNormal(100, 20)), d3.schemeS
 })
 )}
 
-function _11$1(Legend,d3){return(
+function _11(Legend,d3){return(
 Legend(d3.scaleThreshold([2.5, 3.1, 3.5, 3.9, 6, 7, 8, 9.5], d3.schemeRdBu[9]), {
   title: "Unemployment rate (%)",
   tickSize: 0
@@ -4654,17 +4654,17 @@ md`But wait, there’s more!
 How about swatches for ordinal color scales? Both variable-width swatches and [column layout](https://developer.mozilla.org/en-US/docs/Web/CSS/columns) are supported.`
 )}
 
-function _14$1(Swatches,d3){return(
+function _14(Swatches,d3){return(
 Swatches(d3.scaleOrdinal(["blueberries", "oranges", "apples"], d3.schemeCategory10))
 )}
 
-function _15(Swatches,d3){return(
+function _15$1(Swatches,d3){return(
 Swatches(d3.scaleOrdinal(["Wholesale and Retail Trade", "Manufacturing", "Leisure and hospitality", "Business services", "Construction", "Education and Health", "Government", "Finance", "Self-employed", "Other"], d3.schemeTableau10), {
   columns: "180px"
 })
 )}
 
-function _16$1(md){return(
+function _16(md){return(
 md`---
 
 ## Implementation`
@@ -4915,12 +4915,12 @@ function define$1(runtime, observer) {
   main.variable(observer()).define(["Legend","d3"], _8);
   main.variable(observer()).define(["Legend","d3"], _9);
   main.variable(observer()).define(["Legend","d3"], _10);
-  main.variable(observer()).define(["Legend","d3"], _11$1);
+  main.variable(observer()).define(["Legend","d3"], _11);
   main.variable(observer()).define(["Legend","d3"], _12);
   main.variable(observer()).define(["md"], _13);
-  main.variable(observer()).define(["Swatches","d3"], _14$1);
-  main.variable(observer()).define(["Swatches","d3"], _15);
-  main.variable(observer()).define(["md"], _16$1);
+  main.variable(observer()).define(["Swatches","d3"], _14);
+  main.variable(observer()).define(["Swatches","d3"], _15$1);
+  main.variable(observer()).define(["md"], _16);
   main.variable(observer("Legend")).define("Legend", ["d3"], _Legend);
   main.variable(observer("legend")).define("legend", ["Legend"], _legend);
   main.variable(observer("Swatches")).define("Swatches", ["d3","htl"], _Swatches);
@@ -4933,50 +4933,8 @@ md`# Dialectical Wheel with Arrows
 `
 )}
 
-function _dialecticalData(){return(
-{
-    T1: {
-      statement: "AI will eliminate human jobs",
-      positive: "AI frees humans from repetitive tasks",
-      negative: "AI replaces human workers entirely"
-    },
-    Ac: {
-      statement: "Automation reduces labor costs",
-      positive: "Lower costs benefit consumers",
-      negative: "Cost savings don't reach workers"
-    },
-    T3: {
-      statement: "AI improves workplace efficiency",
-      positive: "Faster decision-making processes",
-      negative: "Dehumanizes work environment"
-    },
-    // New entry for testing data flow
-    T4: {
-      statement: "Remote work transforms society",
-      positive: "Greater work-life balance and flexibility",
-      negative: "Social isolation and reduced collaboration"
-    },
-    A1: {
-      statement: "Human creativity remains irreplaceable",
-      positive: "AI enhances human creative potential",
-      negative: "Over-reliance on AI reduces creativity"
-    },
-    Re: {
-      statement: "Education adapts to AI integration",
-      positive: "Skills training becomes more relevant",
-      negative: "Educational systems lag behind technology"
-    },
-    A3: {
-      statement: "AI democratizes access to information",
-      positive: "Levels playing field for learning",
-      negative: "Information overload reduces comprehension"
-    },
-    A4: {
-      statement: "Physical presence builds stronger teams",
-      positive: "Face-to-face interaction fosters trust",
-      negative: "Rigid office culture stifles innovation"
-    }
-  }
+function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){return(
+transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
 )}
 
 function _width(){return(
@@ -5321,23 +5279,39 @@ function _6(showFlow,$0)
 }
 
 
-function _showFlow(Inputs){return(
+function _showFlowInput(Inputs){return(
 Inputs.toggle({label:"Show sequential flow"})
 )}
 
-function _isWhiteOutside(Inputs){return(
+function _showFlow(showFlowInput){return(
+showFlowInput
+)}
+
+function _isWhiteOutsideInput(Inputs){return(
 Inputs.toggle({label: "Swap red and white layer"})
 )}
 
-function _whitesOnly(Inputs){return(
+function _isWhiteOutside(isWhiteOutsideInput){return(
+isWhiteOutsideInput
+)}
+
+function _whitesOnlyInput(Inputs){return(
 Inputs.toggle({label: "White cells only"})
 )}
 
-function _TsOnly(Inputs){return(
+function _whitesOnly(whitesOnlyInput){return(
+whitesOnlyInput
+)}
+
+function _TsOnlyInput(Inputs){return(
 Inputs.toggle({label: "Ts only"})
 )}
 
-function _11(DOM,serialize,$0){return(
+function _TsOnly(TsOnlyInput){return(
+TsOnlyInput
+)}
+
+function _15(DOM,serialize,$0){return(
 DOM.download(() => serialize($0), undefined, "Save as SVG")
 )}
 
@@ -7151,7 +7125,7 @@ function _stepControls(html,$0){return(
 })()
 )}
 
-function _14(chart){return(
+function _18(chart){return(
 chart.focusedPair
 )}
 
@@ -7159,11 +7133,11 @@ function _sliceNumber(Inputs,$0){return(
 Inputs.range([0,$0.cells.length-1],{value:0,step:1,label:"slice number"})
 )}
 
-function _16($0,sliceNumber){return(
+function _20($0,sliceNumber){return(
 $0.focusPair($0.cells[sliceNumber])
 )}
 
-function _17(chart){return(
+function _clickedCellObject(chart){return(
 chart.clickedCell
 )}
 
@@ -7574,7 +7548,7 @@ function _parseArrowConnectionsAsSourceTarget(){return(
 }
 )}
 
-function _27(isWhiteOutside,styles)
+function _31(isWhiteOutside,styles)
 {
   if (isWhiteOutside) {
   styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
@@ -7601,22 +7575,22 @@ function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){return(
     [outerKey]: units.map(unit => ({
       name: `${unit}-`,
       unitId: unit,
-      value: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+      value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+      opacity: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
       fullText: dialecticalData[unit].negative
     })),
     [middleKey]: units.map(unit => ({
       name: unit,
       unitId: unit,
-      value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+      value: (unit == 'A' && tOnly) ? 0: 1,
+      opacity: (unit == 'A' && tOnly) ? 0: 1,
       fullText: dialecticalData[unit].statement
     })),
     inner: units.map(unit => ({
       name: `${unit}+`,
       unitId: unit,
-      value: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
+      value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+      opacity: (unit == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
       fullText: dialecticalData[unit].positive
     }))
   }
@@ -8327,7 +8301,7 @@ function rasterize(svg) {
 }
 )}
 
-function _43(DOM,rasterize,$0){return(
+function _47(DOM,rasterize,$0){return(
 DOM.download(() => rasterize($0), undefined, "Save as PNG")
 )}
 
@@ -8604,31 +8578,223 @@ function isAntithesisType(unitId) {
 }
 )}
 
+function _wisdomUnits(){return(
+[
+  {
+    "t_minus": {
+      "alias": "T-",
+      "statement": "Risk group lives",
+      "explanation": "Identified as negative risks in thesis context."
+    },
+    "t": {
+      "alias": "T",
+      "statement": "Pursue minister elimination",
+      "explanation": "Derived from the original plan outlined in the context."
+    },
+    "t_plus": {
+      "alias": "T+",
+      "statement": "Achieve strategic goals",
+      "explanation": "Derived from positive aspects of thesis pursuit."
+    },
+    "a_plus": {
+      "alias": "A+",
+      "statement": "Ensure survival peacefully",
+      "explanation": "Positive aspect constructed to oppose thesis negative."
+    },
+    "a": {
+      "alias": "A",
+      "statement": "Accept ransom offer",
+      "explanation": "Antithesis derived from opposing choice in scenario."
+    },
+    "a_minus": {
+      "alias": "A-",
+      "statement": "Compromise core ideals",
+      "explanation": "Negative aspect formed to oppose thesis positive."
+    }
+  },
+  {
+    "t_minus": {
+      "alias": "A4-",
+      "statement": "Jeopardize safety",
+      "explanation": "Identified as negative aspect of A."
+    },
+    "t": {
+      "alias": "A4",
+      "statement": "Pursue mission goals",
+      "explanation": "Derived as antithesis of T."
+    },
+    "t_plus": {
+      "alias": "A4+",
+      "statement": "Uphold ideals",
+      "explanation": "Identified as positive aspect of A."
+    },
+    "a_plus": {
+      "alias": "T4+",
+      "statement": "Promote survival",
+      "explanation": "Identified as positive aspect of T."
+    },
+    "a": {
+      "alias": "T4",
+      "statement": "Ensure group safety",
+      "explanation": "Inferred from the choice presented for living."
+    },
+    "a_minus": {
+      "alias": "T4-",
+      "statement": "Foster cowardice",
+      "explanation": "Identified as negative aspect of T."
+    }
+  },
+  {
+    "t_minus": {
+      "alias": "T2-",
+      "statement": "Endanger lives",
+      "explanation": "Derived by noting risks of engagement."
+    },
+    "t": {
+      "alias": "T2",
+      "statement": "Face soldier threat",
+      "explanation": "Extracted from the warning issued by Bouteflika."
+    },
+    "t_plus": {
+      "alias": "T2+",
+      "statement": "Maintain integrity",
+      "explanation": "Derived by identifying positive aspect of confrontation."
+    },
+    "a_plus": {
+      "alias": "A2+",
+      "statement": "Ensure survival",
+      "explanation": "Derived as constructive side of alternative."
+    },
+    "a": {
+      "alias": "A2",
+      "statement": "Take ransom deal",
+      "explanation": "Identified as opposing action."
+    },
+    "a_minus": {
+      "alias": "A2-",
+      "statement": "Compromise principles",
+      "explanation": "Derived as negative side of acceptance."
+    }
+  },
+  {
+    "t_minus": {
+      "alias": "T3-",
+      "statement": "Betray allies mission",
+      "explanation": "Extracted as the negative aspect from the context's implications of failing allies."
+    },
+    "t": {
+      "alias": "T3",
+      "statement": "Take twenty million",
+      "explanation": "Identified from the offered alternative in the narrative."
+    },
+    "t_plus": {
+      "alias": "T3+",
+      "statement": "Gain safety wealth",
+      "explanation": "Derived as the positive aspect by analyzing the benefits of acceptance."
+    },
+    "a_plus": {
+      "alias": "A3+",
+      "statement": "Uphold loyalty honor",
+      "explanation": "Determined as the positive side that contradicts the negative aspect of the thesis."
+    },
+    "a": {
+      "alias": "A3",
+      "statement": "Refuse twenty million",
+      "explanation": "Formulated as the antithesis opposing the primary thesis."
+    },
+    "a_minus": {
+      "alias": "A3-",
+      "statement": "Risk death failure",
+      "explanation": "Ascertained as the negative side that contradicts the positive aspect of the thesis."
+    }
+  }
+]
+)}
+
+function _componentOrder(){return(
+["A","T3","T2","A4","T","A3","A2","T4"]
+)}
+
+function _extractStatement(){return(
+(value) => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value !== null) {
+      return value.statement || value.alias || '';
+    }
+    return '';
+  }
+)}
+
+function _transformWisdomUnitsToDialecticalData(extractStatement){return(
+(wisdomUnits, componentOrder) => {
+  if (!wisdomUnits || wisdomUnits.length === 0) {
+    return {};
+  }
+  const dialecticalData = {};
+  wisdomUnits.forEach((unit, index) => {
+    const thesisKey = unit.t.alias || `T${index + 1}`;
+    dialecticalData[thesisKey] = {
+      statement: extractStatement(unit.t),
+      positive: extractStatement(unit.t_plus),
+      negative: extractStatement(unit.t_minus),
+      pairWith: unit.a.alias || `A${index + 1}`
+    };
+  });
+
+  wisdomUnits.forEach((unit, index) => {
+    const antithesisKey = unit.a.alias || `A${index + 1}`;
+    dialecticalData[antithesisKey] = {
+      statement: extractStatement(unit.a),
+      positive: extractStatement(unit.a_plus),
+      negative: extractStatement(unit.a_minus),
+      pairWith: unit.t.alias || `T${index + 1}`
+    };
+
+  });
+  if (!componentOrder || componentOrder.length === 0) {
+    return dialecticalData;
+  }
+
+  const dialecticalDataOrdered = {};
+  componentOrder.forEach((component) => {
+    const key = component;
+  
+    dialecticalDataOrdered[key] = dialecticalData[key];
+
+  });
+  return dialecticalDataOrdered;
+}
+)}
+
 function define(runtime, observer) {
   const main = runtime.module();
   main.variable(observer()).define(["md"], _1);
-  main.variable(observer("dialecticalData")).define("dialecticalData", _dialecticalData);
+  main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData","wisdomUnits","componentOrder"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","isThesisType","d3"], _arrowControls);
   main.variable(observer()).define(["showFlow","viewof chart"], _6);
-  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
-  main.variable(observer("showFlow")).define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
-  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
-  main.variable(observer("isWhiteOutside")).define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
-  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
-  main.variable(observer("whitesOnly")).define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
-  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
-  main.variable(observer("TsOnly")).define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
-  main.variable(observer()).define(["DOM","serialize","viewof chart"], _11);
+  main.variable(observer("viewof showFlowInput")).define("viewof showFlowInput", ["Inputs"], _showFlowInput);
+  main.variable(observer("showFlowInput")).define("showFlowInput", ["Generators", "viewof showFlowInput"], (G, _) => G.input(_));
+  main.variable(observer("showFlow")).define("showFlow", ["showFlowInput"], _showFlow);
+  main.variable(observer("viewof isWhiteOutsideInput")).define("viewof isWhiteOutsideInput", ["Inputs"], _isWhiteOutsideInput);
+  main.variable(observer("isWhiteOutsideInput")).define("isWhiteOutsideInput", ["Generators", "viewof isWhiteOutsideInput"], (G, _) => G.input(_));
+  main.variable(observer("isWhiteOutside")).define("isWhiteOutside", ["isWhiteOutsideInput"], _isWhiteOutside);
+  main.variable(observer("viewof whitesOnlyInput")).define("viewof whitesOnlyInput", ["Inputs"], _whitesOnlyInput);
+  main.variable(observer("whitesOnlyInput")).define("whitesOnlyInput", ["Generators", "viewof whitesOnlyInput"], (G, _) => G.input(_));
+  main.variable(observer("whitesOnly")).define("whitesOnly", ["whitesOnlyInput"], _whitesOnly);
+  main.variable(observer("viewof TsOnlyInput")).define("viewof TsOnlyInput", ["Inputs"], _TsOnlyInput);
+  main.variable(observer("TsOnlyInput")).define("TsOnlyInput", ["Generators", "viewof TsOnlyInput"], (G, _) => G.input(_));
+  main.variable(observer("TsOnly")).define("TsOnly", ["TsOnlyInput"], _TsOnly);
+  main.variable(observer()).define(["DOM","serialize","viewof chart"], _15);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
-  main.variable(observer()).define(["chart"], _14);
+  main.variable(observer()).define(["chart"], _18);
   main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs","viewof chart"], _sliceNumber);
   main.variable(observer("sliceNumber")).define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
-  main.variable(observer()).define(["viewof chart","sliceNumber"], _16);
-  main.variable(observer()).define(["chart"], _17);
+  main.variable(observer()).define(["viewof chart","sliceNumber"], _20);
+  main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
@@ -8638,7 +8804,7 @@ function define(runtime, observer) {
   main.variable(observer("arrowConnections")).define("arrowConnections", ["dialecticalData"], _arrowConnections);
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define(["isWhiteOutside","styles"], _27);
+  main.variable(observer()).define(["isWhiteOutside","styles"], _31);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside","whitesOnly","TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles","tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
@@ -8655,7 +8821,7 @@ function define(runtime, observer) {
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
   main.variable(observer("rasterize")).define("rasterize", ["DOM","serialize"], _rasterize);
-  main.variable(observer()).define(["DOM","rasterize","viewof chart"], _43);
+  main.variable(observer()).define(["DOM","rasterize","viewof chart"], _47);
   main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
   main.variable(observer("fontsize")).define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
   main.variable(observer("graph")).define("graph", ["suits","d3","location","drag","fontsize","selectedFont","invalidation"], _graph);
@@ -8667,11 +8833,24 @@ function define(runtime, observer) {
   main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
   main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
   main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);
+  main.variable(observer("wisdomUnits")).define("wisdomUnits", _wisdomUnits);
+  main.variable(observer("componentOrder")).define("componentOrder", _componentOrder);
+  main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
+  main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
   return main;
 }
 
 function DialecticalWheel(_ref) {
-  var dialecticalData = _ref.dialecticalData,
+  var wisdomUnits = _ref.wisdomUnits,
+    componentOrder = _ref.componentOrder,
+    _ref$preferences = _ref.preferences,
+    preferences = _ref$preferences === void 0 ? {
+      whitesOnly: false,
+      TsOnly: false,
+      isWhiteOutside: false,
+      showFlow: false,
+      graphView: false
+    } : _ref$preferences,
     _ref$arrowConnections = _ref.arrowConnections,
     arrowConnections = _ref$arrowConnections === void 0 ? '' : _ref$arrowConnections,
     _ref$style = _ref.style,
@@ -8679,9 +8858,11 @@ function DialecticalWheel(_ref) {
     onChartReady = _ref.onChartReady,
     onTopSliceChange = _ref.onTopSliceChange,
     onFocusedSliceChange = _ref.onFocusedSliceChange,
+    onClickedCellChange = _ref.onClickedCellChange,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = react.useRef(null);
+  var graphRef = react.useRef(null);
   var _useState = react.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
@@ -8706,7 +8887,7 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               //setChart(value);
               if (onChartReady) onChartReady(value);
-              return _superPropGet(_class, "fulfilled", this, 3)([value]);
+              return _superPropGet(_class, "fulfilled", this)([value]);
             }
           }]);
         }(Inspector))(chartRef.current);
@@ -8727,6 +8908,24 @@ function DialecticalWheel(_ref) {
           }
         };
       }
+      if (name === "clickedCellObject") {
+        return {
+          fulfilled: function fulfilled(value) {
+            console.log('clickedCellObject updated:', value);
+            if (onClickedCellChange) onClickedCellChange(value);
+          }
+        };
+      }
+      if (name === "graph") {
+        return new (/*#__PURE__*/function (_Inspector2) {
+          function _class2(node) {
+            _classCallCheck(this, _class2);
+            return _callSuper(this, _class2, [node]);
+          }
+          _inherits(_class2, _Inspector2);
+          return _createClass(_class2);
+        }(Inspector))(graphRef.current);
+      }
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
@@ -8742,17 +8941,23 @@ function DialecticalWheel(_ref) {
   react.useEffect(function () {
     if (module) {
       try {
-        module.redefine('dialecticalData', dialecticalData);
+        //module.redefine('dialecticalData', dialecticalData);
         module.redefine('arrowConnections', arrowConnections);
+        module.redefine('wisdomUnits', wisdomUnits);
+        module.redefine('componentOrder', componentOrder);
+        module.redefine('whitesOnly', preferences.whitesOnly);
+        module.redefine('TsOnly', preferences.TsOnly);
+        module.redefine('isWhiteOutside', preferences.isWhiteOutside);
+        module.redefine('showFlow', preferences.showFlow);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [dialecticalData, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, arrowConnections, module]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
-      ref: chartRef,
+      ref: preferences.graphView ? graphRef : chartRef,
       className: "chart-container",
       style: _objectSpread2({
         borderRadius: '8px',
@@ -8767,7 +8972,7 @@ function DialecticalWheel(_ref) {
         fontSize: '12px',
         color: '#666'
       },
-      children: ["Debug: ", Object.keys(dialecticalData).length, " entries passed: ", Object.keys(dialecticalData).join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
+      children: ["Debug: ", wisdomUnits.length, " entries passed: ", componentOrder.join(', '), jsxRuntime.jsx("br", {}), "Using local npm package: @dialexity/dialectical-wheel"]
     })]
   });
 }
