@@ -27,7 +27,7 @@ export default function DialecticalWheel({
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<HTMLDivElement>(null);
+  //const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
@@ -76,7 +76,7 @@ export default function DialecticalWheel({
           }
         };
       }
-      if (name === "graph") {
+      /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
             super(node);
@@ -86,7 +86,7 @@ export default function DialecticalWheel({
             return super.fulfilled(value);
           }
         }(graphRef.current);
-      }
+      }*/
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
@@ -122,7 +122,7 @@ export default function DialecticalWheel({
   return (
     <div className="dialectical-wheel-wrapper">
       <div 
-        ref={preferences.graphView ? graphRef : chartRef} 
+        ref={chartRef} 
         className="chart-container"
         style={{
           borderRadius: '8px',

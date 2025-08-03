@@ -143,7 +143,7 @@ function _superPropBase(t, o) {
 }
 function _superPropGet(t, o, e, r) {
   var p = _get(_getPrototypeOf(t.prototype ), o, e);
-  return "function" == typeof p ? function (t) {
+  return 2 & r && "function" == typeof p ? function (t) {
     return p.apply(e, t);
   } : p;
 }
@@ -8862,7 +8862,7 @@ function DialecticalWheel(_ref) {
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = react.useRef(null);
-  var graphRef = react.useRef(null);
+  //const graphRef = useRef<HTMLDivElement>(null);
   var _useState = react.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
@@ -8887,7 +8887,7 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               //setChart(value);
               if (onChartReady) onChartReady(value);
-              return _superPropGet(_class, "fulfilled", this)([value]);
+              return _superPropGet(_class, "fulfilled", this, 3)([value]);
             }
           }]);
         }(Inspector))(chartRef.current);
@@ -8916,22 +8916,17 @@ function DialecticalWheel(_ref) {
           }
         };
       }
-      if (name === "graph") {
-        return new (/*#__PURE__*/function (_Inspector2) {
-          function _class2(node) {
-            _classCallCheck(this, _class2);
-            return _callSuper(this, _class2, [node]);
+      /*if (name === "graph") {
+        return new class extends Inspector {
+          constructor(node: any) {
+            super(node);
           }
-          _inherits(_class2, _Inspector2);
-          return _createClass(_class2, [{
-            key: "fulfilled",
-            value: function fulfilled(value) {
-              console.log('graph updated:', value);
-              return _superPropGet(_class2, "fulfilled", this)([value]);
-            }
-          }]);
-        }(Inspector))(graphRef.current);
-      }
+          fulfilled(value: any) {
+            console.log('graph updated:', value);
+            return super.fulfilled(value);
+          }
+        }(graphRef.current);
+      }*/
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
@@ -8963,7 +8958,7 @@ function DialecticalWheel(_ref) {
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
-      ref: preferences.graphView ? graphRef : chartRef,
+      ref: chartRef,
       className: "chart-container",
       style: _objectSpread2({
         borderRadius: '8px',
