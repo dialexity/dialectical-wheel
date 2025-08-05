@@ -53,7 +53,7 @@ export interface Preferences {
 export interface DialecticalWheelProps {
   wisdomUnits: WisdomUnit[];
   componentOrder: string[];
-  preferences: Preferences;
+  preferences?: Preferences;
   arrowConnections?: string;
   style?: React.CSSProperties;
   onChartReady?: (chart: any) => void;
