@@ -27,7 +27,7 @@ export default function DialecticalWheel({
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
-  //const graphRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
@@ -76,6 +76,7 @@ export default function DialecticalWheel({
           }
         };
       }
+      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
