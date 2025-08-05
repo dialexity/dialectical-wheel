@@ -6019,8 +6019,11 @@ function unfocus() {
 
 // Focus pair function
 function focusPair(clickedUnitId) {
+  // Choose which data to modify
+  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+
   const isThesis = isThesisType(clickedUnitId);
-  const pairId = getOppositePrefix(clickedUnitId);
+  const pairId = dialecticalData[clickedUnitId].pairWith;
   const thesis = isThesis ? clickedUnitId : pairId;
   const antithesis = isThesis ? pairId : clickedUnitId;   
   
@@ -6028,23 +6031,23 @@ function focusPair(clickedUnitId) {
     focusedPair.thesis === thesis && 
     focusedPair.antithesis === antithesis;
 
-  // Choose which data to modify
-  const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+  
 
   // Check if clickedUnitId is within 90 degrees of 0 degrees (or 180 degrees)
   const sliceData = pie(dataToModify.middle).find(d => d.data.unitId === clickedUnitId);
   const sliceAngle = (sliceData.startAngle + sliceData.endAngle)/2;
   let visualAngle = (sliceAngle + getCurrentRotationFromDOM()) % (2 * Math.PI);
+  let rotateUnitId = clickedUnitId;
   // Round down to the nearest degree (in radians)
   visualAngle = Math.floor(visualAngle * 180 / Math.PI);
   if(!(visualAngle <= 90 || visualAngle >= 270) && !isStepMode) {
-    clickedUnitId = pairId;
+    rotateUnitId = pairId;
     //console.log("is not within 90 degrees. visualAngle: " + visualAngle);
   }
   
   if (isAlreadyFocused) {
     if(isStepMode) {
-      rotateToSlice(clickedUnitId);
+      rotateToSlice(rotateUnitId);
       clickedSlice = clickedUnitId;
       focusedPair = { thesis, antithesis };
       updateChartValue();
@@ -6072,7 +6075,7 @@ function focusPair(clickedUnitId) {
     focusedPair = { thesis, antithesis };
     
     // Rotate to center the clicked slice at the top
-    rotateToSlice(clickedUnitId, styles.durations.stepRotation);
+    rotateToSlice(rotateUnitId, styles.durations.stepRotation);
     
     // Dim all cells first (but only if they were originally visible)
     ["invisible", "outer", "middle", "inner"].forEach(ringType => {
@@ -6321,7 +6324,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
                       parentClass.includes("middle") ? "middle" : "inner";
       setHoveredCell({ unitId: d.data.unitId});
 
-      if(focusedPair && focusedPair.thesis[1] == d.data.unitId[1]) {
+      if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
         d3.select(this)
         .style("stroke-dasharray", "1,0");
         if(clickedCell && clickedCell.name != d.data.name) {
@@ -6333,7 +6336,7 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
           .style("cursor", "default");
         }
       }
-      else if(focusedPair && focusedPair.thesis[1] != d.data.unitId[1]){
+      else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId){
         d3.select(this)
         .style("cursor", "default")
         .style("opacity", ringType === "invisible" ? 0.2 : 1); // Show invisible ring faintly on hover
@@ -6362,14 +6365,14 @@ function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale
     })
     .on("mouseleave", function(event, d) {
 
-      if(focusedPair && focusedPair.thesis[1] == d.data.unitId[1]) {
+      if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
         if(clickedCell && clickedCell.name != d.data.name) {
           d3.select(this)
           .style("stroke-dasharray", "1,3");
         }
       
       }
-      else if(focusedPair && focusedPair.thesis[1] != d.data.unitId[1]) {
+      else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId) {
         d3.select(this)
         .style("opacity", 0.3);
         let labelsGroup;
@@ -7125,7 +7128,14 @@ function _stepControls(html,$0){return(
 })()
 )}
 
-function _18(chart){return(
+function _focusedSlice(chart)
+{ 
+  //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
+  
+  return chart.clickedSlice; }
+
+
+function _19(chart){return(
 chart.focusedPair
 )}
 
@@ -7133,7 +7143,7 @@ function _sliceNumber(Inputs,$0){return(
 Inputs.range([0,$0.cells.length-1],{value:0,step:1,label:"slice number"})
 )}
 
-function _20($0,sliceNumber){return(
+function _21($0,sliceNumber){return(
 $0.focusPair($0.cells[sliceNumber])
 )}
 
@@ -7146,13 +7156,6 @@ function _clickedCellText(chart)
   if(chart.clickedCell) return chart.clickedCell.fullText;
   return null;
 }
-
-
-function _focusedSlice(chart)
-{ 
-  //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
-  
-  return chart.clickedSlice; }
 
 
 function _topSlice(chart,dialecticalData)
@@ -7562,40 +7565,48 @@ function _31(isWhiteOutside,styles)
 
 function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){return(
 (dialecticalData, whiteOutside=isWhiteOutside, whiteOnly=whitesOnly, tOnly = TsOnly) => {
-  const units = Object.keys(dialecticalData);
-  const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
-  return {
-    invisible: units.map((unit,index)=> ({
-      name: `${unit}i`,
-      unitId: unit,
-      value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-      opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-      fullText: `${(index)%(Object.keys(dialecticalData).length/2)+1}`
-    })),
-    [outerKey]: units.map(unit => ({
-      name: `${unit}-`,
-      unitId: unit,
-      value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-      opacity: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-      fullText: dialecticalData[unit].negative
-    })),
-    [middleKey]: units.map(unit => ({
-      name: unit,
-      unitId: unit,
-      value: (unit == 'A' && tOnly) ? 0: 1,
-      opacity: (unit == 'A' && tOnly) ? 0: 1,
-      fullText: dialecticalData[unit].statement
-    })),
-    inner: units.map(unit => ({
-      name: `${unit}+`,
-      unitId: unit,
-      value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-      opacity: (unit == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
-      fullText: dialecticalData[unit].positive
-    }))
-  }
-  
-}
+      const units = Object.keys(dialecticalData);
+      const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
+      return {
+        invisible: units.map((unit,index)=> ({
+          name: `${unit}i`,
+          unitId: unit,
+          value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+          opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+          fullText: `${(index)%(Object.keys(dialecticalData).length/2)+1}`,
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        })),
+        [outerKey]: units.map(unit => ({
+          name: `${unit}-`,
+          unitId: unit,
+          value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+          opacity: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+          fullText: dialecticalData[unit].negative,
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        })),
+        [middleKey]: units.map(unit => ({
+          name: unit,
+          unitId: unit,
+          value: (unit == 'A' && tOnly) ? 0: 1,
+          opacity: (unit == 'A' && tOnly) ? 0: 1,
+          fullText: dialecticalData[unit].statement,
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        })),
+        inner: units.map(unit => ({
+          name: `${unit}+`,
+          unitId: unit,
+          value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+          opacity: (unit == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
+          fullText: dialecticalData[unit].positive,
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        }))
+      }
+
+    }
 )}
 
 function _wrapText(styles,tryWrapWithLineBreaks,truncateWithEllipses){return(
@@ -8737,7 +8748,8 @@ function _transformWisdomUnitsToDialecticalData(extractStatement){return(
       statement: extractStatement(unit.t),
       positive: extractStatement(unit.t_plus),
       negative: extractStatement(unit.t_minus),
-      pairWith: unit.a.alias || `A${index + 1}`
+      pairWith: unit.a.alias || `A${index + 1}`,
+      pairId: `${(unit.t.alias + "_" + unit.a.alias) || `T${index + 1}_A${index + 1}`}`
     };
   });
 
@@ -8747,7 +8759,8 @@ function _transformWisdomUnitsToDialecticalData(extractStatement){return(
       statement: extractStatement(unit.a),
       positive: extractStatement(unit.a_plus),
       negative: extractStatement(unit.a_minus),
-      pairWith: unit.t.alias || `T${index + 1}`
+      pairWith: unit.t.alias || `T${index + 1}`,
+      pairId: `${(unit.t.alias + "_" + unit.a.alias) || `T${index + 1}_A${index + 1}`}`
     };
 
   });
@@ -8758,7 +8771,7 @@ function _transformWisdomUnitsToDialecticalData(extractStatement){return(
   const dialecticalDataOrdered = {};
   componentOrder.forEach((component) => {
     const key = component;
-  
+
     dialecticalDataOrdered[key] = dialecticalData[key];
 
   });
@@ -8790,13 +8803,13 @@ function define(runtime, observer) {
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
-  main.variable(observer()).define(["chart"], _18);
+  main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
+  main.variable(observer()).define(["chart"], _19);
   main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs","viewof chart"], _sliceNumber);
   main.variable(observer("sliceNumber")).define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
-  main.variable(observer()).define(["viewof chart","sliceNumber"], _20);
+  main.variable(observer()).define(["viewof chart","sliceNumber"], _21);
   main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
-  main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html","chart","dialecticalData"], _topSliceTracker);
   main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
