@@ -123,7 +123,7 @@ export default function DialecticalWheel({
   return (
     <div className="dialectical-wheel-wrapper">
       <div 
-        ref={chartRef} 
+        ref={preferences.graphView ? graphRef : chartRef} 
         className="chart-container"
         style={{
           borderRadius: '8px',
