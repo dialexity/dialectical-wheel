@@ -8857,7 +8857,7 @@ function DialecticalWheel(_ref) {
       whitesOnly: false,
       TsOnly: false,
       isWhiteOutside: false,
-      showFlow: false,
+      showFlow: true,
       graphView: false
     } : _ref$preferences,
     _ref$arrowConnections = _ref.arrowConnections,
@@ -8871,7 +8871,7 @@ function DialecticalWheel(_ref) {
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = useRef(null);
-  //const graphRef = useRef<HTMLDivElement>(null);
+  var graphRef = useRef(null);
   var _useState = useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
@@ -8925,6 +8925,7 @@ function DialecticalWheel(_ref) {
           }
         };
       }
+      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -8963,11 +8964,11 @@ function DialecticalWheel(_ref) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences, arrowConnections, module]);
   return jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsx("div", {
-      ref: chartRef,
+      ref: preferences.graphView ? graphRef : chartRef,
       className: "chart-container",
       style: _objectSpread2({
         borderRadius: '8px',

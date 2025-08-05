@@ -15,7 +15,7 @@ export default function DialecticalWheel({
     whitesOnly: false,
     TsOnly: false,
     isWhiteOutside: false,
-    showFlow: false,
+    showFlow: true,
     graphView: false
   },
   arrowConnections = '',
@@ -118,7 +118,7 @@ export default function DialecticalWheel({
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences, arrowConnections, module]);
 
   return (
     <div className="dialectical-wheel-wrapper">
