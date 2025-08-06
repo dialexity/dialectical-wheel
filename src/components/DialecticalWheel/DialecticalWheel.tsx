@@ -6,18 +6,18 @@ import notebook from '@dialexity/dialectical-wheel';
 import './DialecticalWheel-fonts.css';
 import type { DialecticalWheelProps } from '../../types';
 
-
+const DEFAULT_PREFERENCES = {
+  whitesOnly: false,
+  TsOnly: false,
+  isWhiteOutside: false,
+  showFlow: true,
+  graphView: false
+};
 
 export default function DialecticalWheel({
   wisdomUnits,
   componentOrder,
-  preferences = {
-    whitesOnly: false,
-    TsOnly: false,
-    isWhiteOutside: false,
-    showFlow: true,
-    graphView: false
-  },
+  preferences = DEFAULT_PREFERENCES,
   arrowConnections = '',
   style = {},
   onChartReady,
