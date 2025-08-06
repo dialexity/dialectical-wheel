@@ -8853,17 +8853,18 @@ function define(runtime, observer) {
   return main;
 }
 
+var DEFAULT_PREFERENCES = {
+  whitesOnly: false,
+  TsOnly: false,
+  isWhiteOutside: false,
+  showFlow: true,
+  graphView: false
+};
 function DialecticalWheel(_ref) {
   var wisdomUnits = _ref.wisdomUnits,
     componentOrder = _ref.componentOrder,
     _ref$preferences = _ref.preferences,
-    preferences = _ref$preferences === void 0 ? {
-      whitesOnly: false,
-      TsOnly: false,
-      isWhiteOutside: false,
-      showFlow: false,
-      graphView: false
-    } : _ref$preferences,
+    preferences = _ref$preferences === void 0 ? DEFAULT_PREFERENCES : _ref$preferences,
     _ref$arrowConnections = _ref.arrowConnections,
     arrowConnections = _ref$arrowConnections === void 0 ? '' : _ref$arrowConnections,
     _ref$style = _ref.style,
@@ -8875,7 +8876,7 @@ function DialecticalWheel(_ref) {
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var chartRef = react.useRef(null);
-  //const graphRef = useRef<HTMLDivElement>(null);
+  var graphRef = react.useRef(null);
   var _useState = react.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
@@ -8929,6 +8930,7 @@ function DialecticalWheel(_ref) {
           }
         };
       }
+      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -8967,11 +8969,11 @@ function DialecticalWheel(_ref) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences, arrowConnections, module]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
-      ref: chartRef,
+      ref: preferences.graphView ? graphRef : chartRef,
       className: "chart-container",
       style: _objectSpread2({
         borderRadius: '8px',

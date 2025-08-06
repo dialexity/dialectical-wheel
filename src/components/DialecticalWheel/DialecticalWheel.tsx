@@ -6,18 +6,18 @@ import notebook from '@dialexity/dialectical-wheel';
 import './DialecticalWheel-fonts.css';
 import type { DialecticalWheelProps } from '../../types';
 
-
+const DEFAULT_PREFERENCES = {
+  whitesOnly: false,
+  TsOnly: false,
+  isWhiteOutside: false,
+  showFlow: true,
+  graphView: false
+};
 
 export default function DialecticalWheel({
   wisdomUnits,
   componentOrder,
-  preferences = {
-    whitesOnly: false,
-    TsOnly: false,
-    isWhiteOutside: false,
-    showFlow: false,
-    graphView: false
-  },
+  preferences = DEFAULT_PREFERENCES,
   arrowConnections = '',
   style = {},
   onChartReady,
@@ -27,7 +27,7 @@ export default function DialecticalWheel({
   debug = false
 }: DialecticalWheelProps) {
   const chartRef = useRef<HTMLDivElement>(null);
-  //const graphRef = useRef<HTMLDivElement>(null);
+  const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
@@ -76,6 +76,7 @@ export default function DialecticalWheel({
           }
         };
       }
+      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -117,12 +118,12 @@ export default function DialecticalWheel({
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences, arrowConnections, module]);
 
   return (
     <div className="dialectical-wheel-wrapper">
       <div 
-        ref={chartRef} 
+        ref={preferences.graphView ? graphRef : chartRef} 
         className="chart-container"
         style={{
           borderRadius: '8px',
