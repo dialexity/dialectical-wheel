@@ -4608,7 +4608,7 @@ Legend(d3.scaleSequentialLog([1, 100], d3.interpolateBlues), {
 })
 )}
 
-function _7(Legend,d3){return(
+function _7$1(Legend,d3){return(
 Legend(d3.scaleSequentialQuantile(d3.range(100).map(() => Math.random() ** 2), d3.interpolateBlues), {
   title: "Quantile",
   tickFormat: ".2f"
@@ -4658,7 +4658,7 @@ function _14(Swatches,d3){return(
 Swatches(d3.scaleOrdinal(["blueberries", "oranges", "apples"], d3.schemeCategory10))
 )}
 
-function _15$1(Swatches,d3){return(
+function _15(Swatches,d3){return(
 Swatches(d3.scaleOrdinal(["Wholesale and Retail Trade", "Manufacturing", "Leisure and hospitality", "Business services", "Construction", "Education and Health", "Government", "Finance", "Self-employed", "Other"], d3.schemeTableau10), {
   columns: "180px"
 })
@@ -4911,7 +4911,7 @@ function define$1(runtime, observer) {
   main.variable(observer()).define(["Legend","d3"], _4);
   main.variable(observer()).define(["Legend","d3"], _5);
   main.variable(observer()).define(["Legend","d3"], _6$1);
-  main.variable(observer()).define(["Legend","d3"], _7);
+  main.variable(observer()).define(["Legend","d3"], _7$1);
   main.variable(observer()).define(["Legend","d3"], _8);
   main.variable(observer()).define(["Legend","d3"], _9);
   main.variable(observer()).define(["Legend","d3"], _10);
@@ -4919,7 +4919,7 @@ function define$1(runtime, observer) {
   main.variable(observer()).define(["Legend","d3"], _12);
   main.variable(observer()).define(["md"], _13);
   main.variable(observer()).define(["Swatches","d3"], _14);
-  main.variable(observer()).define(["Swatches","d3"], _15$1);
+  main.variable(observer()).define(["Swatches","d3"], _15);
   main.variable(observer()).define(["md"], _16);
   main.variable(observer("Legend")).define("Legend", ["d3"], _Legend);
   main.variable(observer("legend")).define("legend", ["Legend"], _legend);
@@ -5279,6 +5279,18 @@ function _6(showFlow,$0)
 }
 
 
+function _7(unFocus,$0)
+{
+  if(unFocus){
+    $0.unfocus();
+  }
+}
+
+
+function _unFocus(Inputs){return(
+Inputs.toggle({label:"Unfocus"})
+)}
+
 function _showFlowInput(Inputs){return(
 Inputs.toggle({label:"Show sequential flow"})
 )}
@@ -5311,7 +5323,7 @@ function _TsOnly(TsOnlyInput){return(
 TsOnlyInput
 )}
 
-function _15(DOM,serialize,$0){return(
+function _17(DOM,serialize,$0){return(
 DOM.download(() => serialize($0), undefined, "Save as SVG")
 )}
 
@@ -7006,6 +7018,7 @@ updateChartValue();
 // Return the svg node with exposed methods (Observable pattern)
 return Object.assign(svg.node(), {
   focusPair,
+  unfocus,
   get focusedPair() { return focusedPair; },
   cells,
   resetZoom,
@@ -7135,7 +7148,7 @@ function _focusedSlice(chart)
   return chart.clickedSlice; }
 
 
-function _19(chart){return(
+function _21(chart){return(
 chart.focusedPair
 )}
 
@@ -7143,7 +7156,7 @@ function _sliceNumber(Inputs,$0){return(
 Inputs.range([0,$0.cells.length-1],{value:0,step:1,label:"slice number"})
 )}
 
-function _21($0,sliceNumber){return(
+function _23($0,sliceNumber){return(
 $0.focusPair($0.cells[sliceNumber])
 )}
 
@@ -7460,6 +7473,22 @@ function _flowConnections(dialecticalData){return(
 })()
 )}
 
+function _contraConnections(dialecticalData){return(
+(() => {
+  const units = Object.keys(dialecticalData);
+  let connections = [];
+
+  // Add invisible ring connections
+  for (let i = 0; i*2 < units.length; i++) {
+    const current = units[i];
+    const target = dialecticalData[units[i]].pairWith;
+    connections.push(`${current} -> ${target}  // Contra sequence`);
+  }
+
+  return connections.join('\n');
+})()
+)}
+
 function _parseArrowConnectionsAsSourceTarget(){return(
 (dotScript, dialecticalData) => {
   const connections = [];
@@ -7551,7 +7580,7 @@ function _parseArrowConnectionsAsSourceTarget(){return(
 }
 )}
 
-function _31(isWhiteOutside,styles)
+function _34(isWhiteOutside,styles)
 {
   if (isWhiteOutside) {
   styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
@@ -8312,7 +8341,7 @@ function rasterize(svg) {
 }
 )}
 
-function _47(DOM,rasterize,$0){return(
+function _50(DOM,rasterize,$0){return(
 DOM.download(() => rasterize($0), undefined, "Save as PNG")
 )}
 
@@ -8787,6 +8816,9 @@ function define(runtime, observer) {
   main.variable(observer("styles")).define("styles", _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html","parseArrowConnections","arrowConnections","dialecticalData","viewof chart","isThesisType","d3"], _arrowControls);
   main.variable(observer()).define(["showFlow","viewof chart"], _6);
+  main.variable(observer()).define(["unFocus","viewof chart"], _7);
+  main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
+  main.variable(observer("unFocus")).define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
   main.variable(observer("viewof showFlowInput")).define("viewof showFlowInput", ["Inputs"], _showFlowInput);
   main.variable(observer("showFlowInput")).define("showFlowInput", ["Generators", "viewof showFlowInput"], (G, _) => G.input(_));
   main.variable(observer("showFlow")).define("showFlow", ["showFlowInput"], _showFlow);
@@ -8799,15 +8831,15 @@ function define(runtime, observer) {
   main.variable(observer("viewof TsOnlyInput")).define("viewof TsOnlyInput", ["Inputs"], _TsOnlyInput);
   main.variable(observer("TsOnlyInput")).define("TsOnlyInput", ["Generators", "viewof TsOnlyInput"], (G, _) => G.input(_));
   main.variable(observer("TsOnly")).define("TsOnly", ["TsOnlyInput"], _TsOnly);
-  main.variable(observer()).define(["DOM","serialize","viewof chart"], _15);
+  main.variable(observer()).define(["DOM","serialize","viewof chart"], _17);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
-  main.variable(observer()).define(["chart"], _19);
+  main.variable(observer()).define(["chart"], _21);
   main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs","viewof chart"], _sliceNumber);
   main.variable(observer("sliceNumber")).define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
-  main.variable(observer()).define(["viewof chart","sliceNumber"], _21);
+  main.variable(observer()).define(["viewof chart","sliceNumber"], _23);
   main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("topSlice")).define("topSlice", ["chart","dialecticalData"], _topSlice);
@@ -8816,8 +8848,9 @@ function define(runtime, observer) {
   main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html","dialecticalData","arrowConnections","viewof chart","parseArrowConnections"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", ["dialecticalData"], _arrowConnections);
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
+  main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define(["isWhiteOutside","styles"], _31);
+  main.variable(observer()).define(["isWhiteOutside","styles"], _34);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside","whitesOnly","TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles","tryWrapWithLineBreaks","truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
@@ -8834,7 +8867,7 @@ function define(runtime, observer) {
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
   main.variable(observer("rasterize")).define("rasterize", ["DOM","serialize"], _rasterize);
-  main.variable(observer()).define(["DOM","rasterize","viewof chart"], _47);
+  main.variable(observer()).define(["DOM","rasterize","viewof chart"], _50);
   main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
   main.variable(observer("fontsize")).define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
   main.variable(observer("graph")).define("graph", ["suits","d3","location","drag","fontsize","selectedFont","invalidation"], _graph);
