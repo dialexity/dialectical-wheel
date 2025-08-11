@@ -7602,7 +7602,7 @@ function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){return(
           unitId: unit,
           value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
           opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-          fullText: `${(index)%(Object.keys(dialecticalData).length/2)+1}`,
+          fullText: `${unit}`,
           pairWith: dialecticalData[unit].pairWith,
           pairId: dialecticalData[unit].pairId
         })),
