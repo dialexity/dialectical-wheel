@@ -5323,7 +5323,7 @@ function _17(DOM,serialize,$0){return(
 DOM.download(() => serialize($0), undefined, "Save as SVG")
 )}
 
-function _chart(styles,d3,dialecticalData,transformToNestedPieData,getOppositePrefix,getTextConstraints,wrapText,isThesisType,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,initializeBuildSteps){return(
+function _chart(styles,d3,selectedFont,dialecticalData,transformToNestedPieData,getOppositePrefix,getTextConstraints,wrapText,isThesisType,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,initializeBuildSteps){return(
 (() => {
   
 let isTouchDragging = false;
@@ -5341,7 +5341,8 @@ const centerRadius = styles.radii.inner; // Inner ring's outer radius
 const svg = d3.create("svg")
   .attr("viewBox", [-styles.width/2, -styles.height/2, styles.width, styles.height])
   .style("max-width", "100%")
-  .style("height", "auto");
+  .style("height", "auto")
+  .style("font-family", `${selectedFont}, sans-serif`);
 
 // State variables
 let focusedPair = null;
@@ -8747,8 +8748,12 @@ function _wisdomUnits(){return(
 ]
 )}
 
+function _61(wisdomUnits){return(
+wisdomUnits[0].t.alias
+)}
+
 function _componentOrder(){return(
-["A","T3","T2","A4","T","A3","A2","T4"]
+[]
 )}
 
 function _extractStatement(){return(
@@ -8828,7 +8833,7 @@ function define(runtime, observer) {
   main.variable(observer("TsOnlyInput")).define("TsOnlyInput", ["Generators", "viewof TsOnlyInput"], (G, _) => G.input(_));
   main.variable(observer("TsOnly")).define("TsOnly", ["TsOnlyInput"], _TsOnly);
   main.variable(observer()).define(["DOM","serialize","viewof chart"], _17);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles","d3","selectedFont","dialecticalData","transformToNestedPieData","getOppositePrefix","getTextConstraints","wrapText","isThesisType","arrowUtilities","parseArrowConnections","arrowConnections","flowConnections","initializeBuildSteps"], _chart);
   main.variable(observer("chart")).define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html","viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
@@ -8876,6 +8881,7 @@ function define(runtime, observer) {
   main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
   main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);
   main.variable(observer("wisdomUnits")).define("wisdomUnits", _wisdomUnits);
+  main.variable(observer()).define(["wisdomUnits"], _61);
   main.variable(observer("componentOrder")).define("componentOrder", _componentOrder);
   main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
   main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
