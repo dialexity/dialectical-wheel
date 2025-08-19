@@ -9206,7 +9206,7 @@ function DialecticalWheel(_ref) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, preferences, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences.whitesOnly, preferences.TsOnly, preferences.isWhiteOutside, preferences.showFlow, arrowConnections, module]);
   return jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsx("div", {
