@@ -29,7 +29,6 @@ export default function DialecticalWheel({
   const chartRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
-  const [chartReady, setChartReady] = useState<boolean>(false);
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
   
@@ -52,7 +51,6 @@ export default function DialecticalWheel({
             // The chart value IS the SVG node with methods attached
             //setChart(value);
             if (onChartReady) onChartReady(value);
-            setChartReady(true);
             return super.fulfilled(value);
           }
         }(chartRef.current);
@@ -62,13 +60,6 @@ export default function DialecticalWheel({
           fulfilled(value: any) {
             console.log('topSlice updated:', value);
             if (onTopSliceChange) onTopSliceChange(value);
-          }
-        };
-      }
-      if (name === 'transformToNestedPieData') {
-        return {
-          fulfilled() {
-            console.log('transformToNestedPieData recomputed');
           }
         };
       }
@@ -89,13 +80,6 @@ export default function DialecticalWheel({
         };
       }
       if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
-      if (name === "viewof whitesOnly" || name === "viewof TsOnly" || name === "viewof isWhiteOutside" || name === "viewof showFlow") {
-        return {
-          fulfilled() {
-            console.log(`${name} updated`);
-          }
-        };
-      }
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -115,7 +99,6 @@ export default function DialecticalWheel({
     
     return () => {
       setModule(null);
-      setChartReady(false);
       //setChart(null);
       //setRuntime(null);
       runtime.dispose();
@@ -148,17 +131,6 @@ export default function DialecticalWheel({
     arrowConnections,
     module
   ]);
-
-  // After the chart exists, re-apply toggles that gate effect-only cells depending on `viewof chart`.
-  useEffect(() => {
-    if (!module || !chartReady) return;
-    try {
-      module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
-      module.redefine('showFlowInput', preferences.showFlow);
-    } catch (error) {
-      console.warn('Could not redefine post-chart variables in notebook:', error);
-    }
-  }, [module, chartReady, preferences.isWhiteOutside, preferences.showFlow]);
 
   return (
     <div className="dialectical-wheel-wrapper">

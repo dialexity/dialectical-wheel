@@ -5271,12 +5271,7 @@ return (
     })()
 );
 }
-function _2(viewof_showFlow,viewof_chart){
-if(viewof_showFlow){
-        viewof_chart.drawFlow();
-      }
-}
-function _3(unFocus,viewof_chart){
+function _2(unFocus,viewof_chart){
 if(unFocus){
         viewof_chart.unfocus();
       }
@@ -5286,44 +5281,32 @@ return (
 Inputs.toggle({label:"Unfocus"})
 );
 }
-function _showFlowInput(Inputs){
+function _3(showFlow,viewof_chart){
+if(showFlow){
+        viewof_chart.drawFlow();
+      }
+      else {
+        viewof_chart.clearArrows();
+      }
+}
+function _showFlow(Inputs){
 return (
 Inputs.toggle({label:"Show sequential flow"})
 );
 }
-function _showFlow(showFlowInput){
-return (
-showFlowInput
-);
-}
-function _isWhiteOutsideInput(Inputs){
+function _isWhiteOutside(Inputs){
 return (
 Inputs.toggle({label: "Swap red and white layer"})
 );
 }
-function _isWhiteOutside(isWhiteOutsideInput){
-return (
-isWhiteOutsideInput
-);
-}
-function _whitesOnlyInput(Inputs){
+function _whitesOnly(Inputs){
 return (
 Inputs.toggle({label: "White cells only"})
 );
 }
-function _whitesOnly(whitesOnlyInput){
-return (
-whitesOnlyInput
-);
-}
-function _TsOnlyInput(Inputs){
+function _TsOnly(Inputs){
 return (
 Inputs.toggle({label: "Ts only"})
-);
-}
-function _TsOnly(TsOnlyInput){
-return (
-TsOnlyInput
 );
 }
 function _4(DOM,serialize,viewof_chart){
@@ -7640,8 +7623,8 @@ return (
     }
 );
 }
-function _7(viewof_isWhiteOutside,styles){
-if (viewof_isWhiteOutside) {
+function _7(isWhiteOutside,styles){
+if (isWhiteOutside) {
       styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
       styles.colors.text = { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" };
     } else {
@@ -7649,9 +7632,9 @@ if (viewof_isWhiteOutside) {
       styles.colors.text = { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" };
     }
 }
-function _transformToNestedPieData(viewof_isWhiteOutside,viewof_whitesOnly,viewof_TsOnly){
+function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
 return (
-(dialecticalData, whiteOutside= viewof_isWhiteOutside, whiteOnly= viewof_whitesOnly, tOnly = viewof_TsOnly) => {
+(dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
           return {
@@ -9012,25 +8995,17 @@ function define(runtime, observer) {
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "d3"], _arrowControls);
-  main.variable(observer()).define(["viewof showFlow", "viewof chart"], _2);
-  main.variable(observer()).define(["unFocus", "viewof chart"], _3);
+  main.variable(observer()).define(["unFocus", "viewof chart"], _2);
   main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
-  main.variable(observer("viewof showFlowInput")).define("viewof showFlowInput", ["Inputs"], _showFlowInput);
-  main.define("showFlowInput", ["Generators", "viewof showFlowInput"], (G, _) => G.input(_));
-  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["showFlowInput"], _showFlow);
+  main.variable(observer()).define(["showFlow", "viewof chart"], _3);
+  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
   main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
-  main.variable(observer("viewof isWhiteOutsideInput")).define("viewof isWhiteOutsideInput", ["Inputs"], _isWhiteOutsideInput);
-  main.define("isWhiteOutsideInput", ["Generators", "viewof isWhiteOutsideInput"], (G, _) => G.input(_));
-  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["isWhiteOutsideInput"], _isWhiteOutside);
+  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
-  main.variable(observer("viewof whitesOnlyInput")).define("viewof whitesOnlyInput", ["Inputs"], _whitesOnlyInput);
-  main.define("whitesOnlyInput", ["Generators", "viewof whitesOnlyInput"], (G, _) => G.input(_));
-  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["whitesOnlyInput"], _whitesOnly);
+  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
-  main.variable(observer("viewof TsOnlyInput")).define("viewof TsOnlyInput", ["Inputs"], _TsOnlyInput);
-  main.define("TsOnlyInput", ["Generators", "viewof TsOnlyInput"], (G, _) => G.input(_));
-  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["TsOnlyInput"], _TsOnly);
+  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
   main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _4);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
@@ -9052,8 +9027,8 @@ function define(runtime, observer) {
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define(["viewof isWhiteOutside", "styles"], _7);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["viewof isWhiteOutside", "viewof whitesOnly", "viewof TsOnly"], _transformToNestedPieData);
+  main.variable(observer()).define(["isWhiteOutside", "styles"], _7);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
@@ -9119,10 +9094,6 @@ function DialecticalWheel(_ref) {
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
     setModule = _useState2[1];
-  var _useState3 = useState(false),
-    _useState4 = _slicedToArray(_useState3, 2),
-    chartReady = _useState4[0],
-    setChartReady = _useState4[1];
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
   useEffect(function () {
@@ -9146,7 +9117,6 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               //setChart(value);
               if (onChartReady) onChartReady(value);
-              setChartReady(true);
               return _superPropGet(_class, "fulfilled", this, 3)([value]);
             }
           }]);
@@ -9157,13 +9127,6 @@ function DialecticalWheel(_ref) {
           fulfilled: function fulfilled(value) {
             console.log('topSlice updated:', value);
             if (onTopSliceChange) onTopSliceChange(value);
-          }
-        };
-      }
-      if (name === 'transformToNestedPieData') {
-        return {
-          fulfilled: function fulfilled() {
-            console.log('transformToNestedPieData recomputed');
           }
         };
       }
@@ -9184,13 +9147,6 @@ function DialecticalWheel(_ref) {
         };
       }
       if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
-      if (name === "viewof whitesOnly" || name === "viewof TsOnly" || name === "viewof isWhiteOutside" || name === "viewof showFlow") {
-        return {
-          fulfilled: function fulfilled() {
-            console.log("".concat(name, " updated"));
-          }
-        };
-      }
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -9208,7 +9164,6 @@ function DialecticalWheel(_ref) {
     setModule(main);
     return function () {
       setModule(null);
-      setChartReady(false);
       //setChart(null);
       //setRuntime(null);
       runtime.dispose();
@@ -9231,16 +9186,6 @@ function DialecticalWheel(_ref) {
       }
     }
   }, [wisdomUnits, componentOrder, preferences.whitesOnly, preferences.TsOnly, preferences.isWhiteOutside, preferences.showFlow, arrowConnections, module]);
-  // After the chart exists, re-apply toggles that gate effect-only cells depending on `viewof chart`.
-  useEffect(function () {
-    if (!module || !chartReady) return;
-    try {
-      module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
-      module.redefine('showFlowInput', preferences.showFlow);
-    } catch (error) {
-      console.warn('Could not redefine post-chart variables in notebook:', error);
-    }
-  }, [module, chartReady, preferences.isWhiteOutside, preferences.showFlow]);
   return jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsx("div", {
