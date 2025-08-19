@@ -9186,6 +9186,18 @@ function DialecticalWheel(_ref) {
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
+    // Apply initial props immediately so the first render uses them
+    try {
+      main.redefine('arrowConnections', arrowConnections);
+      main.redefine('wisdomUnits', wisdomUnits);
+      main.redefine('componentOrder', componentOrder);
+      main.redefine('whitesOnlyInput', preferences.whitesOnly);
+      main.redefine('TsOnlyInput', preferences.TsOnly);
+      main.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
+      main.redefine('showFlowInput', preferences.showFlow);
+    } catch (error) {
+      console.warn('Could not set initial notebook variables:', error);
+    }
     setModule(main);
     return function () {
       setModule(null);
@@ -9202,10 +9214,10 @@ function DialecticalWheel(_ref) {
         module.redefine('arrowConnections', arrowConnections);
         module.redefine('wisdomUnits', wisdomUnits);
         module.redefine('componentOrder', componentOrder);
-        module.redefine('viewof whitesOnlyInput', preferences.whitesOnly);
-        module.redefine('viewof TsOnlyInput', preferences.TsOnly);
-        module.redefine('viewof isWhiteOutsideInput', preferences.isWhiteOutside);
-        module.redefine('viewof showFlowInput', preferences.showFlow);
+        module.redefine('whitesOnlyInput', preferences.whitesOnly);
+        module.redefine('TsOnlyInput', preferences.TsOnly);
+        module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
+        module.redefine('showFlowInput', preferences.showFlow);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
