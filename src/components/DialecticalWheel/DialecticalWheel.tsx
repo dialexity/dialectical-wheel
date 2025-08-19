@@ -1,5 +1,6 @@
 import {Runtime, Inspector} from '@observablehq/runtime';
 import {useEffect, useRef, useState} from 'react';
+import {toggle} from '@observablehq/inputs';
 // @ts-ignore - Import the fixed version from package.json
 import notebook from '@dialexity/dialectical-wheel';
 //import './DialecticalWheel.css';
@@ -113,10 +114,11 @@ export default function DialecticalWheel({
         module.redefine('arrowConnections', arrowConnections);
         module.redefine('wisdomUnits', wisdomUnits);
         module.redefine('componentOrder', componentOrder);
-        module.redefine('whitesOnlyInput', preferences.whitesOnly);
-        module.redefine('TsOnlyInput', preferences.TsOnly);
-        module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
-        module.redefine('showFlowInput', preferences.showFlow);
+        // Redefine the actual view cells so downstream `Generators.input(viewof ...)` works
+        module.redefine('viewof whitesOnly', toggle({label: 'White cells only', value: preferences.whitesOnly}));
+        module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
+        module.redefine('viewof isWhiteOutside', toggle({label: 'Swap red and white layer', value: preferences.isWhiteOutside}));
+        module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
