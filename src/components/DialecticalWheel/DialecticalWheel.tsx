@@ -113,10 +113,10 @@ export default function DialecticalWheel({
         module.redefine('arrowConnections', arrowConnections);
         module.redefine('wisdomUnits', wisdomUnits);
         module.redefine('componentOrder', componentOrder);
-        module.redefine('whitesOnly', preferences.whitesOnly);
-        module.redefine('TsOnly', preferences.TsOnly);
-        module.redefine('isWhiteOutside', preferences.isWhiteOutside);
-        module.redefine('showFlow', preferences.showFlow);
+        module.redefine('viewof whitesOnly', preferences.whitesOnly);
+        module.redefine('viewof TsOnly', preferences.TsOnly);
+        module.redefine('viewof isWhiteOutside', preferences.isWhiteOutside);
+        module.redefine('viewof showFlow', preferences.showFlow);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
