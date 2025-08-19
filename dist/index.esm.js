@@ -9123,6 +9123,9 @@ function DialecticalWheel(_ref) {
     //setRuntime(runtime);
     var main = runtime.module(define, function (name) {
       if (name === 'viewof chart') {
+        // Only attach an Inspector when the chart container is mounted.
+        // When graphView is true, chartRef.current will be null because the ref is assigned to graphRef instead.
+        if (!chartRef.current) return undefined;
         return new (/*#__PURE__*/function (_Inspector) {
           function _class(node) {
             _classCallCheck(this, _class);

@@ -40,6 +40,9 @@ export default function DialecticalWheel({
     
     const main = runtime.module(notebook, (name: string) => {
       if (name === 'viewof chart') {
+        // Only attach an Inspector when the chart container is mounted.
+        // When graphView is true, chartRef.current will be null because the ref is assigned to graphRef instead.
+        if (!chartRef.current) return undefined;
         return new class extends Inspector {
           constructor(node: any) {
             super(node);
