@@ -9123,6 +9123,10 @@ function DialecticalWheel(_ref) {
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
     setModule = _useState2[1];
+  var _useState3 = react.useState(false),
+    _useState4 = _slicedToArray(_useState3, 2),
+    chartReady = _useState4[0],
+    setChartReady = _useState4[1];
   //const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
   react.useEffect(function () {
@@ -9146,6 +9150,7 @@ function DialecticalWheel(_ref) {
               // The chart value IS the SVG node with methods attached
               //setChart(value);
               if (onChartReady) onChartReady(value);
+              setChartReady(true);
               return _superPropGet(_class, "fulfilled", this, 3)([value]);
             }
           }]);
@@ -9156,6 +9161,13 @@ function DialecticalWheel(_ref) {
           fulfilled: function fulfilled(value) {
             console.log('topSlice updated:', value);
             if (onTopSliceChange) onTopSliceChange(value);
+          }
+        };
+      }
+      if (name === 'transformToNestedPieData') {
+        return {
+          fulfilled: function fulfilled() {
+            console.log('transformToNestedPieData recomputed');
           }
         };
       }
@@ -9176,6 +9188,13 @@ function DialecticalWheel(_ref) {
         };
       }
       if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
+      if (name === "viewof whitesOnly" || name === "viewof TsOnly" || name === "viewof isWhiteOutside" || name === "viewof showFlow") {
+        return {
+          fulfilled: function fulfilled() {
+            console.log("".concat(name, " updated"));
+          }
+        };
+      }
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -9190,21 +9209,10 @@ function DialecticalWheel(_ref) {
       // Don't render the Observable controls - we'll use React components instead
       return undefined;
     });
-    // Apply initial props immediately so the first render uses them
-    try {
-      main.redefine('arrowConnections', arrowConnections);
-      main.redefine('wisdomUnits', wisdomUnits);
-      main.redefine('componentOrder', componentOrder);
-      main.redefine('whitesOnlyInput', preferences.whitesOnly);
-      main.redefine('TsOnlyInput', preferences.TsOnly);
-      main.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
-      main.redefine('showFlowInput', preferences.showFlow);
-    } catch (error) {
-      console.warn('Could not set initial notebook variables:', error);
-    }
     setModule(main);
     return function () {
       setModule(null);
+      setChartReady(false);
       //setChart(null);
       //setRuntime(null);
       runtime.dispose();
@@ -9227,6 +9235,16 @@ function DialecticalWheel(_ref) {
       }
     }
   }, [wisdomUnits, componentOrder, preferences.whitesOnly, preferences.TsOnly, preferences.isWhiteOutside, preferences.showFlow, arrowConnections, module]);
+  // After the chart exists, re-apply toggles that gate effect-only cells depending on `viewof chart`.
+  react.useEffect(function () {
+    if (!module || !chartReady) return;
+    try {
+      module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
+      module.redefine('showFlowInput', preferences.showFlow);
+    } catch (error) {
+      console.warn('Could not redefine post-chart variables in notebook:', error);
+    }
+  }, [module, chartReady, preferences.isWhiteOutside, preferences.showFlow]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {
