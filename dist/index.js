@@ -5275,8 +5275,8 @@ return (
     })()
 );
 }
-function _2(showFlow,viewof_chart){
-if(showFlow){
+function _2(viewof_showFlow,viewof_chart){
+if(viewof_showFlow){
         viewof_chart.drawFlow();
       }
 }
@@ -7644,8 +7644,8 @@ return (
     }
 );
 }
-function _7(isWhiteOutside,styles){
-if (isWhiteOutside) {
+function _7(viewof_isWhiteOutside,styles){
+if (viewof_isWhiteOutside) {
       styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
       styles.colors.text = { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" };
     } else {
@@ -7653,9 +7653,9 @@ if (isWhiteOutside) {
       styles.colors.text = { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" };
     }
 }
-function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
+function _transformToNestedPieData(viewof_isWhiteOutside,viewof_whitesOnly,viewof_TsOnly){
 return (
-(dialecticalData, whiteOutside=isWhiteOutside, whiteOnly=whitesOnly, tOnly = TsOnly) => {
+(dialecticalData, whiteOutside= viewof_isWhiteOutside, whiteOnly= viewof_whitesOnly, tOnly = viewof_TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
           return {
@@ -8507,9 +8507,9 @@ return (
 Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
 );
 }
-function _graph(flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
-const width = 928;
-      const height = 600;
+function _graph(styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
+const width = styles.width + 200;
+      const height = styles.height + 200;
       // Build link datasets from both flow and contra connections
       const flowLinksData = flowSuits.map(d => Object.assign({}, d, { isContra: false }));
       const contraLinksData = contraSuits.map(d => Object.assign({}, d, { isContra: true }));
@@ -9016,22 +9016,26 @@ function define(runtime, observer) {
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "d3"], _arrowControls);
-  main.variable(observer()).define(["showFlow", "viewof chart"], _2);
+  main.variable(observer()).define(["viewof showFlow", "viewof chart"], _2);
   main.variable(observer()).define(["unFocus", "viewof chart"], _3);
   main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
   main.variable(observer("viewof showFlowInput")).define("viewof showFlowInput", ["Inputs"], _showFlowInput);
   main.define("showFlowInput", ["Generators", "viewof showFlowInput"], (G, _) => G.input(_));
-  main.variable(observer("showFlow")).define("showFlow", ["showFlowInput"], _showFlow);
+  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["showFlowInput"], _showFlow);
+  main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
   main.variable(observer("viewof isWhiteOutsideInput")).define("viewof isWhiteOutsideInput", ["Inputs"], _isWhiteOutsideInput);
   main.define("isWhiteOutsideInput", ["Generators", "viewof isWhiteOutsideInput"], (G, _) => G.input(_));
-  main.variable(observer("isWhiteOutside")).define("isWhiteOutside", ["isWhiteOutsideInput"], _isWhiteOutside);
+  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["isWhiteOutsideInput"], _isWhiteOutside);
+  main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
   main.variable(observer("viewof whitesOnlyInput")).define("viewof whitesOnlyInput", ["Inputs"], _whitesOnlyInput);
   main.define("whitesOnlyInput", ["Generators", "viewof whitesOnlyInput"], (G, _) => G.input(_));
-  main.variable(observer("whitesOnly")).define("whitesOnly", ["whitesOnlyInput"], _whitesOnly);
+  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["whitesOnlyInput"], _whitesOnly);
+  main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
   main.variable(observer("viewof TsOnlyInput")).define("viewof TsOnlyInput", ["Inputs"], _TsOnlyInput);
   main.define("TsOnlyInput", ["Generators", "viewof TsOnlyInput"], (G, _) => G.input(_));
-  main.variable(observer("TsOnly")).define("TsOnly", ["TsOnlyInput"], _TsOnly);
+  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["TsOnlyInput"], _TsOnly);
+  main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _4);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles", "d3", "selectedFont", "dialecticalData", "transformToNestedPieData", "getOppositePrefix", "getTextConstraints", "wrapText", "isThesisType", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "initializeBuildSteps"], _chart);
@@ -9052,8 +9056,8 @@ function define(runtime, observer) {
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define(["isWhiteOutside", "styles"], _7);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
+  main.variable(observer()).define(["viewof isWhiteOutside", "styles"], _7);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["viewof isWhiteOutside", "viewof whitesOnly", "viewof TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
@@ -9072,7 +9076,7 @@ function define(runtime, observer) {
   main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _8);
   main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
   main.define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
-  main.variable(observer("graph")).define("graph", ["flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
+  main.variable(observer("graph")).define("graph", ["styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
   main.variable(observer("drag")).define("drag", ["d3"], _drag);
   main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
   main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
