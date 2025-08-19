@@ -9206,10 +9206,10 @@ function DialecticalWheel(_ref) {
         module.redefine('arrowConnections', arrowConnections);
         module.redefine('wisdomUnits', wisdomUnits);
         module.redefine('componentOrder', componentOrder);
-        module.redefine('viewof whitesOnly', preferences.whitesOnly);
-        module.redefine('viewof TsOnly', preferences.TsOnly);
-        module.redefine('viewof isWhiteOutside', preferences.isWhiteOutside);
-        module.redefine('viewof showFlow', preferences.showFlow);
+        module.redefine('whitesOnlyInput', preferences.whitesOnly);
+        module.redefine('TsOnlyInput', preferences.TsOnly);
+        module.redefine('isWhiteOutsideInput', preferences.isWhiteOutside);
+        module.redefine('showFlowInput', preferences.showFlow);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
