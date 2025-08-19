@@ -5332,7 +5332,7 @@ Legend(d3.scaleSequentialQuantile(d3.range(100).map(() => Math.random() ** 2), d
 })
 )}
 
-function _8$1(Legend,d3){return(
+function _8(Legend,d3){return(
 Legend(d3.scaleSqrt([-100, 0, 100], ["blue", "white", "red"]), {
   title: "Temperature (°C)"
 })
@@ -5629,7 +5629,7 @@ function define$1(runtime, observer) {
   main.variable(observer()).define(["Legend","d3"], _5$1);
   main.variable(observer()).define(["Legend","d3"], _6$1);
   main.variable(observer()).define(["Legend","d3"], _7$1);
-  main.variable(observer()).define(["Legend","d3"], _8$1);
+  main.variable(observer()).define(["Legend","d3"], _8);
   main.variable(observer()).define(["Legend","d3"], _9);
   main.variable(observer()).define(["Legend","d3"], _10);
   main.variable(observer()).define(["Legend","d3"], _11);
@@ -5660,7 +5660,7 @@ return (
 500
 );
 }
-function _styles(){
+function _styles(ringColors,textColors){
 return (
 {
         // Dimensions
@@ -5678,8 +5678,8 @@ return (
         // Colors
         colors: {
           hub: "#ffff7a", // Khaki
-          rings: { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" },
-          text: { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" },
+          rings: ringColors,
+          text: textColors,
           strokes: { default: "#000", middleRing: "#000", zoom: null },
           axis: {
             positive: { fill: "#C6E5B3", stroke: "#2d5a2d" },
@@ -6002,22 +6002,42 @@ return (
 Inputs.toggle({label:"Unfocus"})
 );
 }
-function _3(showFlow,viewof_chart){
-if(showFlow){
-        viewof_chart.drawFlow();
-      }
-      else {
-        viewof_chart.clearArrows();
-      }
-}
 function _showFlow(Inputs){
 return (
 Inputs.toggle({label:"Show sequential flow"})
 );
 }
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,invalidation){
+return (
+Generators.observe(notify => {
+      const node = viewof_showFlow;
+      const handler = () => {
+        if (node.value) viewof_chart.drawFlow(); else viewof_chart.clearArrows();
+        notify(node.value);
+      };
+      node.addEventListener("input", handler);
+      invalidation.then(() => node.removeEventListener("input", handler));
+      handler();
+    })
+);
+}
 function _isWhiteOutside(Inputs){
 return (
 Inputs.toggle({label: "Swap red and white layer"})
+);
+}
+function _ringColors(isWhiteOutside){
+return (
+isWhiteOutside
+      ? { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" }
+      : { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" }
+);
+}
+function _textColors(isWhiteOutside){
+return (
+isWhiteOutside
+      ? { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" }
+      : { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" }
 );
 }
 function _whitesOnly(Inputs){
@@ -6030,7 +6050,7 @@ return (
 Inputs.toggle({label: "Ts only"})
 );
 }
-function _4(DOM,serialize,viewof_chart){
+function _3(DOM,serialize,viewof_chart){
 return (
 DOM.download(() => serialize(viewof_chart), undefined, "Save as SVG")
 );
@@ -7905,7 +7925,7 @@ function _focusedSlice(chart){
 
       return chart.clickedSlice;
 }
-function _5(chart){
+function _4(chart){
 return (
 chart.focusedPair
 );
@@ -7915,7 +7935,7 @@ return (
 Inputs.range([0,viewof_chart.cells.length-1],{value:0,step:1,label:"slice number"})
 );
 }
-function _6(viewof_chart,sliceNumber){
+function _5(viewof_chart,sliceNumber){
 return (
 viewof_chart.focusPair(viewof_chart.cells[sliceNumber])
 );
@@ -8344,14 +8364,10 @@ return (
     }
 );
 }
-function _7(isWhiteOutside,styles){
-if (isWhiteOutside) {
-      styles.colors.rings = { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" };
-      styles.colors.text = { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" };
-    } else {
-      styles.colors.rings = { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" };
-      styles.colors.text = { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" };
-    }
+function _6(){
+return (
+null
+);
 }
 function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
 return (
@@ -9197,7 +9213,7 @@ function rasterize(svg) {
     }
 );
 }
-function _8(DOM,rasterize,viewof_chart){
+function _7(DOM,rasterize,viewof_chart){
 return (
 DOM.download(() => rasterize(viewof_chart), undefined, "Save as PNG")
 );
@@ -9714,30 +9730,32 @@ function define(runtime, observer) {
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
-  main.variable(observer("styles")).define("styles", _styles);
+  main.variable(observer("styles")).define("styles", ["ringColors", "textColors"], _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "d3"], _arrowControls);
   main.variable(observer()).define(["unFocus", "viewof chart"], _2);
   main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
-  main.variable(observer()).define(["showFlow", "viewof chart"], _3);
   main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
   main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
+  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside"], _ringColors);
+  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
   main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
   main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
-  main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _4);
+  main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
   main.variable(observer("viewof chart")).define("viewof chart", ["styles", "d3", "selectedFont", "dialecticalData", "transformToNestedPieData", "getOppositePrefix", "getTextConstraints", "wrapText", "isThesisType", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "initializeBuildSteps"], _chart);
   main.define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html", "viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
-  main.variable(observer()).define(["chart"], _5);
+  main.variable(observer()).define(["chart"], _4);
   main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs", "viewof chart"], _sliceNumber);
   main.define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
-  main.variable(observer()).define(["viewof chart", "sliceNumber"], _6);
+  main.variable(observer()).define(["viewof chart", "sliceNumber"], _5);
   main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("topSlice")).define("topSlice", ["chart", "dialecticalData"], _topSlice);
@@ -9748,7 +9766,7 @@ function define(runtime, observer) {
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define(["isWhiteOutside", "styles"], _7);
+  main.variable(observer()).define(_6);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
@@ -9765,7 +9783,7 @@ function define(runtime, observer) {
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
   main.variable(observer("rasterize")).define("rasterize", ["DOM", "serialize"], _rasterize);
-  main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _8);
+  main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _7);
   main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
   main.define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
   main.variable(observer("graph")).define("graph", ["styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
