@@ -10005,7 +10005,7 @@ function DialecticalWheel(_ref) {
           }
         };
       }
-      if (name === "mermaid_graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
+      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {
@@ -10061,12 +10061,23 @@ function DialecticalWheel(_ref) {
   return jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsx("div", {
-      ref: preferences.graphView ? graphRef : chartRef,
+      ref: chartRef,
       className: "chart-container",
-      style: _objectSpread2({
+      style: _objectSpread2(_objectSpread2({
         borderRadius: '8px',
         background: 'white'
-      }, style)
+      }, style), {}, {
+        display: preferences.graphView ? 'none' : 'block'
+      })
+    }), jsx("div", {
+      ref: graphRef,
+      className: "chart-container",
+      style: _objectSpread2(_objectSpread2({
+        borderRadius: '8px',
+        background: 'white'
+      }, style), {}, {
+        display: preferences.graphView ? 'block' : 'none'
+      })
     }), debug && jsxs("div", {
       style: {
         marginTop: '10px',
