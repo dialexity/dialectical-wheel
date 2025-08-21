@@ -5332,7 +5332,7 @@ Legend(d3.scaleSequentialQuantile(d3.range(100).map(() => Math.random() ** 2), d
 })
 )}
 
-function _8(Legend,d3){return(
+function _8$1(Legend,d3){return(
 Legend(d3.scaleSqrt([-100, 0, 100], ["blue", "white", "red"]), {
   title: "Temperature (°C)"
 })
@@ -5629,7 +5629,7 @@ function define$1(runtime, observer) {
   main.variable(observer()).define(["Legend","d3"], _5$1);
   main.variable(observer()).define(["Legend","d3"], _6$1);
   main.variable(observer()).define(["Legend","d3"], _7$1);
-  main.variable(observer()).define(["Legend","d3"], _8);
+  main.variable(observer()).define(["Legend","d3"], _8$1);
   main.variable(observer()).define(["Legend","d3"], _9);
   main.variable(observer()).define(["Legend","d3"], _10);
   main.variable(observer()).define(["Legend","d3"], _11);
@@ -8387,8 +8387,8 @@ return (
             [outerKey]: units.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
-              value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
+              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
+              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].negative,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -8396,8 +8396,8 @@ return (
             [middleKey]: units.map(unit => ({
               name: unit,
               unitId: unit,
-              value: (unit == 'A' && tOnly) ? 0: 1,
-              opacity: (unit == 'A' && tOnly) ? 0: 1,
+              value: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
+              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
               fullText: dialecticalData[unit].statement,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -8405,8 +8405,8 @@ return (
             inner: units.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
-              value: (unit == 'A' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit == 'A' && tOnly) ? 0: whiteOnly? 0: 1,
+              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
+              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly? 0: 1,
               fullText: dialecticalData[unit].positive,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -9223,8 +9223,23 @@ return (
 Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
 );
 }
-function _graph(styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
-const width = styles.width + 200;
+function _rotationAngle(Inputs){
+return (
+Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
+);
+}
+function _8(rotationAngle){
+// effect: apply rotation without restarting simulation
+      const apply = () => {
+        const root = document.querySelector('svg .graph-rotate');
+        if (!root) return;
+        root.setAttribute('transform', `rotate(${rotationAngle})`);
+        root.querySelectorAll('text').forEach(t => t.setAttribute('transform', `rotate(${-rotationAngle})`));
+      };
+      apply();
+}
+function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
+      const width = styles.width + 200;
       const height = styles.height + 200;
       // Build link datasets from both flow and contra connections
       const flowLinksData = flowSuits.map(d => Object.assign({}, d, { isContra: false }));
@@ -9260,10 +9275,13 @@ const width = styles.width + 200;
           .attr("refY", 0)
           .attr("markerWidth", 6)
           .attr("markerHeight", 6)
-          .attr("orient", "auto")
+          .attr("orient", "auto-start-reverse")
         .append("path")
           .attr("fill", color)
           .attr("d", "M0,-5L10,0L0,5");
+
+      // Container to rotate the entire graph while keeping text upright
+      const g = svg.append("g").attr("class", "graph-rotate").attr("transform", `rotate(0)`);
 
       // Map link endpoints to node objects for rendering so linkArc can read x/y
       const renderLinksData = allLinksData.map(l => {
@@ -9276,7 +9294,7 @@ const width = styles.width + 200;
         };
       });
 
-      const link = svg.append("g")
+      const link = g.append("g")
           .attr("fill", "none")
           .attr("stroke-width", 1.5)
         .selectAll("path")
@@ -9286,9 +9304,10 @@ const width = styles.width + 200;
           .attr("stroke", d => d.isContra ? "#d62728" : color(d.type))
           .attr("stroke-dasharray", d => d.isContra ? "4,2" : null)
           .attr("stroke-width", d => d.isContra ? 2 : 1.5)
+          .attr("marker-start", d => d.isContra ? `url(${new URL(`#arrow-${d.type}`, location)})` : null)
           .attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location)})`);
 
-      const node = svg.append("g")
+      const node = g.append("g")
           .attr("fill", "currentColor")
           .attr("stroke-linecap", "round")
           .attr("stroke-linejoin", "round")
@@ -9299,7 +9318,7 @@ const width = styles.width + 200;
 
       // Function to wrap text and return dimensions
       function wrapText(textElement, text, maxWidth = 120) {
-        const words = text.split(/\s+/);
+        text.split(/\s+/);
         const lineHeight = 1.2; // em
 
         textElement.selectAll("tspan").remove(); // Clear existing tspans
@@ -9327,11 +9346,18 @@ const width = styles.width + 200;
         const avgCharWidth = fontsize * 0.6; // 20px font size
         const maxCharsPerLine = Math.max(1, Math.floor(maxWidth / avgCharWidth));
 
+        // If there's a colon, color the prefix (before the colon) differently
+        const colonIndex = text.indexOf(":");
+        const hasPrefix = colonIndex >= 0;
+        const prefixText = hasPrefix ? text.slice(0, colonIndex + 1) : "";
+        const bodyText = hasPrefix ? text.slice(colonIndex + 1).trimStart() : text;
+
         const lines = [];
         let currentLine = "";
+        const bodyWords = bodyText.split(/\s+/);
 
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
+        for (let i = 0; i < bodyWords.length; i++) {
+          const word = bodyWords[i];
           const testLine = currentLine + (currentLine ? " " : "") + word;
 
           // Simple character count based wrapping
@@ -9348,28 +9374,60 @@ const width = styles.width + 200;
         }
 
         // If still no wrapping happened, force it by character count
-        if (lines.length === 1 && text.length > maxCharsPerLine) {
+        if (lines.length === 1 && bodyText.length > maxCharsPerLine) {
           lines.length = 0;
-          for (let i = 0; i < text.length; i += maxCharsPerLine) {
-            lines.push(text.slice(i, i + maxCharsPerLine));
+          for (let i = 0; i < bodyText.length; i += maxCharsPerLine) {
+            lines.push(bodyText.slice(i, i + maxCharsPerLine));
           }
         }
 
-        // Create proper tspans for each line
-        textElement.selectAll("tspan")
-          .data(lines)
-          .join("tspan")
+        const totalLines = Math.max(1, lines.length);
+
+        // Build tspans. If we have a prefix, put it on the first line with a different color.
+        if (hasPrefix) {
+          // Choose color based on prefix initial
+          const initial = prefixText.trim()[0];
+          let prefixColor = "#2563eb"; // default blue
+          if (initial === 'A') prefixColor = "#dc2626"; // red
+
+          // First line baseline shift
+          textElement.append("tspan")
             .attr("x", 0)
-            .attr("dy", (d, i) => i === 0 ? `${-((lines.length - 1) * lineHeight * 0.5)}em` : `${lineHeight}em`)
+            .attr("dy", `${-((totalLines - 1) * lineHeight * 0.5)}em`)
             .attr("text-anchor", "middle")
-            .text(d => d);
+            .attr("fill", prefixColor)
+            .text(prefixText + (lines[0] ? " " : ""));
+
+          if (lines.length > 0) {
+            textElement.append("tspan")
+              .attr("text-anchor", "middle")
+              .text(lines[0]);
+          }
+
+          for (let i = 1; i < lines.length; i++) {
+            textElement.append("tspan")
+              .attr("x", 0)
+              .attr("dy", `${lineHeight}em`)
+              .attr("text-anchor", "middle")
+              .text(lines[i]);
+          }
+        } else {
+          // No prefix; regular multi-line tspans
+          textElement.selectAll("tspan")
+            .data(lines)
+            .join("tspan")
+              .attr("x", 0)
+              .attr("dy", (d, i) => i === 0 ? `${-((lines.length - 1) * lineHeight * 0.5)}em` : `${lineHeight}em`)
+              .attr("text-anchor", "middle")
+              .text(d => d);
+        }
 
         // Calculate actual dimensions
         const bbox = textElement.node().getBBox();
         return {
           width: bbox.width,
           height: bbox.height,
-          lineCount: lines.length
+          lineCount: totalLines
         };
       }
 
@@ -9383,7 +9441,8 @@ const width = styles.width + 200;
           .attr("fill", "black")
           .attr("stroke", "white")
           .attr("stroke-width", 3)
-          .attr("paint-order", "stroke");
+          .attr("paint-order", "stroke")
+          .attr("transform", `rotate(0)`);
 
       // Calculate node dimensions after text wrapping
       node.each(function(d) {
@@ -9661,7 +9720,7 @@ return (
 }
 function _componentOrder(){
 return (
-["A","T3","T2","A4","T","A3","A2","T4"]
+[]
 );
 }
 function _extractStatement(){
@@ -9681,10 +9740,10 @@ return (
       if (!wisdomUnits || wisdomUnits.length === 0) {
         return {};
       }
-      const dialecticalData = {};
+      const diabolicalData = {};
       wisdomUnits.forEach((unit, index) => {
         const thesisKey = unit.t.alias || `T${index + 1}`;
-        dialecticalData[thesisKey] = {
+        diabolicalData[thesisKey] = {
           statement: extractStatement(unit.t),
           positive: extractStatement(unit.t_plus),
           negative: extractStatement(unit.t_minus),
@@ -9695,7 +9754,7 @@ return (
 
       wisdomUnits.forEach((unit, index) => {
         const antithesisKey = unit.a.alias || `A${index + 1}`;
-        dialecticalData[antithesisKey] = {
+        diabolicalData[antithesisKey] = {
           statement: extractStatement(unit.a),
           positive: extractStatement(unit.a_plus),
           negative: extractStatement(unit.a_minus),
@@ -9705,19 +9764,75 @@ return (
 
       });
       if (!componentOrder || componentOrder.length === 0) {
-        return dialecticalData;
+        return diabolicalData;
       }
 
       const dialecticalDataOrdered = {};
       componentOrder.forEach((component) => {
         const key = component;
 
-        dialecticalDataOrdered[key] = dialecticalData[key];
+        dialecticalDataOrdered[key] = diabolicalData[key];
 
       });
       return dialecticalDataOrdered;
     }
 );
+}
+function _mermaid_graph(mermaid){
+return (
+mermaid`graph TD
+      W["wisdomUnits"] --> T["transformWisdomUnitsToDialecticalData"]
+      C["componentOrder"] --> T
+      T --> D["dialecticalData (Object)"]
+      D --> FC["flowConnections"]
+      D --> CC["contraConnections"]
+      FC --> P["parseArrowConnectionsAsSourceTarget"]
+      CC --> P
+      D --> P
+      P --> FS["flowSuits"]
+      P --> CS["contraSuits"]
+      FS --> G["graph"]
+      CS --> G
+      FZ["fontsize" ] --> G
+      SF["selectedFont" ] --> G
+      STY["styles" ] --> G
+      D3["d3/drag" ] --> G
+
+      classDef note fill:#fff,stroke:#999,color:#333;
+      N1["nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order"]:::note
+      FS --> N1
+      CS --> N1`
+);
+}
+function _mermaid_graph_from_suits(suits,mermaid){
+const types = Array.from(new Set(suits.map(d => d.type)));
+      const nodes = Array.from(new Set(suits.flatMap(d => [d.source, d.target])));
+
+      const scheme10 = [
+        "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
+        "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
+      ];
+      const colorForType = (type) => scheme10[types.indexOf(type) % scheme10.length];
+
+      const parts = [];
+      parts.push("graph TD");
+      nodes.forEach(id => {
+        const safeId = String(id).replace(/[^A-Za-z0-9_]/g, "_");
+        parts.push(`${safeId}["${id}"]`);
+      });
+
+      // Edges with labels and per-link styling via linkStyle index
+      suits.forEach((d, i) => {
+        const s = String(d.source).replace(/[^A-Za-z0-9_]/g, "_");
+        const t = String(d.target).replace(/[^A-Za-z0-9_]/g, "_");
+        const label = d.type ? `|${d.type}|` : "";
+        parts.push(`${s} -->${label} ${t}`);
+        const color = colorForType(d.type || "default");
+        parts.push(`linkStyle ${i} stroke:${color},stroke-width:2px,opacity:0.85`);
+      });
+
+      const def = parts.join("\n");
+      return mermaid`${def}`;
 }
 
 function define(runtime, observer) {
@@ -9786,7 +9901,10 @@ function define(runtime, observer) {
   main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _7);
   main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
   main.define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
-  main.variable(observer("graph")).define("graph", ["styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
+  main.variable(observer("viewof rotationAngle")).define("viewof rotationAngle", ["Inputs"], _rotationAngle);
+  main.define("rotationAngle", ["Generators", "viewof rotationAngle"], (G, _) => G.input(_));
+  main.variable(observer()).define(["rotationAngle"], _8);
+  main.variable(observer("graph")).define("graph", ["componentOrder", "styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
   main.variable(observer("drag")).define("drag", ["d3"], _drag);
   main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
   main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
@@ -9801,6 +9919,8 @@ function define(runtime, observer) {
   main.variable(observer("componentOrder")).define("componentOrder", _componentOrder);
   main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
   main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
+  main.variable(observer("mermaid_graph")).define("mermaid_graph", ["mermaid"], _mermaid_graph);
+  main.variable(observer("mermaid_graph_from_suits")).define("mermaid_graph_from_suits", ["suits", "mermaid"], _mermaid_graph_from_suits);
 
   return main;
 }
@@ -9885,7 +10005,7 @@ function DialecticalWheel(_ref) {
           }
         };
       }
-      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
+      if (name === "mermaid_graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {

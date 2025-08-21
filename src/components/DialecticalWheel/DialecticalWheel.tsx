@@ -80,7 +80,7 @@ export default function DialecticalWheel({
           }
         };
       }
-      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
+      if (name === "mermaid_graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
       /*if (name === "graph") {
         return new class extends Inspector {
           constructor(node: any) {

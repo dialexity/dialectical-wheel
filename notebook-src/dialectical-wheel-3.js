@@ -1,18 +1,23 @@
-<!doctype html>
-<notebook theme="air">
-  <title>Dialectical Wheel with Arrows</title>
-  <script id="1" type="text/markdown">
-    # Dialectical Wheel with Arrows
+import define1 from "https://api.observablehq.com/@d3/color-legend.js?v=3"; 
 
-  </script>
-  <script id="9" type="application/vnd.observable.javascript">
-    dialecticalData = transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
-  </script>
-  <script id="379" type="application/vnd.observable.javascript" pinned="">
-    width = 500
-  </script>
-  <script id="24" type="application/vnd.observable.javascript">
-    styles = ({
+function _1(md){
+return (
+md`# Dialectical Wheel with Arrows`
+);
+}
+function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){
+return (
+transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
+);
+}
+function _width(){
+return (
+500
+);
+}
+function _styles(ringColors,textColors){
+return (
+{
         // Dimensions
         width: 500,
         height: 500,
@@ -60,10 +65,12 @@
           normal: 750,
           stepRotation: 600
         }
-      });
-  </script>
-  <script id="43" type="application/vnd.observable.javascript">
-    arrowControls = (() => {
+      }
+);
+}
+function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,viewof_chart,isThesisType,d3){
+return (
+(() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">Arrow Connections</div>
 
@@ -136,7 +143,7 @@
       }
 
       function drawArrowsUpToStep(step) {
-        viewof chart.clearArrows();
+        viewof_chart.clearArrows();
         if (step <= 0) return;
 
         for (let i = 0; i < Math.min(step, parsedArrowConnections.length); i++) {
@@ -201,12 +208,12 @@
         }
 
         // Draw this arrow with animation
-        viewof chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
+        viewof_chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
       }
 
       function drawStaticArrow(from, to, color = "#666", strokeWidth = 2, fromRing = 'middle', toRing = 'middle') {
-        const fromPos = viewof chart.getCellCentroid(from, fromRing);
-        const toPos = viewof chart.getCellCentroid(to, toRing);
+        const fromPos = viewof_chart.getCellCentroid(from, fromRing);
+        const toPos = viewof_chart.getCellCentroid(to, toRing);
 
         if (!fromPos || !toPos) return;
 
@@ -252,7 +259,7 @@
         const path = `M ${fromShortened.x} ${fromShortened.y} Q ${controlX} ${controlY} ${toShortened.x} ${toShortened.y}`;
 
         // Get the arrows group from the chart
-        const svg = d3.select(viewof chart);
+        const svg = d3.select(viewof_chart);
         const arrowsGroup = svg.select('.arrows-group');
 
         // Draw static arrow (no animation)
@@ -268,14 +275,14 @@
       // Basic arrow controls
       toggleBtn.addEventListener('click', () => {
         if (arrowsVisible) {
-          viewof chart.clearArrows();
+          viewof_chart.clearArrows();
           toggleBtn.textContent = 'Show Arrows';
           arrowsVisible = false;
         } else {
           if (arrowStepMode) {
             drawArrowsUpToStep(currentArrowStep);
           } else {
-            viewof chart.drawAllArrows();
+            viewof_chart.drawAllArrows();
           }
           toggleBtn.textContent = 'Hide Arrows';
           arrowsVisible = true;
@@ -287,7 +294,7 @@
           if (arrowStepMode) {
             drawArrowsUpToStep(currentArrowStep);
           } else {
-            viewof chart.drawAllArrows();
+            viewof_chart.drawAllArrows();
           }
         }
       });
@@ -298,7 +305,7 @@
         arrowStepMode = true;
         currentArrowStep = 0;
         if (arrowsVisible) {
-          viewof chart.clearArrows();
+          viewof_chart.clearArrows();
         }
         updateArrowStepUI();
       });
@@ -328,7 +335,7 @@
         arrowStepMode = false;
         currentArrowStep = 0;
         if (arrowsVisible) {
-          viewof chart.drawAllArrows();
+          viewof_chart.drawAllArrows();
         }
         updateArrowStepUI();
       });
@@ -341,56 +348,74 @@
       container.value = "arrow-controls";
       return container;
     })()
-  </script>
-  <script id="1556" type="application/vnd.observable.javascript" pinned="">
-    {
-      if(unFocus){
-        viewof chart.unfocus();
+);
+}
+function _2(unFocus,viewof_chart){
+if(unFocus){
+        viewof_chart.unfocus();
       }
-    }
-  </script>
-  <script id="1558" type="application/vnd.observable.javascript" pinned="">
-    viewof unFocus = Inputs.toggle({label:"Unfocus"})
-  </script>
-  <script id="1352" type="application/vnd.observable.javascript">
-    viewof showFlow = Inputs.toggle({label:"Show sequential flow"})
-  </script>
-  <script id="1559" type="application/vnd.observable.javascript">
-    showFlowSubscription = Generators.observe(notify => {
-      const node = viewof showFlow;
+}
+function _unFocus(Inputs){
+return (
+Inputs.toggle({label:"Unfocus"})
+);
+}
+function _showFlow(Inputs){
+return (
+Inputs.toggle({label:"Show sequential flow"})
+);
+}
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,invalidation){
+return (
+Generators.observe(notify => {
+      const node = viewof_showFlow;
       const handler = () => {
-        if (node.value) viewof chart.drawFlow(); else viewof chart.clearArrows();
+        if (node.value) viewof_chart.drawFlow(); else viewof_chart.clearArrows();
         notify(node.value);
       };
       node.addEventListener("input", handler);
       invalidation.then(() => node.removeEventListener("input", handler));
       handler();
     })
-  </script>
-  <script id="1210" type="application/vnd.observable.javascript">
-    viewof isWhiteOutside = Inputs.toggle({label: "Swap red and white layer"});
-  </script>
-  <script id="1560" type="application/vnd.observable.javascript">
-    ringColors = isWhiteOutside
+);
+}
+function _isWhiteOutside(Inputs){
+return (
+Inputs.toggle({label: "Swap red and white layer"})
+);
+}
+function _ringColors(isWhiteOutside){
+return (
+isWhiteOutside
       ? { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" }
       : { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" }
-  </script>
-  <script id="1561" type="application/vnd.observable.javascript">
-    textColors = isWhiteOutside
+);
+}
+function _textColors(isWhiteOutside){
+return (
+isWhiteOutside
       ? { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" }
       : { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" }
-  </script>
-  <script id="1253" type="application/vnd.observable.javascript">
-    viewof whitesOnly = Inputs.toggle({label: "White cells only"});
-  </script>
-  <script id="1263" type="application/vnd.observable.javascript">
-    viewof TsOnly = Inputs.toggle({label: "Ts only"});
-  </script>
-  <script id="1274" type="application/vnd.observable.javascript">
-    DOM.download(() => serialize(viewof chart), undefined, "Save as SVG")
-  </script>
-  <script id="1562" type="application/vnd.observable.javascript">
-    makeArrowsModule = ({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
+);
+}
+function _whitesOnly(Inputs){
+return (
+Inputs.toggle({label: "White cells only"})
+);
+}
+function _TsOnly(Inputs){
+return (
+Inputs.toggle({label: "Ts only"})
+);
+}
+function _3(DOM,serialize,viewof_chart){
+return (
+DOM.download(() => serialize(viewof_chart), undefined, "Save as SVG")
+);
+}
+function _makeArrowsModule(d3,location){
+return (
+({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
       const arrowsGroup = contentGroup.append("g")
         .attr("class", "arrows-group")
         .style("pointer-events", "none");
@@ -560,9 +585,11 @@
       }
       return { arrowsGroup, getCellCentroid, drawArrow, clearArrows };
     }
-  </script>
-  <script id="320" type="application/vnd.observable.javascript">
-    viewof chart = (() => {
+);
+}
+function _chart(styles,d3,selectedFont,dialecticalData,transformToNestedPieData,getOppositePrefix,getTextConstraints,wrapText,isThesisType,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,initializeBuildSteps){
+return (
+(() => {
 
     let isTouchDragging = false;
     let touchDragStart = null;
@@ -2226,9 +2253,11 @@
       }
     });
     })()
-  </script>
-  <script id="51" type="application/vnd.observable.javascript">
-    stepControls = (() => {
+);
+}
+function _stepControls(html,viewof_chart){
+return (
+(() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;">
           <button id="start" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Start Step Mode</button>
@@ -2256,7 +2285,7 @@
       const rotationResetBtn = container.querySelector('#rotation-reset');
 
       function updateUI() {
-        const stepInfo = viewof chart.getCurrentStepInfo();
+        const stepInfo = viewof_chart.getCurrentStepInfo();
 
         if (stepInfo) {
           // In step mode
@@ -2276,7 +2305,7 @@
       }
 
       startBtn.addEventListener('click', () => {
-        viewof chart.startStepMode();
+        viewof_chart.startStepMode();
         updateUI();
       });
 
@@ -2286,12 +2315,12 @@
       // }); // Hidden - commenting out
 
       nextBtn.addEventListener('click', () => {
-        viewof chart.stepForward();
+        viewof_chart.stepForward();
         updateUI();
       });
 
       resetBtn.addEventListener('click', () => {
-        viewof chart.resetToFull();
+        viewof_chart.resetToFull();
         updateUI();
       });
 
@@ -2299,13 +2328,13 @@
       rotationSlider.addEventListener('input', (e) => {
         const degrees = parseInt(e.target.value);
         const radians = (degrees * Math.PI) / 180;
-        viewof chart.rotate(radians);
+        viewof_chart.rotate(radians);
         rotationValue.textContent = `${degrees}°`;
       });
 
       rotationResetBtn.addEventListener('click', () => {
         rotationSlider.value = 0;
-        viewof chart.rotate(0);
+        viewof_chart.rotate(0);
         rotationValue.textContent = '0°';
       });
 
@@ -2316,33 +2345,39 @@
       container.value = "step-controls";
       return container;
     })()
-  </script>
-  <script id="517" type="application/vnd.observable.javascript">
-    focusedSlice = { 
-      //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
+);
+}
+function _focusedSlice(chart){
+//console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
 
-      return chart.clickedSlice; }
-  </script>
-  <script id="1117" type="application/vnd.observable.javascript" pinned="">
-    chart.focusedPair
-  </script>
-  <script id="1071" type="application/vnd.observable.javascript" pinned="">
-    viewof sliceNumber = Inputs.range([0,viewof chart.cells.length-1],{value:0,step:1,label:"slice number"});
-  </script>
-  <script id="1073" type="application/vnd.observable.javascript" pinned="">
-    viewof chart.focusPair(viewof chart.cells[sliceNumber])
-  </script>
-  <script id="1110" type="application/vnd.observable.javascript" pinned="">
-    clickedCellObject = chart.clickedCell
-  </script>
-  <script id="1050" type="application/vnd.observable.javascript" pinned="">
-    clickedCellText = {
-      if(chart.clickedCell) return chart.clickedCell.fullText;
+      return chart.clickedSlice;
+}
+function _4(chart){
+return (
+chart.focusedPair
+);
+}
+function _sliceNumber(Inputs,viewof_chart){
+return (
+Inputs.range([0,viewof_chart.cells.length-1],{value:0,step:1,label:"slice number"})
+);
+}
+function _5(viewof_chart,sliceNumber){
+return (
+viewof_chart.focusPair(viewof_chart.cells[sliceNumber])
+);
+}
+function _clickedCellObject(chart){
+return (
+chart.clickedCell
+);
+}
+function _clickedCellText(chart){
+if(chart.clickedCell) return chart.clickedCell.fullText;
       return null;
-    }
-  </script>
-  <script id="528" type="application/vnd.observable.javascript">
-    topSlice = {// Get current rotation
+}
+function _topSlice(chart,dialecticalData){
+// Get current rotation
         const currentRotation = chart.currentRotation;
         //console.log(`topSlice current rotation at ntbk level: ${currentRotation}`)
 
@@ -2362,10 +2397,11 @@
         // Find which slice this angle falls into
         const sliceIndex = Math.floor(normalizedAngle / angleStep);
         const topUnitId = units[sliceIndex];
-        return topUnitId}
-  </script>
-  <script id="484" type="application/vnd.observable.javascript">
-    topSliceTracker = (() => {
+        return topUnitId
+}
+function _topSliceTracker(html,chart,dialecticalData){
+return (
+(() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">Top Slice Tracker</div>
 
@@ -2473,9 +2509,11 @@
 
       return container;
     })()
-  </script>
-  <script id="21" type="application/vnd.observable.javascript">
-    parseArrowConnections = (dotScript, dialecticalData) => {
+);
+}
+function _parseArrowConnections(){
+return (
+(dotScript, dialecticalData) => {
       const connections = [];
       const lines = dotScript.split('\n');
 
@@ -2521,9 +2559,11 @@
 
       return connections;
     }
-  </script>
-  <script id="456" type="application/vnd.observable.javascript">
-    dotScriptEditor = (() => {
+);
+}
+function _dotScriptEditor(html,dialecticalData,arrowConnections,viewof_chart,parseArrowConnections){
+return (
+(() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">DOT Script Editor</div>
 
@@ -2550,7 +2590,7 @@
 
       // Function to draw arrows from custom connections
       function drawCustomArrows(customConnections) {
-        viewof chart.clearArrows();
+        viewof_chart.clearArrows();
         const connections = parseArrowConnections(customConnections, dialecticalData);
 
         connections.forEach((conn, index) => {
@@ -2577,7 +2617,7 @@
           }
 
           const delay = index * 300;
-          viewof chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
+          viewof_chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
         });
       }
 
@@ -2595,9 +2635,11 @@
       container.value = "dot-script-editor";
       return container;
     })()
-  </script>
-  <script id="19" type="application/vnd.observable.javascript">
-    arrowConnections = (() => {
+);
+}
+function _arrowConnections(dialecticalData){
+return (
+(() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
 
@@ -2620,10 +2662,12 @@
 
 
       return connections.join('\n');
-    })();
-  </script>
-  <script id="1355" type="application/vnd.observable.javascript">
-    flowConnections = (() => {
+    })()
+);
+}
+function _flowConnections(dialecticalData){
+return (
+(() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
 
@@ -2635,10 +2679,12 @@
       }
 
       return connections.join('\n');
-    })();
-  </script>
-  <script id="1542" type="application/vnd.observable.javascript">
-    contraConnections = (() => {
+    })()
+);
+}
+function _contraConnections(dialecticalData){
+return (
+(() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
 
@@ -2651,9 +2697,11 @@
 
       return connections.join('\n');
     })()
-  </script>
-  <script id="1290" type="application/vnd.observable.javascript">
-    parseArrowConnectionsAsSourceTarget = (dotScript, dialecticalData) => {
+);
+}
+function _parseArrowConnectionsAsSourceTarget(){
+return (
+(dotScript, dialecticalData) => {
       const connections = [];
       const lines = dotScript.split('\n');
 
@@ -2741,13 +2789,16 @@
 
       return connections;
     }
-  </script>
-  <script id="1213" type="application/vnd.observable.javascript">
-    // Replaced by computed ringColors/textColors and styles binding
-    null
-  </script>
-  <script id="168" type="application/vnd.observable.javascript">
-    transformToNestedPieData = (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
+);
+}
+function _6(){
+return (
+null
+);
+}
+function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
+return (
+(dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
           return {
@@ -2789,10 +2840,12 @@
             }))
           }
 
-        };
-  </script>
-  <script id="171" type="application/vnd.observable.javascript">
-    wrapText = (textElement, text, constraints) => {
+        }
+);
+}
+function _wrapText(styles,tryWrapWithLineBreaks,truncateWithEllipses){
+return (
+(textElement, text, constraints) => {
       const { midWidth, maxHeight, ringType, arcData } = constraints;
       // New: also get angle, innerRadius, outerRadius
       const angle = arcData.endAngle - arcData.startAngle;
@@ -2842,9 +2895,11 @@
       const maxWidth = angle * ((innerRadius + outerRadius) / 2) * 0.85;
       return truncateWithEllipses(textElement, text, maxWidth, maxHeight, false);
     }
-  </script>
-  <script id="189" type="application/vnd.observable.javascript">
-    tryWrapWithLineBreaks = (textElement, text, maxHeight, angle, innerRadius, outerRadius) => {
+);
+}
+function _tryWrapWithLineBreaks(){
+return (
+(textElement, text, maxHeight, angle, innerRadius, outerRadius) => {
       const fontSize = parseFloat(textElement.style("font-size"));
       const lineHeight = fontSize * 1.2;
       const maxLines = Math.floor(maxHeight / lineHeight);
@@ -2936,9 +2991,11 @@
 
       return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
     }
-  </script>
-  <script id="192" type="application/vnd.observable.javascript">
-    truncateWithEllipses = (textElement, text, maxWidth, maxHeight, isNarrowCell) => {
+);
+}
+function _truncateWithEllipses(){
+return (
+(textElement, text, maxWidth, maxHeight, isNarrowCell) => {
       const fontSize = parseFloat(textElement.style("font-size"));
       const lineHeight = fontSize * 1.2;
       const maxLines = Math.floor(maxHeight / lineHeight);
@@ -3022,9 +3079,11 @@
 
       return { success: true, lines: lines.length, truncated: lines.some(line => line.includes("...")), totalHeight: totalHeight };
     }
-  </script>
-  <script id="174" type="application/vnd.observable.javascript">
-    getTextConstraints = (ringType, arcData) => {
+);
+}
+function _getTextConstraints(styles){
+return (
+(ringType, arcData) => {
       const angle = arcData.endAngle - arcData.startAngle;
 
       // Calculate actual ring dimensions
@@ -3068,9 +3127,11 @@
         arcLength: arcLength
       };
     }
-  </script>
-  <script id="274" type="application/vnd.observable.javascript">
-    arrowUtilities = (() => {
+);
+}
+function _arrowUtilities(isThesisType){
+return (
+(() => {
       // Quadratic curve point calculation
       function getPointAlongQuadraticCurve(start, control, end, t) {
         const x = Math.pow(1 - t, 2) * start.x + 2 * (1 - t) * t * control.x + Math.pow(t, 2) * end.x;
@@ -3265,13 +3326,17 @@
         calculateArrowColor,
         calculateArrowPath
       };
-    })();
-  </script>
-  <script id="177" type="application/vnd.observable.javascript">
-    getPointAlongQuadraticCurve = arrowUtilities.getPointAlongQuadraticCurve;
-  </script>
-  <script id="180" type="application/vnd.observable.javascript">
-    initializeBuildSteps = (dialecticalData) => {
+    })()
+);
+}
+function _getPointAlongQuadraticCurve(arrowUtilities){
+return (
+arrowUtilities.getPointAlongQuadraticCurve
+);
+}
+function _initializeBuildSteps(getOppositePrefix,isThesisType){
+return (
+(dialecticalData) => {
       const buildSteps = [];
 
       // Dynamically generate build sequence based on dialecticalData
@@ -3341,9 +3406,11 @@
 
       return buildSteps;
     }
-  </script>
-  <script id="271" type="application/vnd.observable.javascript">
-    longPressUtilities = (() => {
+);
+}
+function _longPressUtilities(d3){
+return (
+(() => {
       // Long press configuration
       const LONG_PRESS_DURATION = 500; // 500ms for long press
       const LONG_PRESS_MOVE_THRESHOLD = 10; // pixels - cancel if finger moves more than this
@@ -3481,10 +3548,12 @@
         LONG_PRESS_DURATION,
         LONG_PRESS_MOVE_THRESHOLD
       };
-    })();
-  </script>
-  <script id="739" type="application/vnd.observable.javascript">
-    viewof selectedFont = Inputs.select(
+    })()
+);
+}
+function _selectedFont(Inputs){
+return (
+Inputs.select(
       [
         "Source Serif Pro",
         "Source Sans Pro",
@@ -3507,12 +3576,16 @@
         value: "Arial"
       }
     )
-  </script>
-  <script id="742" type="application/vnd.observable.javascript" pinned="">
-    parseFont = selectedFont.split(" ").join("+")
-  </script>
-  <script id="744" type="application/vnd.observable.javascript" pinned="">
-    style = html`
+);
+}
+function _parseFont(selectedFont){
+return (
+selectedFont.split(" ").join("+")
+);
+}
+function _style(html,parseFont,selectedFont){
+return (
+html`
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap">
 
     <style>
@@ -3522,13 +3595,15 @@
      }
     </style>
     `
-  </script>
-  <script id="840" type="application/vnd.observable.javascript" pinned="">
-    fontCDN = `https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap`
-  </script>
-  <script id="1278" type="application/vnd.observable.javascript">
-    serialize = {
-      const xmlns = "http://www.w3.org/2000/xmlns/";
+);
+}
+function _fontCDN(parseFont){
+return (
+`https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap`
+);
+}
+function _serialize(NodeFilter){
+const xmlns = "http://www.w3.org/2000/xmlns/";
       const xlinkns = "http://www.w3.org/1999/xlink";
       const svgns = "http://www.w3.org/2000/svg";
       return function serialize(svg) {
@@ -3548,10 +3623,10 @@
         const string = serializer.serializeToString(svg);
         return new Blob([string], {type: "image/svg+xml"});
       };
-    }
-  </script>
-  <script id="1285" type="application/vnd.observable.javascript">
-    function rasterize(svg) {
+}
+function _rasterize(DOM,serialize){
+return (
+function rasterize(svg) {
       let resolve, reject;
       const promise = new Promise((y, n) => (resolve = y, reject = n));
       const image = new Image;
@@ -3565,19 +3640,25 @@
       image.src = URL.createObjectURL(serialize(svg));
       return promise;
     }
-  </script>
-  <script id="1288" type="application/vnd.observable.javascript" pinned="">
-    DOM.download(() => rasterize(viewof chart), undefined, "Save as PNG")
-  </script>
-  <script id="1401" type="application/vnd.observable.javascript" pinned="">
-    viewof fontsize = Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
-  </script>
-  <script id="1402" type="application/vnd.observable.javascript" pinned="">
-    viewof rotationAngle = Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
-  </script>
-  <script id="1403" type="application/vnd.observable.javascript">
-    {
-      // effect: apply rotation without restarting simulation
+);
+}
+function _7(DOM,rasterize,viewof_chart){
+return (
+DOM.download(() => rasterize(viewof_chart), undefined, "Save as PNG")
+);
+}
+function _fontsize(Inputs){
+return (
+Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
+);
+}
+function _rotationAngle(Inputs){
+return (
+Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
+);
+}
+function _8(rotationAngle){
+// effect: apply rotation without restarting simulation
       const apply = () => {
         const root = document.querySelector('svg .graph-rotate');
         if (!root) return;
@@ -3585,11 +3666,9 @@
         root.querySelectorAll('text').forEach(t => t.setAttribute('transform', `rotate(${-rotationAngle})`));
       };
       apply();
-    }
-  </script>
-  <script id="1296" type="application/vnd.observable.javascript">
-    graph = {
-      // Explicit dependency so the graph re-runs when ordering changes
+}
+function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
+// Explicit dependency so the graph re-runs when ordering changes
       const __componentOrderDep = componentOrder;
       const width = styles.width + 200;
       const height = styles.height + 200;
@@ -3858,10 +3937,10 @@
       invalidation.then(() => simulation.stop());
 
       return Object.assign(svg.node(), {scales: {color}});
-    }
-  </script>
-  <script id="1300" type="application/vnd.observable.javascript">
-    drag = simulation => {
+}
+function _drag(d3){
+return (
+simulation => {
 
       function dragstarted(event, d) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -3885,49 +3964,60 @@
           .on("drag", dragged)
           .on("end", dragended);
     }
-  </script>
-  <script id="1293" type="application/vnd.observable.javascript">
-    // Separate link sets: flow shapes the layout; contra is overlaid
-    flowSuits = parseArrowConnectionsAsSourceTarget(flowConnections, dialecticalData)
-  </script>
-  <script id="1294" type="application/vnd.observable.javascript">
-    contraSuits = parseArrowConnectionsAsSourceTarget(contraConnections, dialecticalData)
-  </script>
-  <script id="1295" type="application/vnd.observable.javascript">
-    // Convenience union used for rendering, but not for forces
-    suits = [...flowSuits, ...contraSuits]
-  </script>
-  <script id="1302" type="application/vnd.observable.javascript" pinned="">
-    import {Swatches} from "@d3/color-legend"
-  </script>
-  <script id="1425" type="application/vnd.observable.javascript">
-    function getOppositePrefix(unitId) {
+);
+}
+function _flowSuits(parseArrowConnectionsAsSourceTarget,flowConnections,dialecticalData){
+return (
+parseArrowConnectionsAsSourceTarget(flowConnections, dialecticalData)
+);
+}
+function _contraSuits(parseArrowConnectionsAsSourceTarget,contraConnections,dialecticalData){
+return (
+parseArrowConnectionsAsSourceTarget(contraConnections, dialecticalData)
+);
+}
+function _suits(flowSuits,contraSuits){
+return (
+[...flowSuits, ...contraSuits]
+);
+}
+function _getOppositePrefix(){
+return (
+function getOppositePrefix(unitId) {
       if (unitId.startsWith('Ac')) return unitId.replace('Ac', 'Re');
       if (unitId.startsWith('T')) return unitId.replace('T', 'A');
       if (unitId.startsWith('A')) return unitId.replace('A', 'T');
       if (unitId.startsWith('Re')) return unitId.replace('Re', 'Ac');
       return unitId; // fallback for unknown prefixes
     }
-  </script>
-  <script id="1427" type="application/vnd.observable.javascript">
-    function getUnitType(unitId) {
+);
+}
+function _getUnitType(){
+return (
+function getUnitType(unitId) {
       if (unitId.startsWith('T') || unitId.startsWith('Re')) return 'thesis';
       if (unitId.startsWith('A') || unitId.startsWith('Ac')) return 'antithesis';
       return 'unknown'; // fallback for unknown prefixes
     }
-  </script>
-  <script id="1429" type="application/vnd.observable.javascript">
-    function isThesisType(unitId) {
+);
+}
+function _isThesisType(){
+return (
+function isThesisType(unitId) {
       return unitId.startsWith('T') || unitId.startsWith('Re');
     }
-  </script>
-  <script id="1431" type="application/vnd.observable.javascript">
-    function isAntithesisType(unitId) {
+);
+}
+function _isAntithesisType(){
+return (
+function isAntithesisType(unitId) {
       return unitId.startsWith('A') || unitId.startsWith('Ac');
     }
-  </script>
-  <script id="1451" type="application/vnd.observable.javascript">
-    wisdomUnits = ([
+);
+}
+function _wisdomUnits(){
+return (
+[
       {
         "t_minus": {
           "alias": "T-",
@@ -4056,22 +4146,28 @@
           "explanation": "Ascertained as the negative side that contradicts the positive aspect of the thesis."
         }
       }
-    ]);
-  </script>
-  <script id="1486" type="application/vnd.observable.javascript" pinned="">
-    componentOrder = [];
-  </script>
-  <script id="1458" type="application/vnd.observable.javascript">
-    extractStatement = (value) => {
+    ]
+);
+}
+function _componentOrder(){
+return (
+[]
+);
+}
+function _extractStatement(){
+return (
+(value) => {
         if (typeof value === 'string') return value;
         if (typeof value === 'object' && value !== null) {
           return value.statement || value.alias || '';
         }
         return '';
-      };
-  </script>
-  <script id="1460" type="application/vnd.observable.javascript">
-    transformWisdomUnitsToDialecticalData = (wisdomUnits, componentOrder) => {
+      }
+);
+}
+function _transformWisdomUnitsToDialecticalData(extractStatement){
+return (
+(wisdomUnits, componentOrder) => {
       if (!wisdomUnits || wisdomUnits.length === 0) {
         return {};
       }
@@ -4110,10 +4206,12 @@
 
       });
       return dialecticalDataOrdered;
-    };
-  </script>
-  <script id="1584" type="module" pinned="">
-    mermaid_graph = mermaid`graph TD
+    }
+);
+}
+function _mermaid_graph(mermaid){
+return (
+mermaid`graph TD
       W["wisdomUnits"] --> T["transformWisdomUnitsToDialecticalData"]
       C["componentOrder"] --> T
       T --> D["dialecticalData (Object)"]
@@ -4135,12 +4233,10 @@
       N1["nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order"]:::note
       FS --> N1
       CS --> N1`
-  </script>
-  <script id="1585" type="module" pinned="">
-    // @ts-nocheck
-    /* eslint-disable */
-    mermaid_graph_from_suits = {
-      const types = Array.from(new Set(suits.map(d => d.type)));
+);
+}
+function _mermaid_graph_from_suits(suits,mermaid){
+const types = Array.from(new Set(suits.map(d => d.type)));
       const nodes = Array.from(new Set(suits.flatMap(d => [d.source, d.target])));
 
       const scheme10 = [
@@ -4168,6 +4264,96 @@
 
       const def = parts.join("\n");
       return mermaid`${def}`;
-    }
-  </script>
-</notebook>
+}
+
+export default function define(runtime, observer) {
+  const main = runtime.module();
+
+  function toString() { return this.url; }
+  const fileAttachments = new Map([
+    
+  ]);
+  main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+
+  main.variable(observer()).define(["md"], _1);
+  main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
+  main.variable(observer("width")).define("width", _width);
+  main.variable(observer("styles")).define("styles", ["ringColors", "textColors"], _styles);
+  main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "d3"], _arrowControls);
+  main.variable(observer()).define(["unFocus", "viewof chart"], _2);
+  main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
+  main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
+  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
+  main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "invalidation"], _showFlowSubscription);
+  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
+  main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
+  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside"], _ringColors);
+  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside"], _textColors);
+  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
+  main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
+  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
+  main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
+  main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
+  main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "d3", "selectedFont", "dialecticalData", "transformToNestedPieData", "getOppositePrefix", "getTextConstraints", "wrapText", "isThesisType", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "initializeBuildSteps"], _chart);
+  main.define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
+  main.variable(observer("stepControls")).define("stepControls", ["html", "viewof chart"], _stepControls);
+  main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
+  main.variable(observer()).define(["chart"], _4);
+  main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs", "viewof chart"], _sliceNumber);
+  main.define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
+  main.variable(observer()).define(["viewof chart", "sliceNumber"], _5);
+  main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
+  main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
+  main.variable(observer("topSlice")).define("topSlice", ["chart", "dialecticalData"], _topSlice);
+  main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html", "chart", "dialecticalData"], _topSliceTracker);
+  main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
+  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html", "dialecticalData", "arrowConnections", "viewof chart", "parseArrowConnections"], _dotScriptEditor);
+  main.variable(observer("arrowConnections")).define("arrowConnections", ["dialecticalData"], _arrowConnections);
+  main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
+  main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
+  main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
+  main.variable(observer()).define(_6);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
+  main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
+  main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
+  main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
+  main.variable(observer("getTextConstraints")).define("getTextConstraints", ["styles"], _getTextConstraints);
+  main.variable(observer("arrowUtilities")).define("arrowUtilities", ["isThesisType"], _arrowUtilities);
+  main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
+  main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", ["getOppositePrefix", "isThesisType"], _initializeBuildSteps);
+  main.variable(observer("longPressUtilities")).define("longPressUtilities", ["d3"], _longPressUtilities);
+  main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _selectedFont);
+  main.define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
+  main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
+  main.variable(observer("style")).define("style", ["html", "parseFont", "selectedFont"], _style);
+  main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
+  main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
+  main.variable(observer("rasterize")).define("rasterize", ["DOM", "serialize"], _rasterize);
+  main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _7);
+  main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
+  main.define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
+  main.variable(observer("viewof rotationAngle")).define("viewof rotationAngle", ["Inputs"], _rotationAngle);
+  main.define("rotationAngle", ["Generators", "viewof rotationAngle"], (G, _) => G.input(_));
+  main.variable(observer()).define(["rotationAngle"], _8);
+  main.variable(observer("graph")).define("graph", ["componentOrder", "styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
+  main.variable(observer("drag")).define("drag", ["d3"], _drag);
+  main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
+  main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
+  main.variable(observer("suits")).define("suits", ["flowSuits", "contraSuits"], _suits);
+  const child1 = runtime.module(define1);
+  main.import("Swatches", child1); 
+  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", _getOppositePrefix);
+  main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
+  main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
+  main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);
+  main.variable(observer("wisdomUnits")).define("wisdomUnits", _wisdomUnits);
+  main.variable(observer("componentOrder")).define("componentOrder", _componentOrder);
+  main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
+  main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
+  main.variable(observer("mermaid_graph")).define("mermaid_graph", ["mermaid"], _mermaid_graph);
+  main.variable(observer("mermaid_graph_from_suits")).define("mermaid_graph_from_suits", ["suits", "mermaid"], _mermaid_graph_from_suits);
+
+  return main;
+}
