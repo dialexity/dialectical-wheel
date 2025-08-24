@@ -5650,6 +5650,157 @@ return (
 md`# Dialectical Wheel with Arrows`
 );
 }
+function _makeRings(arcTween,d3){
+return (
+({
+      groups,
+      labels,
+      arcs,
+      colorScales,
+      styles,
+      pie,
+      radii,
+      helpers,
+      getDataToUse,
+      getCellVisibility,
+      bindCellEvents
+    }) => {
+      const { invisibleGroup, outerGroup, middleGroup, innerGroup } = groups;
+      const { invisibleLabelsGroup, outerLabelsGroup, middleLabelsGroup, innerLabelsGroup } = labels;
+      const { invisibleArc, outerArc, middleArc, innerArc } = arcs;
+      const { invisibleColor, outerColor, middleColor, innerColor } = colorScales;
+
+      function changeData(ringType, newData, arcGenerator) {
+        const group = ringType === "outer" ? outerGroup : ringType === "middle" ? middleGroup : innerGroup;
+        const labelsGroup = ringType === "outer" ? outerLabelsGroup : ringType === "middle" ? middleLabelsGroup : innerLabelsGroup;
+        const pieData = pie(newData);
+        const paths = group.selectAll("path").data(pieData, d => d.data.name);
+        paths.transition()
+          .duration(styles.durations.normal)
+          .attrTween("d", arcTween(arcGenerator))
+          .style("opacity", d => {
+            if (!getCellVisibility(d.data.unitId, ringType)) return 0;
+            const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            return d.data.opacity * baseOpacity;
+          });
+        const labelsSel = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
+        labelsSel.transition()
+          .duration(styles.durations.normal)
+          .attr("transform", d => helpers.calculateTextTransform(d, arcGenerator))
+          .style("opacity", d => (d.data.value === 0 || !getCellVisibility(d.data.unitId, ringType)) ? 0 : d.data.opacity);
+      }
+
+      function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
+        const labelsSel = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
+        const labelsEnter = labelsSel.enter()
+          .append("text")
+          .attr("class", "cell-label")
+          .style("opacity", d => (d.data.value === 0 || !getCellVisibility(d.data.unitId, ringType)) ? 0 : d.data.opacity)
+          .attr("transform", d => helpers.calculateTextTransform(d, arcGenerator))
+          .style("text-anchor", "middle")
+          .style("dominant-baseline", "central")
+          .style("font-family", styles.fonts.family)
+          .style("font-size", d => {
+            const b = styles.fonts.labels.baseSize;
+            return `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`;
+          })
+          .style("font-weight", styles.fonts.labels.weight)
+          .style("fill", d => {
+            const t = styles.colors.text;
+            if (ringType === "invisible") return 'black';
+            if (ringType === "inner") return t.inner;
+            if (ringType === "outer") return t.outer;
+            return t.middle;
+          })
+          .style("pointer-events", "none")
+          .each(function(d) {
+            const textElement = d3.select(this);
+            const b = styles.fonts.labels.baseSize;
+            textElement.style("font-size", `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`);
+            const text = d.data.fullText || d.data.name;
+            const dataToUse = getDataToUse();
+            let pieDataLocal;
+            if (ringType === "invisible") { pieDataLocal = pie(dataToUse.invisible); d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible); }
+            else if (ringType === "outer") { pieDataLocal = pie(dataToUse.outer); d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
+            else if (ringType === "middle") { pieDataLocal = pie(dataToUse.middle); d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
+            else { pieDataLocal = pie(dataToUse.inner); d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+            const arcDatum = pieDataLocal.find(p => p.data.unitId === d.data.unitId);
+            const constraints = helpers.getTextConstraints(ringType, arcDatum);
+            helpers.wrapText(textElement, text, constraints);
+          });
+        labelsSel.merge(labelsEnter)
+          .transition()
+          .duration(styles.durations.normal)
+          .attr("transform", d => helpers.calculateTextTransform(d, arcGenerator))
+          .style("opacity", d => (d.data.value === 0 || !getCellVisibility(d.data.unitId, ringType)) ? 0 : d.data.opacity)
+          .on("end", function(d) {
+            if (d && d.data) {
+              const textElement = d3.select(this);
+              const b = styles.fonts.labels.baseSize;
+              textElement.style("font-size", `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`);
+              const text = d.data.fullText || d.data.name;
+              const dataToUse = getDataToUse();
+              let pieDataLocal;
+              if (ringType === "invisible") { pieDataLocal = pie(dataToUse.invisible); d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible); }
+              else if (ringType === "outer") { pieDataLocal = pie(dataToUse.outer); d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
+              else if (ringType === "middle") { pieDataLocal = pie(dataToUse.middle); d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
+              else { pieDataLocal = pie(dataToUse.inner); d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+              const arcDatum = pieDataLocal.find(p => p.data.unitId === d.data.unitId);
+              const constraints = helpers.getTextConstraints(ringType, arcDatum);
+              helpers.wrapText(textElement, text, constraints);
+            }
+          });
+        labelsSel.exit().transition().duration(styles.durations.normal).style("opacity", 0).remove();
+      }
+
+      function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale) {
+        const pieData = pie(data);
+        const paths = group.selectAll("path").data(pieData, d => d.data.name);
+        const pathsEnter = paths.enter()
+          .append("path")
+          .attr("class", "cell")
+          .attr("fill", d => colorScale(d.data.unitId))
+          .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
+          .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+          .attr("stroke-dasharray", "1,3")
+          .attr("stroke-linecap", "round")
+          .attr("stroke-opacity", 0.3)
+          .style("opacity", d => {
+            if (!getCellVisibility(d.data.unitId, ringType)) return 0;
+            const baseOpacity = ringType === "outer" || ringType === "invisible" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            return d.data.opacity * baseOpacity;
+          })
+          .attr("d", arcGenerator)
+          .each(function(d) { this._current = d; });
+        if (bindCellEvents) {
+          bindCellEvents(pathsEnter, ringType);
+        }
+        paths.merge(pathsEnter)
+          .transition()
+          .duration(styles.durations.normal)
+          .attrTween("d", arcTween(arcGenerator))
+          .style("opacity", d => {
+            if (!getCellVisibility(d.data.unitId, ringType)) return 0;
+            if (ringType === "invisible") return 0;
+            const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            return d.data.opacity * baseOpacity;
+          });
+        paths.exit().transition().duration(styles.durations.normal).style("opacity", 0).remove();
+        updateLabels(labelsGroup, pieData, arcGenerator, ringType);
+      }
+
+      function updateAllRings() {
+        const dataToUse = getDataToUse();
+        updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
+        updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
+        updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
+        updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
+      }
+
+      return { updateAllRings, updateRing, changeData };
+    }
+);
+}
 function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){
 return (
 transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
@@ -5713,7 +5864,7 @@ return (
       }
 );
 }
-function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,viewof_chart,isThesisType,d3){
+function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,viewof_chart,isThesisType,arrowUtilities,d3){
 return (
 (() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
@@ -5873,32 +6024,9 @@ return (
 
         const arrowheadId = getArrowheadId(color);
 
-        // Calculate arrow path (same as animated version but static)
-        const dx = toPos.x - fromPos.x;
-        const dy = toPos.y - fromPos.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        const shortenBy = 10;  // Use same shortened distance as main function
-        const fromShortened = {
-          x: fromPos.x + (dx / distance) * shortenBy,
-          y: fromPos.y + (dy / distance) * shortenBy
-        };
-        const toShortened = {
-          x: toPos.x - (dx / distance) * shortenBy,
-          y: toPos.y - (dy / distance) * shortenBy
-        };
-
-        const midX = (fromShortened.x + toShortened.x) / 2;
-        const midY = (fromShortened.y + toShortened.y) / 2;
-
-        const perpX = -dy / distance;
-        const perpY = dx / distance;
-        const curvature = Math.min(distance * 0.4, 80);
-
-        const controlX = midX - perpX * curvature;
-        const controlY = midY - perpY * curvature;
-
-        const path = `M ${fromShortened.x} ${fromShortened.y} Q ${controlX} ${controlY} ${toShortened.x} ${toShortened.y}`;
+        // Use shared path calculator for consistency
+        const arrowPath = arrowUtilities.calculateArrowPath(fromPos, toPos, 10);
+        const path = arrowPath.path;
 
         // Get the arrows group from the chart
         const svg = d3.select(viewof_chart);
@@ -6172,16 +6300,20 @@ return (
       }
 
       function drawArrow(from, to, color = "#666", strokeWidth = 2, fromRing = "middle", toRing = "middle", delay = 0) {
-        // Prefer label centers for endpoints
-        const fromLabel = getLabelInfo(from, fromRing);
-        const toLabel = getLabelInfo(to, toRing);
-        const fromPos = fromLabel || getCellCentroid(from, fromRing);
-        const toPos = toLabel || getCellCentroid(to, toRing);
+        // Use centroids only for endpoints
+        const fromPos = getCellCentroid(from, fromRing);
+        const toPos = getCellCentroid(to, toRing);
         if (!fromPos || !toPos) return;
-        // Augment with labelRadius when available to let path calculation use label bounds
-        if (fromLabel) fromPos.labelRadius = fromLabel.radius;
-        if (toLabel) toPos.labelRadius = toLabel.radius;
-        const arrowPath = arrowUtilities.calculateArrowPath(fromPos, toPos, 10);
+
+        // Shorten by scaling toward midpoint
+        const shrink = 1;
+        const midX = (fromPos.x + toPos.x) / 2;
+        const midY = (fromPos.y + toPos.y) / 2;
+        const source = { x: midX + (fromPos.x - midX) * shrink, y: midY + (fromPos.y - midY) * shrink };
+        const target = { x: midX + (toPos.x - midX) * shrink, y: midY + (toPos.y - midY) * shrink };
+
+        const arrowPath = arrowUtilities.calculateArrowPath(source, target, 0);
+
         const arrowheadId = arrowUtilities.getArrowheadId(color);
         const staticPath = arrowsGroup.append("path")
           .attr("d", arrowPath.path)
@@ -6190,22 +6322,24 @@ return (
           .attr("fill", "none")
           .attr("opacity", 0.3)
           .attr("stroke-dasharray", "3,3");
-        const animatedArrowhead = arrowsGroup.append("polygon")
-          .attr("points", "0,-3 8,0 0,3")
+
+        const animatedHead = arrowsGroup.append("polygon")
+          .attr("points", "0,-1.5 4.5,0 0,1.5")
           .attr("fill", color)
           .attr("opacity", 0);
-        animatedArrowhead
+
+        animatedHead
           .transition()
           .delay(delay)
-          .duration(1500)
+          .duration(1200)
           .ease(d3.easeQuadInOut)
           .attrTween("transform", function() {
             return function(t) {
-              const point = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, t);
+              const p = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, t);
               const nextT = Math.min(t + 0.01, 1);
-              const nextPoint = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, nextT);
-              const angle = Math.atan2(nextPoint.y - point.y, nextPoint.x - point.x) * 180 / Math.PI;
-              return `translate(${point.x}, ${point.y}) rotate(${angle})`;
+              const n = arrowUtilities.getPointAlongQuadraticCurve(arrowPath.start, arrowPath.control, arrowPath.end, nextT);
+              const ang = Math.atan2(n.y - p.y, n.x - p.x) * 180 / Math.PI;
+              return `translate(${p.x}, ${p.y}) rotate(${ang})`;
             };
           })
           .attr("opacity", 1)
@@ -6213,23 +6347,518 @@ return (
             staticPath.transition().duration(200).attr("opacity", 0.7);
           })
           .on("end", function() {
-            animatedArrowhead.remove();
+            animatedHead.remove();
             staticPath
               .attr("marker-end", () => `url(${new URL(`#${arrowheadId}`, location)})`)
               .attr("stroke-dasharray", "none")
               .transition()
               .duration(300)
-              .attr("opacity", 0.7);
+              .attr("opacity", 0.9);
           });
       }
       function clearArrows() {
         arrowsGroup.selectAll("*").remove();
       }
-      return { arrowsGroup, getCellCentroid, drawArrow, clearArrows };
+      // Treat <text> labels as nodes and draw force-graph-style links between them
+      function drawLabelLinks(connections) {
+        arrowsGroup.selectAll("*").remove();
+
+        // Build node map keyed by unitId:ringType
+        const nodeByKey = new Map();
+        function ensureNode(unitId, ringType) {
+          const key = `${unitId}:${ringType}`;
+          if (nodeByKey.has(key)) return nodeByKey.get(key);
+          const label = getLabelInfo(unitId, ringType);
+          const pos = label || getCellCentroid(unitId, ringType);
+          if (!pos) return null;
+          const padding = 2;
+          const hasEllipse = !!label;
+          const ellipseRx = hasEllipse ? Math.max(1, label.labelWidth  / 2) : null;
+          const ellipseRy = hasEllipse ? Math.max(1, label.labelHeight / 2) : null;
+          const ellipseTheta = hasEllipse ? (label.labelRotationRadians || 0) : 0;
+          const radius = hasEllipse
+            ? Math.min(ellipseRx, ellipseRy) + padding
+            : Math.max(6, (pos.thickness || 12) * 0.3);
+          const node = {
+            id: key,
+            unitId,
+            ringType,
+            x: pos.x,
+            y: pos.y,
+            fx: pos.x,
+            fy: pos.y,
+            radius,
+            hasEllipse,
+            ellipseRx,
+            ellipseRy,
+            ellipseTheta
+          };
+          nodeByKey.set(key, node);
+          return node;
+        }
+
+        // Build links with per-connection color
+        const links = [];
+        connections.forEach(conn => {
+          const fromRing = conn.fromRing || 'middle';
+          const toRing = conn.toRing || 'middle';
+          const s = ensureNode(conn.from, fromRing);
+          const t = ensureNode(conn.to, toRing);
+          if (!s || !t) return;
+          const color = arrowUtilities.calculateArrowColor(fromRing, toRing, conn.from, conn.to);
+          links.push({ source: s, target: t, color });
+        });
+
+        // Helper: anchor on ellipse boundary given a world-space direction
+        function anchorOnEllipse(cx, cy, rx, ry, theta, towardX, towardY, offset) {
+          const dx = towardX - cx, dy = towardY - cy;
+          const len = Math.hypot(dx, dy) || 1;
+          let ux = dx / len, uy = dy / len;
+          const c = Math.cos(theta), s = Math.sin(theta);
+          // rotate into ellipse local frame (-theta)
+          const uxLocal =  ux * c + uy * s;
+          const uyLocal = -ux * s + uy * c;
+          const denom = Math.sqrt((uxLocal*uxLocal)/(rx*rx) + (uyLocal*uyLocal)/(ry*ry)) || 1;
+          const scale = 1 / denom;
+          const exLocal = uxLocal * (scale + offset);
+          const eyLocal = uyLocal * (scale + offset);
+          // rotate back to world
+          const ex = cx + (exLocal * c - eyLocal * s);
+          const ey = cy + (exLocal * s + eyLocal * c);
+          return { x: ex, y: ey };
+        }
+
+        // Arc path similar to force-graph cell, but compute anchors on ellipse (or circle fallback)
+        function linkArc(d) {
+          const buffer = 2;
+          const arrowheadLen = 5;
+          // Source anchor toward target
+          let start;
+          if (d.source.hasEllipse) {
+            start = anchorOnEllipse(d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta, d.target.x, d.target.y, buffer);
+          } else {
+            const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            start = { x: d.source.x + (dx/dist) * (d.source.radius + buffer), y: d.source.y + (dy/dist) * (d.source.radius + buffer) };
+          }
+          // Target anchor from target back toward source (subtract arrowhead length)
+          let end;
+          if (d.target.hasEllipse) {
+            // move slightly inside by arrowheadLen along reverse direction
+            const anchor = anchorOnEllipse(d.target.x, d.target.y, d.target.ellipseRx, d.target.ellipseRy, d.target.ellipseTheta, d.source.x, d.source.y, arrowheadLen);
+            end = anchor;
+          } else {
+            const dx = d.source.x - d.target.x, dy = d.source.y - d.target.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            end = { x: d.target.x + (dx/dist) * (d.target.radius + arrowheadLen), y: d.target.y + (dy/dist) * (d.target.radius + arrowheadLen) };
+          }
+          const dxA = end.x - start.x, dyA = end.y - start.y;
+          const distance = Math.hypot(dxA, dyA) || 1;
+          // If very close, choose a better emission point and take a longer route
+          if (distance < 80) {
+            // Re-anchor source on the outward side of the ellipse to avoid cramped starts
+            if (d.source.hasEllipse) {
+              const rlen = Math.hypot(d.source.x, d.source.y) || 1;
+              const outx = d.source.x / rlen, outy = d.source.y / rlen;
+              const towardX = d.source.x + outx * (d.source.ellipseRx + d.source.ellipseRy);
+              const towardY = d.source.y + outy * (d.source.ellipseRx + d.source.ellipseRy);
+              start = anchorOnEllipse(d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta, towardX, towardY, buffer);
+            }
+            // Quadratic curve with boosted curvature, bending outward from the wheel center
+            const midX = (start.x + end.x) / 2;
+            const midY = (start.y + end.y) / 2;
+            let perpX = -dyA / (distance);
+            let perpY =  dxA / (distance);
+            // Ensure bend is outward (same direction as radial from center at midpoint)
+            const dotOut = perpX * midX + perpY * midY;
+            if (dotOut < 0) { perpX = -perpX; perpY = -perpY; }
+            const curve = Math.max(60, distance * 0.9);
+            const cx = midX + perpX * curve;
+            const cy = midY + perpY * curve;
+            return `M${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`;
+          }
+          const dr = distance * 1;
+          return `M${start.x},${start.y}A${dr},${dr} 0 0,1 ${end.x},${end.y}`;
+        }
+
+        arrowsGroup.append("g").attr("class", "label-link-group")
+          .selectAll("path").data(links)
+          .join("path")
+          .attr("fill", "none")
+          .attr("stroke", d => d.color)
+          .attr("stroke-width", 1.25)
+          .attr("opacity", 0.85)
+          .attr("d", linkArc)
+          .attr("marker-end", d => `url(${new URL(`#${arrowUtilities.getArrowheadId(d.color)}`, location)})`);
+      }
+
+      return { arrowsGroup, getCellCentroid, drawArrow, drawLabelLinks, clearArrows };
     }
 );
 }
-function _chart(styles,d3,selectedFont,dialecticalData,transformToNestedPieData,getOppositePrefix,getTextConstraints,wrapText,isThesisType,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,initializeBuildSteps){
+function _radii(styles){
+return (
+{
+      outerRadius: styles.radii.outer,
+      innerRadius: styles.radii.middleOuter,
+      middleRadius: styles.radii.middleOuter,
+      innerInnerRadius: styles.radii.middleInner,
+      centerRadius: styles.radii.inner
+    }
+);
+}
+function _pie(d3){
+return (
+d3.pie().value(d => d.value).sort(null)
+);
+}
+function _arcs(d3,radii,styles){
+return (
+{
+      invisibleArc: d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible),
+      outerArc: d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius),
+      middleArc: d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius),
+      innerArc: d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius)
+    }
+);
+}
+function _colorScales(d3,dialecticalData,styles){
+return (
+{
+      invisibleColor: d3.scaleOrdinal()
+        .domain(Object.keys(dialecticalData))
+        .range(Object.keys(dialecticalData).map(() => "transparent")),
+      outerColor: d3.scaleOrdinal()
+        .domain(Object.keys(dialecticalData))
+        .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer)),
+      middleColor: d3.scaleOrdinal()
+        .domain(Object.keys(dialecticalData))
+        .range(Object.keys(dialecticalData).map(() => styles.colors.rings.middle)),
+      innerColor: d3.scaleOrdinal()
+        .domain(Object.keys(dialecticalData))
+        .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner))
+    }
+);
+}
+function _arcTween(d3){
+return (
+(arcGenerator) => function(a) {
+      const i = d3.interpolate(this._current, a);
+      this._current = i(0);
+      return function(t) {
+        return arcGenerator(i(t));
+      };
+    }
+);
+}
+function _makeTextTransform(){
+return (
+(getCurrentRotationFn) => {
+      return function(d, arcGenerator, currentRotationRadians = null) {
+        const centroid = arcGenerator.centroid(d);
+        const sliceMiddleAngle = (d.startAngle + d.endAngle) / 2;
+        const currentRotation = currentRotationRadians !== null ? currentRotationRadians : (getCurrentRotationFn ? getCurrentRotationFn() : 0);
+        const currentVisualAngle = sliceMiddleAngle + currentRotation;
+        const normalizedAngle = ((currentVisualAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        let textRotationDegrees = (sliceMiddleAngle * 180) / Math.PI;
+        if (normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
+          textRotationDegrees += 180;
+        }
+        return `translate(${centroid[0]}, ${centroid[1]}) rotate(${textRotationDegrees})`;
+      }
+    }
+);
+}
+function _makeAxisModule(d3){
+return (
+({ coordinateGroup, defs, pie, radii, styles, getDataToUse, getOppositePrefix, dialecticalData }) => {
+      function updateCoordinateNumbersOpacities() {
+        const units = Object.keys(dialecticalData);
+        const middleData = getDataToUse().middle;
+        coordinateGroup.selectAll("text.coordinate-number").each(function() {
+          const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
+          const unitId = units[sliceIndex];
+          if (unitId) {
+            const sliceData = middleData.find(d => d.unitId === unitId);
+            const opacity = sliceData ? sliceData.opacity : 1;
+            d3.select(this)
+              .transition()
+              .duration(styles.durations.normal)
+              .style("opacity", opacity);
+          }
+        });
+      }
+
+      function updateAxisPositions(focusedUnitId = null) {
+        if (!focusedUnitId) {
+          updateCoordinateNumbersOpacities();
+          return;
+        }
+        coordinateGroup.selectAll(".coordinate-circle").remove();
+        coordinateGroup.selectAll(".coordinate-symbol").remove();
+        const dataToUse = getDataToUse();
+        const pieData = pie(dataToUse.middle);
+        const focusedSlice = pieData.find(d => d.data.unitId === focusedUnitId);
+        let axisAngle;
+        if (focusedSlice) {
+          axisAngle = focusedSlice.startAngle - Math.PI / 2;
+        } else {
+          const units = Object.keys(dialecticalData);
+          const numSlices = units.length;
+          const angleStep = (2 * Math.PI) / numSlices;
+          axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
+        }
+        const axisAngles = [axisAngle, axisAngle + Math.PI];
+        const ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
+        const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+        axisAngles.forEach((angle, sideIndex) => {
+          ringRadii.forEach((radius, ringIndex) => {
+            const angleOffset = 8 / radius;
+            const rotatedAngle = angle + angleOffset;
+            const x = (radius-8) * Math.cos(rotatedAngle);
+            const y = (radius-8) * Math.sin(rotatedAngle);
+            const x2 = (radius) * Math.cos(angle);
+            const y2 = (radius) * Math.sin(angle);
+            let clipUnitId = sideIndex === 0 ? focusedUnitId : getOppositePrefix(focusedUnitId);
+            // Derive display label from cell name (keeps clip id stable with unitId)
+            let clipLabel = clipUnitId;
+            (function deriveClipLabel(){
+              const dataToUse = getDataToUse();
+              let pieData;
+              if (ringIndex === 0) pieData = pie(dataToUse.inner);
+              else if (ringIndex === 1) pieData = pie(dataToUse.middle);
+              else pieData = pie(dataToUse.outer);
+              const cell = pieData.find(d => d.data.unitId === clipUnitId);
+              if (cell && cell.data && cell.data.name) clipLabel = cell.data.name;
+            })();
+            const clipId = `clip-${clipUnitId}-${sideIndex}-${ringIndex}`;
+            const clipPath = defs.append("clipPath").attr("id", clipId);
+            clipPath.append("path").attr("d", function() {
+              const dataToUse = getDataToUse();
+              let pieData, arcGen;
+              if (ringIndex === 0) { // inner ring
+                pieData = pie(dataToUse.inner);
+                arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius);
+              } else if (ringIndex === 1) { // middle ring
+                pieData = pie(dataToUse.middle);
+                arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
+              } else { // outer ring
+                pieData = pie(dataToUse.outer);
+                arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
+              }
+              const cellData = pieData.find(d => d.data.unitId === clipUnitId);
+              cellData ? cellData.data.opacity : 1;
+              d3.select(null);
+              return cellData ? arcGen(cellData) : "";
+            });
+            coordinateGroup.append("circle")
+              .attr("class", "coordinate-circle")
+              .attr("cx", x2)
+              .attr("cy", y2)
+              .attr("r", 0)
+              .style("fill", "#000")
+              .style("opacity", 0)
+              .style("clip-path", `url(#${clipId})`)
+              .transition()
+              .duration(500)
+              .attr("r", 20)
+              .style("opacity", 0.1);
+            coordinateGroup.append("text")
+              .attr("class", "coordinate-symbol")
+              .attr("x", x)
+              .attr("y", y)
+              .style("text-anchor", "middle")
+              .style("dominant-baseline", "central")
+              .style("font-family", "Monaco, monospace")
+              .style("font-size", "8px")
+              .style("font-weight", styles.fonts.coordinates.weight)
+              .style("fill", axisColors[ringIndex])
+              .style("pointer-events", "none")
+              .style("opacity", 1)
+              .text(clipLabel);
+          });
+        });
+        updateCoordinateNumbersOpacities();
+      }
+      return { updateCoordinateNumbersOpacities, updateAxisPositions };
+    }
+);
+}
+function _makeStepMode(d3){
+return (
+({
+      dialecticalData,
+      transformToNestedPieData,
+      initializeBuildSteps,
+      isThesisType,
+      getOppositePrefix,
+      pie,
+      radii,
+      styles,
+      groups,
+      helpers
+    }) => {
+      let animationData = {};
+      let buildSteps = [];
+      let currentStep = 0;
+      function initializeAnimationData() {
+        animationData = transformToNestedPieData(dialecticalData);
+        ["invisible", "outer", "middle", "inner"].forEach(ringType => {
+          animationData[ringType].forEach(item => { item.value = 0; });
+        });
+      }
+      function initializeBuildStepsLocal() {
+        buildSteps = initializeBuildSteps(dialecticalData);
+        currentStep = 0;
+      }
+      function resetBuildState(cellVisibility, updateAllRings) {
+        Object.keys(dialecticalData).forEach(cell => {
+          cellVisibility[cell] = { invisible: true, outer: false, middle: true, inner: false };
+        });
+        initializeAnimationData();
+        updateAllRings();
+      }
+      function executeStep(stepIndex, ctx) {
+        if (stepIndex < 0 || stepIndex >= buildSteps.length) return;
+        const step = buildSteps[stepIndex];
+        switch (step.type) {
+          case 'showWhite': {
+            const pairId = getOppositePrefix(step.unitId);
+            const currentCellFirstStep = buildSteps.findIndex(s => s.unitId === step.unitId && s.type === 'showWhite');
+            const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
+            const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
+            function setupFirstOfPair() {
+              ["outer","middle","inner"].forEach(ringType => {
+                const dataArray = animationData[ringType];
+                const currentData = dataArray.find(d => d.unitId === step.unitId);
+                const pairData = dataArray.find(d => d.unitId === pairId);
+                if (currentData) currentData.value = 1;
+                if (pairData) pairData.value = 1;
+              });
+              ctx.cellVisibility[step.unitId].outer = true;
+              ctx.cellVisibility[step.unitId].inner = true;
+              ctx.cellVisibility[step.unitId].middle = true;
+              ctx.cellVisibility[pairId].outer = true;
+              ctx.cellVisibility[pairId].inner = true;
+              ctx.cellVisibility[pairId].middle = true;
+              setTimeout(() => {
+                ["outer","middle","inner"].forEach(ringType => {
+                  const dataArray = animationData[ringType];
+                  const pairData = dataArray.find(d => d.unitId === pairId);
+                  if (pairData) pairData.opacity = 0;
+                });
+                ctx.updateAllRings();
+              }, 100);
+            }
+            function setupSecondOfPair() {
+              ["outer","middle","inner"].forEach(ringType => {
+                const dataArray = animationData[ringType];
+                const currentData = dataArray.find(d => d.unitId === step.unitId);
+                if (currentData) currentData.opacity = 1;
+              });
+            }
+            if (isFirstOfPair) setupFirstOfPair(); else setupSecondOfPair();
+            ctx.focusPair(step.unitId, styles.durations.stepRotation);
+            ctx.updateAllRings();
+            const latestPieData = pie(animationData.middle);
+            const latestArcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
+            const currentRotation = ctx.getCurrentRotationFromDOM();
+            groups.middleLabelsGroup.selectAll("text")
+              .data(latestPieData, d => d.data.unitId)
+              .attr("transform", d => helpers.calculateTextTransform(d, latestArcGen, currentRotation))
+              .each(function(d) {
+                const textElement = d3.select(this);
+                const baseSizes = styles.fonts.labels.baseSize;
+                textElement.style("font-size", `${baseSizes.middle}px`);
+                textElement.selectAll("tspan").remove();
+                const text = d.data.fullText || d.data.name;
+                const arcDatum = latestPieData.find(p => p.data.unitId === d.data.unitId);
+                const constraints = helpers.getTextConstraints("middle", arcDatum);
+                helpers.wrapText(textElement, text, constraints);
+              });
+            setTimeout(() => {
+              ctx.hideCell(step.unitId, "outer");
+              ctx.hideCell(step.unitId, "inner");
+              setTimeout(() => {
+                groups.outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+                groups.innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+              }, styles.durations.stepRotation + 50);
+            }, 100);
+            break;
+          }
+          case 'showGreen':
+            ctx.showCell(step.unitId, "inner");
+            break;
+          case 'showRed':
+            ctx.showCell(step.unitId, "outer");
+            break;
+        }
+      }
+      function startStepMode(ctx) {
+        ctx.setIsStepMode(true);
+        initializeBuildStepsLocal();
+        resetBuildState(ctx.cellVisibility, ctx.updateAllRings);
+        ctx.clearFocus();
+        ctx.resetZoom();
+        ctx.hideCoordinates();
+      }
+      function stepForward(ctx) {
+        if (!ctx.getIsStepMode() || currentStep >= buildSteps.length) return false;
+        executeStep(currentStep, ctx);
+        currentStep++;
+        return true;
+      }
+      function stepBackward(ctx) {
+        if (!ctx.getIsStepMode() || currentStep <= 0) return false;
+        currentStep--;
+        resetBuildState(ctx.cellVisibility, ctx.updateAllRings);
+        for (let i = 0; i < currentStep; i++) executeStep(i, ctx);
+        return true;
+      }
+      function resetToFull(ctx) {
+        ctx.setIsStepMode(false);
+        currentStep = 0;
+        animationData = {};
+        Object.keys(ctx.cellVisibility).forEach(cell => {
+          ctx.cellVisibility[cell] = { invisible: true, outer: true, middle: true, inner: true };
+        });
+        ctx.clearFocus();
+        ctx.resetZoom();
+        ctx.setRotationDirectly(0);
+        ["invisible","outer","middle","inner"].forEach(ringType => {
+          ctx.nestedData[ringType].forEach(item => {
+            const originalItem = ctx.originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
+            item.opacity = originalItem ? originalItem.opacity : 1;
+          });
+        });
+        ctx.updateAllRings();
+        ctx.showCoordinates();
+        ctx.updateAxisPositions(ctx.cells[0]);
+        ctx.rotateToSlice(ctx.cells[0]);
+      }
+      function getCurrentStepInfo(ctx) {
+        if (!ctx.getIsStepMode()) return null;
+        const totalSteps = buildSteps.length;
+        if (currentStep === 0) {
+          return { current: currentStep, total: totalSteps, unit: "none", stepType: "start", canStepForward: currentStep < totalSteps, canStepBackward: false };
+        }
+        const step = buildSteps[currentStep - 1];
+        const stepTypeMap = { 'showWhite': 'statement', 'showGreen': 'positive', 'showRed': 'negative' };
+        return { current: currentStep, total: totalSteps, unit: step.unitId, stepType: stepTypeMap[step.type], canStepForward: currentStep < totalSteps, canStepBackward: currentStep > 0 };
+      }
+      return {
+        get animationData() { return animationData; },
+        get buildSteps() { return buildSteps; },
+        startStepMode,
+        stepForward,
+        stepBackward,
+        resetToFull,
+        getCurrentStepInfo
+      };
+    }
+);
+}
+function _chart(styles,radii,d3,selectedFont,dialecticalData,arcs,makeTextTransform,pie,transformToNestedPieData,makeAxisModule,getOppositePrefix,colorScales,getTextConstraints,wrapText,isThesisType,arcTween,makeRings,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,makeStepMode,initializeBuildSteps){
 return (
 (() => {
 
@@ -6238,11 +6867,7 @@ return (
     const TOUCH_DRAG_THRESHOLD = 8;
 
     styles.height;
-    const outerRadius = styles.radii.outer;
-    const innerRadius = styles.radii.middleOuter; // Outer ring's inner radius
-    const middleRadius = styles.radii.middleOuter; // Middle ring's outer radius
-    const innerInnerRadius = styles.radii.middleInner; // Middle ring's inner radius
-    const centerRadius = styles.radii.inner; // Inner ring's outer radius
+    const { outerRadius, innerRadius, middleRadius, innerInnerRadius, centerRadius } = radii;
 
     // Create SVG with centered viewBox
     const svg = d3.create("svg")
@@ -6292,10 +6917,7 @@ return (
     }
 
     // Step-by-step animation state
-    let currentStep = 0;
     let isStepMode = false;
-    let animationData = {};
-    let buildSteps = [];
 
     // Initialize cell visibility
     const cells = Object.keys(dialecticalData);
@@ -6362,63 +6984,19 @@ return (
     // ===== TOUCH BEHAVIOR: Focus + Zoom to Slice =====
     // Touch events now simply focus the pair and zoom to the entire slice
 
-    // Create pie generator
-    const pie = d3.pie()
-      .value(d => d.value)
-      .sort(null);
+    // Create pie generator (from separate cell)
+    // uses: pie
 
-    // Create arc generators
-    const invisibleArc = d3.arc()
-      .innerRadius(outerRadius)
-      .outerRadius(styles.radii.invisible);
+    // Arc generators (from separate cell)
+    const { invisibleArc, outerArc, middleArc, innerArc } = arcs;
 
-    const outerArc = d3.arc()
-      .innerRadius(innerRadius)
-      .outerRadius(outerRadius);
-
-    const middleArc = d3.arc()
-      .innerRadius(innerInnerRadius)
-      .outerRadius(middleRadius);
-
-    const innerArc = d3.arc()
-      .innerRadius(styles.radii.hub)  // Add inner radius to make it a ring, not a pie
-      .outerRadius(centerRadius);
-
-    // Simple Text Rotation and Flipping Logic
-    // Single function to calculate text orientation with consistent flipping
-    function calculateTextTransform(d, arcGenerator, currentRotationRadians = null) {
-      const centroid = arcGenerator.centroid(d);
-
-      // Get the slice middle angle in the original data
-      const sliceMiddleAngle = (d.startAngle + d.endAngle) / 2;
-
-      // PERFORMANCE: Use passed rotation or get from DOM only if needed
-      const currentRotation = currentRotationRadians !== null ? 
-        currentRotationRadians : 
-        getCurrentRotationFromDOM();
-
-      // Calculate the current visual angle (slice angle + wheel rotation)
-      const currentVisualAngle = sliceMiddleAngle + currentRotation;
-
-      // Normalize to [0, 2π] for consistent flipping logic
-      const normalizedAngle = ((currentVisualAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-
-      // Convert slice angle to degrees for text rotation
-      let textRotationDegrees = (sliceMiddleAngle * 180) / Math.PI;
-
-      // DISABLE text flipping when focused to avoid confusion
-      // Only flip text if we're NOT in focus mode (focusedPair is null)
-      if (normalizedAngle > Math.PI / 2 && normalizedAngle < 3 * Math.PI / 2) {
-        textRotationDegrees += 180;
-      }
-
-      return `translate(${centroid[0]}, ${centroid[1]}) rotate(${textRotationDegrees})`;
-    }
+    // Simple Text Rotation and Flipping Logic (from separate cell)
+    const calculateTextTransform = makeTextTransform(getCurrentRotationFromDOM);
 
     // Reusable function to rotate wheel to center a slice at the top
     function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
       // Choose which data to use based on current mode
-      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+      const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       // Calculate rotation needed to center the slice at the top
       const pieData = pie(dataToUse.middle);
@@ -6492,197 +7070,34 @@ return (
     // Add circumference numbers at slice centers
     Object.keys(dialecticalData).length;
 
-
-
-    // Add axis symbols at the center of each ring layer
-    const ringRadii = [
-      centerRadius,                // Inner ring center
-      middleRadius,  // Middle ring center
-      outerRadius        // Outer ring center
-    ];
-
     //const symbols = ["T+", "T", "T-"]; // Positive, neutral, negative
-    const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+    [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
 
-    function updateCoordinateNumbersOpacities() {
-      // Update coordinate number opacities based on slice data
-      const units = Object.keys(dialecticalData);
-      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-      const middleData = dataToUse.middle;
+    // Coordinate number opacity updates now handled inside axis module
 
-      coordinateGroup.selectAll("text.coordinate-number").each(function() {
-        const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
-        const unitId = units[sliceIndex];
+    // Function to update axis positions is provided by axis module below
 
-        if (unitId) {
-          const sliceData = middleData.find(d => d.unitId === unitId);
-          const opacity = sliceData ? sliceData.opacity : 1;
+    // Initialize axis module and axes
+    const axis = makeAxisModule({
+      coordinateGroup,
+      defs,
+      pie,
+      radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
+      styles,
+      getDataToUse: () => (isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData),
+      getOppositePrefix,
+      dialecticalData
+    });
+    const updateAxisPositions = axis.updateAxisPositions;
+    axis.updateAxisPositions();
 
-          d3.select(this)
-            .transition()
-            .duration(styles.durations.normal)
-            .style("opacity", opacity);
-        }
-      });
-    }
-
-    // Function to update axis positions based on focus
-    function updateAxisPositions(focusedUnitId = null) {
-
-      let axisAngle;
-
-      if (focusedUnitId) {
-        // Remove existing axis elements
-        coordinateGroup.selectAll(".coordinate-circle").remove();
-        coordinateGroup.selectAll(".coordinate-symbol").remove();
-
-        // When focused, position axis at the left edge of the focused slice
-        // Choose which data to use based on current mode (same as other functions)
-        const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-        const pieData = pie(dataToUse.middle);
-        const focusedSlice = pieData.find(d => d.data.unitId === focusedUnitId);
-
-        if (focusedSlice) {
-          // Position axis at the start angle of the slice (left edge)
-          axisAngle = focusedSlice.startAngle - Math.PI / 2;
-        } else {
-          // Fallback to default
-          const units = Object.keys(dialecticalData);
-          const numSlices = units.length;
-          const angleStep = (2 * Math.PI) / numSlices;
-          axisAngle = (numSlices / 2 * angleStep) - Math.PI / 2;
-        }
-      } else {
-        updateCoordinateNumbersOpacities();
-        return;
-      }
-
-      // Create axis on both sides of the wheel
-      const axisAngles = [axisAngle, axisAngle + Math.PI]; // Both sides
-
-      axisAngles.forEach((angle, sideIndex) => {
-        ringRadii.forEach((radius, ringIndex) => {
-          const angleOffset = 8 / radius; // 8px arc length at this radius
-          const rotatedAngle = angle + angleOffset;
-          const x = (radius-8) * Math.cos(rotatedAngle);
-          const y = (radius-8) * Math.sin(rotatedAngle);
-          const x2 = (radius) * Math.cos(angle);
-          const y2 = (radius) * Math.sin(angle);
-
-          //const symbols = focusedUnitId.startsWith('T') ? logos[sideIndex] : logos[1 - sideIndex];
-
-          // Create a group for this axis element (circle + symbol)
-          const axisGroup = coordinateGroup.append("g")
-            .attr("class", "axis-element");
-
-          let oppaciudad = 1;
-
-          // Determine which unit ID to use for clipping (partner unit for opposite side)
-          let clipUnitId = sideIndex === 0 ? focusedUnitId : getOppositePrefix(focusedUnitId);
-
-          // Create a unique clip path ID for this axis element
-          const clipId = `clip-${clipUnitId}-${sideIndex}-${ringIndex}`;
-
-          // Create clip path that matches the cell shape
-          const clipPath = defs.append("clipPath")
-            .attr("id", clipId);
-
-          // Add the cell path to the clip path
-          clipPath.append("path")
-            .attr("d", function() {
-              // Get the cell data for this unit and ring
-              const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-              let pieData, arcGen;
-              if (ringIndex === 0) { // inner ring
-                pieData = pie(dataToUse.inner);
-                arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(centerRadius);
-              } else if (ringIndex === 1) { // middle ring
-                pieData = pie(dataToUse.middle);
-                arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-              } else { // outer ring
-                pieData = pie(dataToUse.outer);
-                arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-              }
-              const cellData = pieData.find(d => d.data.unitId === clipUnitId);
-              clipUnitId = cellData.data.name;
-              oppaciudad = cellData.data.opacity;
-              console.log(`cellData.data.name: ${cellData.data.name}, cellData.data.opacity: ${cellData.data.opacity}`);
-              return cellData ? arcGen(cellData) : "";
-            });
-
-          // Create circle background within the group (clipped to cell)
-
-          axisGroup.append("circle")
-            .attr("class", "coordinate-circle")
-            .attr("cx", x2)
-            .attr("cy", y2)
-            .attr("r", 0) // Start at 0 for a grow-in effect
-            .style("fill", "#000")
-            .style("opacity", 0)
-            .style("clip-path", `url(#${clipId})`)
-            .transition()
-            .duration(500)
-            .attr("r", 20)
-            .style("opacity", 0.1);
-
-
-          // Add symbol text within the same group, perfectly centered
-          axisGroup.append("text")
-            .attr("class", "coordinate-symbol")
-            .attr("x", x)
-            .attr("y", y - 10) // Start above for a slide-in effect
-            .style("text-anchor", "middle")
-            .style("dominant-baseline", "central")
-            .style("font-family", "Monaco, monospace")
-            .style("font-size", "8px")
-            .style("font-weight", styles.fonts.coordinates.weight)
-            .style("fill", axisColors[ringIndex])
-            .style("pointer-events", "none")
-            .style("opacity", 0)
-            .text(clipUnitId)
-            .transition()
-            .duration(500)
-            .attr("y", y)
-            .style("opacity", oppaciudad);
-        });
-      });
-
-      updateCoordinateNumbersOpacities();
-    }
-
-    // Initialize axes
-    updateAxisPositions();
-
-    // Color scales
-    const invisibleColor = d3.scaleOrdinal()
-      .domain(Object.keys(dialecticalData))
-      .range(Object.keys(dialecticalData).map(() => "transparent"));
-
-    const outerColor = d3.scaleOrdinal()
-      .domain(Object.keys(dialecticalData))
-      .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer));
-
-    const middleColor = d3.scaleOrdinal()
-      .domain(Object.keys(dialecticalData))
-      .range(Object.keys(dialecticalData).map(() => styles.colors.rings.middle));
-
-    const innerColor = d3.scaleOrdinal()
-      .domain(Object.keys(dialecticalData))
-      .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner));
+    // Color scales (from separate cell)
+    const { invisibleColor, outerColor, middleColor, innerColor } = colorScales;
 
     // Initialize data
     //const nestedData = transformToNestedPieData(dialecticalData);
 
-    // Arc tween function
-    function arcTween(arcGenerator) {
-      return function(a) {
-        const i = d3.interpolate(this._current, a);
-        this._current = i(0);
-        return function(t) {
-          return arcGenerator(i(t));
-        };
-      };
-    }
+    // arcTween helper from separate cell
 
     // Function to hide individual cell (sucking into inner ring)
     function hideCell(unitId, ringType) {
@@ -6835,7 +7250,7 @@ return (
           const text = d.data.fullText || d.data.name;
 
           // Use the current data (either animationData if in step mode, or nestedData otherwise)
-          const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+          const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
           let pieData;
           if (ringType === "invisible") {
             pieData = pie(dataToUse.invisible);
@@ -6872,52 +7287,11 @@ return (
         .style("opacity", 1);
     }
 
-    // Change data function for smooth value transitions
-    function changeData(ringType, newData, arcGenerator) {
-      const group = ringType === "outer" ? outerGroup : 
-                   ringType === "middle" ? middleGroup : innerGroup;
-      const labelsGroup = ringType === "outer" ? outerLabelsGroup :
-                         ringType === "middle" ? middleLabelsGroup : innerLabelsGroup;
-
-      const pieData = pie(newData);
-
-      // Update paths with smooth transitions
-      const paths = group.selectAll("path").data(pieData, d => d.data.name);
-
-      paths.transition()
-        .duration(styles.durations.normal)
-        .attrTween("d", arcTween(arcGenerator))
-        .style("opacity", d => {
-          if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          // Use data opacity combined with ring-specific opacity
-          const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-          return d.data.opacity * baseOpacity;
-        });
-
-      // Update labels with opacity based on data value
-      const labels = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
-
-      labels.transition()
-        .duration(styles.durations.normal)
-        .attr("transform", function(d) {
-          // Use the simple text transform function
-          return calculateTextTransform(d, arcGenerator);
-        })
-        .style("opacity", d => {
-          // Hide if data value is 0 or if visibility is toggled off
-          if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          return d.data.opacity;
-        });
-
-    }
+    // Change data moved to makeRings
 
     function unfocus() {
       // Choose which data to modify
-      const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+      const dataToModify = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       // Reset all opacities to original values
       ["invisible", "outer", "middle", "inner"].forEach(ringType => {
@@ -6939,7 +7313,7 @@ return (
     // Focus pair function
     function focusPair(clickedUnitId) {
       // Choose which data to modify
-      const dataToModify = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
+      const dataToModify = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       const isThesis = isThesisType(clickedUnitId);
       const pairId = dialecticalData[clickedUnitId].pairWith;
@@ -7024,11 +7398,11 @@ return (
       }
 
       // Re-render with updated opacity
-      if (isStepMode && Object.keys(animationData).length > 0) {
-        changeData("invisible", animationData.invisible, invisibleArc);
-        changeData("outer", animationData.outer, outerArc);
-        changeData("middle", animationData.middle, middleArc);
-        changeData("inner", animationData.inner, innerArc);
+      if (isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0) {
+        rings.changeData("invisible", stepMode.animationData.invisible, invisibleArc);
+        rings.changeData("outer", stepMode.animationData.outer, outerArc);
+        rings.changeData("middle", stepMode.animationData.middle, middleArc);
+        rings.changeData("inner", stepMode.animationData.inner, innerArc);
       } else {
         updateAllRings();
       }
@@ -7132,70 +7506,72 @@ return (
 
     }
 
-    // Update ring function
-    function updateRing(group, labelsGroup, data, arcGenerator, ringType, colorScale) {
-      const pieData = pie(data);
-
-      const paths = group.selectAll("path")
-        .data(pieData, d => d.data.name);
-
-      const pathsEnter = paths.enter()
-        .append("path")
-        .attr("class", "cell")
-        .attr("fill", d => colorScale(d.data.unitId))
-        .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
-        .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
-        .attr("stroke-dasharray", "1,3") // Dotted border
-        .attr("stroke-linecap", "round")
-        .attr("stroke-opacity", 0.3)
-        .style("opacity", d => {
-          if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          const baseOpacity = ringType === "outer" || ringType === "invisible" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-          return d.data.opacity * baseOpacity;
-        })
-        .attr("d", arcGenerator)
-        .each(function(d) { this._current = d; })
+    // Update all rings helper
+    const bindCellEvents = (selection, ringType) => {
+      selection
         .on("click", function(event, d) {
           if (event.metaKey || event.ctrlKey) ; else {
-            // Match touch behavior: focus pair and zoom to slice if not already zoomed
-            //console.log('Mouse click - focusing slice:', d.data.unitId);
-            //const isCurrentlyZoomed = activeZoom !== null;
-            // Remove highlight from all cells with the same unitId
-            d3.select(this.ownerSVGElement)
-              .selectAll("path.cell")
-              .style("stroke-dasharray", "1,3");
+            d3.select(this.ownerSVGElement).selectAll("path.cell").style("stroke-dasharray", "1,3");
             if(!focusedPair){
               focusPair(d.data.unitId);
               clickedCell = d.data;
-            }
-            else {
+            } else {
               if(focusedPair.thesis != d.data.unitId && focusedPair.antithesis != d.data.unitId){
                 unfocus();
                 clickedCell = null;
-              }
-              else {
+              } else {
                 clickedCell = d.data;
-                d3.select(this)
-                .style("stroke-dasharray", "1,0");
+                d3.select(this).style("stroke-dasharray", "1,0");
                 if(clickedCell && clickedCell.name == d.data.name) {
-                  d3.select(this)
-                  .style("cursor", "default");
+                  d3.select(this).style("cursor", "default");
                 }
               }
             }
             updateChartValue();
           }
         })
+        .on("mouseenter", function(event, d) {
+          const parentClass = d3.select(this.parentNode).attr("class");
+          const ringTypeLocal = parentClass.includes("invisible") ? "invisible" : parentClass.includes("outer") ? "outer" : parentClass.includes("middle") ? "middle" : "inner";
+          setHoveredCell({ unitId: d.data.unitId});
+          if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
+            d3.select(this).style("stroke-dasharray", "1,0");
+            if(clickedCell && clickedCell.name != d.data.name) { d3.select(this).style("cursor", "pointer"); }
+            else if(clickedCell && clickedCell.name == d.data.name) { d3.select(this).style("cursor", "default"); }
+          } else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId){
+            d3.select(this).style("cursor", "default").style("opacity", ringTypeLocal === "invisible" ? 0.2 : 1);
+            let labelsGroup = ringTypeLocal === "invisible" ? invisibleLabelsGroup : ringTypeLocal === "outer" ? outerLabelsGroup : ringTypeLocal === "middle" ? middleLabelsGroup : innerLabelsGroup;
+            labelsGroup.selectAll("text").filter(text => text.data.unitId === d.data.unitId).style("opacity", 1);
+          } else {
+            d3.select(this.ownerSVGElement).selectAll("path.cell")
+              .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
+              .style("stroke-dasharray", "1,0").style("cursor", "pointer").style("opacity", function() {
+                const thisRingType = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null;
+                return thisRingType === "invisible" ? 0.2 : null;
+              });
+          }
+        })
+        .on("mouseleave", function(event, d) {
+          const parentClass = d3.select(this.parentNode).attr("class");
+          const ringTypeLocal = parentClass.includes("invisible") ? "invisible" : parentClass.includes("outer") ? "outer" : parentClass.includes("middle") ? "middle" : "inner";
+          if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
+            if(clickedCell && clickedCell.name != d.data.name) { d3.select(this).style("stroke-dasharray", "1,3"); }
+          } else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId) {
+            d3.select(this).style("opacity", 0.3);
+            let labelsGroup = ringTypeLocal === "invisible" ? invisibleLabelsGroup : ringTypeLocal === "outer" ? outerLabelsGroup : ringTypeLocal === "middle" ? middleLabelsGroup : innerLabelsGroup;
+            labelsGroup.selectAll("text").filter(text => text.data.unitId === d.data.unitId).style("opacity", 0.3);
+            if(ringTypeLocal === "invisible"){ d3.select(this).style("opacity", 0); }
+          } else {
+            d3.select(this.ownerSVGElement).selectAll("path.cell")
+              .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
+              .style("stroke-dasharray", "1,3")
+              .style("opacity", function() { const t = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null; return t === "invisible" ? 0 : null; });
+          }
+        })
         .on("touchstart", function(event, d) {
           event.preventDefault();
           const touch = event.touches && event.touches[0];
-          if (touch) {
-            touchDragStart = { x: touch.clientX, y: touch.clientY };
-          } else {
-            touchDragStart = null;
-          }
+          touchDragStart = touch ? { x: touch.clientX, y: touch.clientY } : null;
           isTouchDragging = false;
         })
         .on("touchmove", function(event, d) {
@@ -7204,275 +7580,38 @@ return (
           if (touch) {
             const dx = touch.clientX - touchDragStart.x;
             const dy = touch.clientY - touchDragStart.y;
-            if (Math.sqrt(dx*dx + dy*dy) > TOUCH_DRAG_THRESHOLD) {
-              isTouchDragging = true;
-            }
+            if (Math.sqrt(dx*dx + dy*dy) > TOUCH_DRAG_THRESHOLD) { isTouchDragging = true; }
           }
         })
         .on("touchend", function(event, d) {
           event.preventDefault();
-          if (isTouchDragging) {
-            // It was a drag, not a tap—do nothing
-            isTouchDragging = false;
-            touchDragStart = null;
-            return;
-          }
-          // ... existing tap/focus logic ...
+          if (isTouchDragging) { isTouchDragging = false; touchDragStart = null; return; }
           const currentTime = Date.now();
           const timeSinceLastTap = currentTime - lastTapTime;
-          if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
-            // Double tap detected - reset zoom
-            //console.log('Double tap detected - resetting zoom');
-            resetZoom();
-          } else {
+          if (timeSinceLastTap < DOUBLE_TAP_DELAY) { resetZoom(); }
+          else {
             focusPair(d.data.unitId);
           }
           lastTapTime = currentTime;
           isTouchDragging = false;
           touchDragStart = null;
         })
-        .on("touchcancel", function(event, d) {
-          // Just prevent default on cancel
-          event.preventDefault();
-        })
-        .on("mouseenter", function(event, d) {
-          // Set hovered cell for scroll-to-zoom
-          const parentClass = d3.select(this.parentNode).attr("class");
-          const ringType = parentClass.includes("invisible") ? "invisible" :
-                          parentClass.includes("outer") ? "outer" : 
-                          parentClass.includes("middle") ? "middle" : "inner";
-          setHoveredCell({ unitId: d.data.unitId});
-
-          if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
-            d3.select(this)
-            .style("stroke-dasharray", "1,0");
-            if(clickedCell && clickedCell.name != d.data.name) {
-              d3.select(this)
-              .style("cursor", "pointer");
-            }
-            else if(clickedCell && clickedCell.name == d.data.name) {
-              d3.select(this)
-              .style("cursor", "default");
-            }
-          }
-          else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId){
-            d3.select(this)
-            .style("cursor", "default")
-            .style("opacity", ringType === "invisible" ? 0.2 : 1); // Show invisible ring faintly on hover
-            let labelsGroup;
-            if (ringType === "invisible") labelsGroup = invisibleLabelsGroup;
-            else if (ringType === "outer") labelsGroup = outerLabelsGroup;
-            else if (ringType === "middle") labelsGroup = middleLabelsGroup;
-            else labelsGroup = innerLabelsGroup;
-            labelsGroup.selectAll("text")
-            .filter(text => text.data.unitId === d.data.unitId)
-            .style("opacity", 1);
-          }
-          else {
-            // Highlight all cells with the same unitId across all rings
-            d3.select(this.ownerSVGElement)
-            .selectAll("path.cell")
-            .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
-            .style("stroke-dasharray", "1,0")
-            .style("cursor", "pointer")
-            .style("opacity", function() {
-              const thisRingType = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null;
-              return thisRingType === "invisible" ? 0.2 : null; // Show invisible ring faintly on hover
-            });
-          }
-
-        })
-        .on("mouseleave", function(event, d) {
-
-          if(focusedPair && d.data.pairId === dialecticalData[focusedPair.thesis].pairId) {
-            if(clickedCell && clickedCell.name != d.data.name) {
-              d3.select(this)
-              .style("stroke-dasharray", "1,3");
-            }
-
-          }
-          else if(focusedPair && d.data.pairId !== dialecticalData[focusedPair.thesis].pairId) {
-            d3.select(this)
-            .style("opacity", 0.3);
-            let labelsGroup;
-            if (ringType === "invisible") labelsGroup = invisibleLabelsGroup;
-            else if (ringType === "outer") labelsGroup = outerLabelsGroup;
-            else if (ringType === "middle") labelsGroup = middleLabelsGroup;
-            else labelsGroup = innerLabelsGroup;
-            labelsGroup.selectAll("text")
-            .filter(text => text.data.unitId === d.data.unitId)
-            .style("opacity", 0.3);
-
-            if(ringType === "invisible"){
-              d3.select(this)
-              .style("opacity", 0);
-            }
-          }
-          else {
-            // Remove highlight from all cells with the same unitId
-            d3.select(this.ownerSVGElement)
-              .selectAll("path.cell")
-              .filter(cellD => cellD && cellD.data && cellD.data.unitId === d.data.unitId)
-              .style("stroke-dasharray", "1,3")
-              .style("opacity", function() {
-                const thisRingType = d3.select(this.parentNode).attr("class").includes("invisible") ? "invisible" : null;
-                return thisRingType === "invisible" ? 0 : null; // Hide invisible ring when not hovering
-              });
-
-          }
-        });
-
-      pathsEnter.append("title")
-        .text(d => d.data.fullText);
-
-      paths.merge(pathsEnter)
-        .transition()
-        .duration(styles.durations.normal)
-        .attrTween("d", arcTween(arcGenerator))
-        .style("opacity", d => {
-          if (!cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          if (ringType === "invisible") {
-            return 0; // Paths are invisible, only text shows
-          }
-          const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
-          return d.data.opacity * baseOpacity;
-        });
-
-      paths.exit()
-        .transition()
-        .duration(styles.durations.normal)
-        .style("opacity", 0)
-        .remove();
-
-      updateLabels(labelsGroup, pieData, arcGenerator, ringType);
-    }
-
-
-
-    function updateLabels(labelsGroup, pieData, arcGenerator, ringType) {
-      const labels = labelsGroup.selectAll("text")
-        .data(pieData, d => d.data.name);
-
-      const labelsEnter = labels.enter()
-        .append("text")
-        .attr("class", "cell-label")
-        .style("opacity", d => {
-          if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          return d.data.opacity;
-        })
-        .attr("transform", function(d) {
-          // Use the simple text transform function
-          return calculateTextTransform(d, arcGenerator);
-        })
-        .style("text-anchor", "middle")
-        .style("dominant-baseline", "central")
-        .style("font-family", styles.fonts.family)
-        .style("font-size", function(d) {
-          const baseSizes = styles.fonts.labels.baseSize;
-          return `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
-        })
-        .style("font-weight", styles.fonts.labels.weight)
-        .style("fill", function(d) {
-          const textColors = styles.colors.text;
-          if (ringType === "invisible") return 'black';
-          if (ringType === "inner") return textColors.inner;
-          if (ringType === "outer") return textColors.outer;
-          return textColors.middle;
-        })
-        .style("pointer-events", "none")
-        .each(function(d) {
-          // Always apply text wrapping on create with up-to-date arc data
-          const textElement = d3.select(this);
-          // Ensure font size is set before wrapping
-          const baseSizes = styles.fonts.labels.baseSize;
-          textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
-
-          const text = d.data.fullText || d.data.name;
-          // Get latest arc data for this cell
-          let pieData;
-          const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-          if (ringType === "invisible") {
-            pieData = pie(dataToUse.invisible);
-            d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-          } else if (ringType === "outer") {
-            pieData = pie(dataToUse.outer);
-            d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-          } else if (ringType === "middle") {
-            pieData = pie(dataToUse.middle);
-            d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-          } else {
-            pieData = pie(dataToUse.inner);
-            d3.arc().innerRadius(30).outerRadius(centerRadius);
-          }
-          const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-          const constraints = getTextConstraints(ringType, arcDatum);
-          wrapText(textElement, text, constraints);
-        });
-
-      labels.merge(labelsEnter)
-        .transition()
-        .duration(styles.durations.normal)
-        .attr("transform", function(d) {
-          // Use the simple text transform function
-          return calculateTextTransform(d, arcGenerator);
-        })
-        .style("opacity", d => {
-          if (d.data.value === 0 || !cellVisibility[d.data.unitId] || !cellVisibility[d.data.unitId][ringType]) {
-            return 0;
-          }
-          return d.data.opacity;
-        })
-        .on("end", function(d) {
-          // Apply text wrapping after transition completes with up-to-date arc data
-          if (d && d.data) {
-            const textElement = d3.select(this);
-            // Ensure font size is set before wrapping
-            const baseSizes = styles.fonts.labels.baseSize;
-            textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
-
-            const text = d.data.fullText || d.data.name;
-            let pieData;
-            const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-            if (ringType === "invisible") {
-              pieData = pie(dataToUse.invisible);
-              d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-            } else if (ringType === "outer") {
-              pieData = pie(dataToUse.outer);
-              d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-            } else if (ringType === "middle") {
-              pieData = pie(dataToUse.middle);
-              d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-            } else {
-              pieData = pie(dataToUse.inner);
-              d3.arc().innerRadius(30).outerRadius(centerRadius);
-            }
-            const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
-            const constraints = getTextConstraints(ringType, arcDatum);
-            wrapText(textElement, text, constraints);
-          }
-        });
-
-      labels.exit()
-        .transition()
-        .duration(styles.durations.normal)
-        .style("opacity", 0)
-        .remove();
-    }
-
-    // Update all rings helper
-    function updateAllRings() {
-      // Use animation data if in step mode, otherwise use regular data
-      const dataToUse = isStepMode && Object.keys(animationData).length > 0 ? animationData : nestedData;
-
-      updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
-      updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
-      updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
-      updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
-    }
+        .on("touchcancel", function(event) { event.preventDefault(); });
+    };
+    const rings = makeRings({
+      groups: { invisibleGroup, outerGroup, middleGroup, innerGroup },
+      labels: { invisibleLabelsGroup, outerLabelsGroup, middleLabelsGroup, innerLabelsGroup },
+      arcs: { invisibleArc, outerArc, middleArc, innerArc },
+      colorScales: { invisibleColor, outerColor, middleColor, innerColor },
+      styles,
+      pie,
+      radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
+      helpers: { calculateTextTransform, wrapText, getTextConstraints },
+      getDataToUse: () => (isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData),
+      getCellVisibility: (unitId, ringType) => (cellVisibility[unitId] && cellVisibility[unitId][ringType]),
+      bindCellEvents
+    });
+    const updateAllRings = rings.updateAllRings;
 
     // ===== ARROW DRAWING FUNCTIONALITY (moved to arrows-module cell) =====
     const arrows = makeArrowsModule({
@@ -7503,282 +7642,54 @@ return (
     function drawAllArrows() {
       clearArrows();
       const connections = parseArrowConnections(arrowConnections, dialecticalData);
-      connections.forEach((conn, index) => {
-        const color = arrowUtilities.calculateArrowColor(conn.fromRing, conn.toRing, conn.from, conn.to);
-        const delay = index * 300;
-        drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-      });
+      arrows.drawLabelLinks(connections);
     }
     function drawFlow() {
       clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-      connections.forEach((conn, index) => {
-        const color = arrowUtilities.calculateArrowColor(conn.fromRing, conn.toRing, conn.from, conn.to);
-        const delay = index * 300;
-        drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-      });
+      arrows.drawLabelLinks(connections);
     }
 
-    // Step-by-step animation functions
-    function initializeAnimationData() {
-      // Use transformToNestedPieData and then modify values for step mode
-      animationData = transformToNestedPieData(dialecticalData);
-
-      // Set all values to 0 for step mode (start with empty slices)
-      ["invisible", "outer", "middle", "inner"].forEach(ringType => {
-        animationData[ringType].forEach(item => {
-          item.value = 0; // Start with 0 for step mode
-        });
-      });
-    }
-
-    // Initialize build steps (generalized for any number of thesis/antithesis pairs)
-    function initializeBuildStepsLocal() {
-      buildSteps = initializeBuildSteps(dialecticalData);
-      currentStep = 0;
-    }
-
-    // Reset build state (exact copy from HTML)
-    function resetBuildState() {
-      // Reset all cells to visible in visibility state (for step mode)
-      cells.forEach(cell => {
-        cellVisibility[cell] = {
-          invisible: true,  // Always present but invisible
-          outer: false,  // Red (negative) - hidden initially
-          middle: true,  // White (parent) - visible  
-          inner: false   // Green (positive) - hidden initially
-        };
-      });
-
-      // Initialize with all values at 0
-      initializeAnimationData();
-
-      // Initial render with all zeros (will show nothing)
-      updateAllRings();
-    }
-
-    // Execute a single build step (exact copy from HTML)
-    function executeStep(stepIndex) {
-      if (stepIndex < 0 || stepIndex >= buildSteps.length) return;
-
-      const step = buildSteps[stepIndex];
-
-      switch (step.type) {
-        case 'showWhite':
-          // Determine pair ID and which one comes first in build sequence
-              isThesisType(step.unitId);
-        const pairId = getOppositePrefix(step.unitId);
-
-          // Find which cell appears first in the build sequence
-          const currentCellFirstStep = buildSteps.findIndex(s => s.unitId === step.unitId && s.type === 'showWhite');
-          const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
-          const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
-
-          // Helper function to set up data for first of pair
-          function setupFirstOfPair() {
-            // Set data values for both cells
-            ["outer", "middle", "inner"].forEach(ringType => {
-              const dataArray = animationData[ringType];
-              const currentData = dataArray.find(d => d.unitId === step.unitId);
-              const pairData = dataArray.find(d => d.unitId === pairId);
-              if (currentData) currentData.value = 1;
-              if (pairData) pairData.value = 1;
-            });
-
-            // Set visibility for both cells
-            cellVisibility[step.unitId].outer = true;
-            cellVisibility[step.unitId].inner = true;
-            cellVisibility[step.unitId].middle = true;
-            cellVisibility[pairId].outer = true;
-            cellVisibility[pairId].inner = true;
-            cellVisibility[pairId].middle = true;
-
-            // Hide pair cells after initial setup
-            setTimeout(() => {
-              ["outer", "middle", "inner"].forEach(ringType => {
-                const dataArray = animationData[ringType];
-                const pairData = dataArray.find(d => d.unitId === pairId);
-                if (pairData) pairData.opacity = 0;
-              });
-              updateAllRings();
-            }, 100);
-          }
-
-          // Helper function to set up data for second of pair
-          function setupSecondOfPair() {
-            // Just set opacity for current cell (data already set)
-            ["outer", "middle", "inner"].forEach(ringType => {
-              const dataArray = animationData[ringType];
-              const currentData = dataArray.find(d => d.unitId === step.unitId);
-              if (currentData) currentData.opacity = 1;
-            });
-          }
-
-          // Helper function to apply text wrapping
-          function applyTextWrapping() {
-            const latestPieData = pie(animationData.middle);
-            const latestArcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-            const currentRotation = getCurrentRotationFromDOM();
-            middleLabelsGroup.selectAll("text")
-              .data(latestPieData, d => d.data.unitId)
-              .attr("transform", function(d) {
-                return calculateTextTransform(d, latestArcGen, currentRotation);
-              })
-              .each(function(d) {
-              const textElement = d3.select(this);
-              // Set the font size explicitly before wrapping
-              const baseSizes = styles.fonts.labels.baseSize;
-              textElement.style("font-size", `${baseSizes.middle}px`);
-              textElement.selectAll("tspan").remove();
-              const text = d.data.fullText || d.data.name;
-              const arcDatum = latestPieData.find(p => p.data.unitId === d.data.unitId);
-              const constraints = getTextConstraints("middle", arcDatum);
-              wrapText(textElement, text, constraints);
-            });
-          }
-
-          // Helper function to hide and restore segments
-          function hideAndRestoreSegments() {
-            setTimeout(() => {
-              hideCell(step.unitId, "outer");
-              hideCell(step.unitId, "inner");
-
-              setTimeout(() => {
-                outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-                innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-              }, styles.durations.stepRotation + 50);
-            }, 100);
-          }
-
-          // Execute the appropriate setup
-          if (isFirstOfPair) {
-            setupFirstOfPair();
-          } else {
-            setupSecondOfPair();
-          }
-
-          // Common operations for both branches
-          focusPair(step.unitId, styles.durations.stepRotation);
-          updateAllRings();
-          applyTextWrapping();
-          hideAndRestoreSegments();
-
-          break;
-
-        case 'showGreen':
-          // Show the inner cell (it should now expand from hidden state with full opacity)
-          showCell(step.unitId, "inner");
-          break;
-
-        case 'showRed':
-          // Show the outer cell (it should now expand from hidden state with full opacity)
-          showCell(step.unitId, "outer");
-          break;
-      }
-    }
-
-    // Step animation functions (exact copy from HTML)
+    // Step mode module wiring
+    const stepMode = makeStepMode({
+      dialecticalData,
+      transformToNestedPieData,
+      initializeBuildSteps,
+      isThesisType,
+      getOppositePrefix,
+      pie,
+      radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
+      styles,
+      groups: { outerGroup, middleLabelsGroup, innerGroup, outerLabelsGroup, middleGroup },
+      helpers: { calculateTextTransform, wrapText, getTextConstraints }
+    });
     function startStepMode() {
       isStepMode = true;
-      initializeBuildStepsLocal();
-      resetBuildState();
-      focusedPair = null;
-      resetZoom();
-
-      // Hide coordinate system during step mode
-      coordinateGroup.style("display", "none");
-    }
-
-    function stepForward() {
-      if (!isStepMode || currentStep >= buildSteps.length) return false;
-
-      executeStep(currentStep);
-      currentStep++;
-      return true;
-    }
-
-    function stepBackward() {
-      if (!isStepMode || currentStep <= 0) return false;
-
-      currentStep--;
-
-      // Reset and rebuild up to current step
-      resetBuildState();
-      for (let i = 0; i < currentStep; i++) {
-        executeStep(i);
-      }
-      return true;
-    }
-
-    function resetToFull() {
-      isStepMode = false;
-      currentStep = 0;
-      animationData = {}; // Clear animation data
-
-      // Show all cells
-      cells.forEach(cell => {
-        cellVisibility[cell] = {
-          invisible: true,
-          outer: true,
-          middle: true,
-          inner: true
-        };
+      stepMode.startStepMode({
+        cellVisibility,
+        updateAllRings,
+        focusPair,
+        showCell,
+        hideCell,
+        clearFocus: () => { focusedPair = null; },
+        resetZoom,
+        hideCoordinates: () => coordinateGroup.style("display", "none"),
+        getCurrentRotationFromDOM,
+        setIsStepMode: (v) => { isStepMode = v; },
+        getIsStepMode: () => isStepMode,
+        nestedData,
+        originalNestedData,
+        updateAxisPositions,
+        rotateToSlice,
+        setRotationDirectly,
+        cells,
+        ...stepMode
       });
-
-      // Reset focus and zoom
-      focusedPair = null;
-      resetZoom();
-
-      // Reset wheel rotation to default position
-      setRotationDirectly(0);
-
-      // Reset opacities to original values and update with full data
-      ["invisible", "outer", "middle", "inner"].forEach(ringType => {
-        nestedData[ringType].forEach(item => {
-          const originalItem = originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
-          item.opacity = originalItem ? originalItem.opacity : 1;
-        });
-      });
-
-      updateAllRings();
-
-      // Show coordinate system in full mode
-      coordinateGroup.style("display", "block");
-      updateAxisPositions(cells[0]);
-      rotateToSlice(cells[0]);
     }
-
-    function getCurrentStepInfo() {
-      if (!isStepMode) return null;
-
-      const totalSteps = buildSteps.length;
-      if (currentStep === 0) {
-        return {
-          current: currentStep,
-          total: totalSteps,
-          unit: "none",
-          stepType: "start",
-          canStepForward: currentStep < totalSteps,
-          canStepBackward: false
-        };
-      }
-
-      const step = buildSteps[currentStep - 1];
-      const stepTypeMap = {
-        'showWhite': 'statement',
-        'showGreen': 'positive', 
-        'showRed': 'negative'
-      };
-
-      return {
-        current: currentStep,
-        total: totalSteps,
-        unit: step.unitId,
-        stepType: stepTypeMap[step.type],
-        canStepForward: currentStep < totalSteps,
-        canStepBackward: currentStep > 0
-      };
-    }
+    function stepForward() { return stepMode.stepForward({ getIsStepMode: () => isStepMode, updateAllRings, cellVisibility, focusPair, showCell, hideCell, getCurrentRotationFromDOM, groups: { outerGroup, middleLabelsGroup, innerGroup }, helpers: { calculateTextTransform, wrapText, getTextConstraints }, styles }); }
+    function stepBackward() { return stepMode.stepBackward({ getIsStepMode: () => isStepMode, updateAllRings, cellVisibility, focusPair, showCell, hideCell, getCurrentRotationFromDOM, groups: { outerGroup, middleLabelsGroup, innerGroup }, helpers: { calculateTextTransform, wrapText, getTextConstraints }, styles }); }
+    function resetToFull() { return stepMode.resetToFull({ setIsStepMode: (v)=>{isStepMode=v;}, cellVisibility, clearFocus: () => { focusedPair = null; }, resetZoom, setRotationDirectly, nestedData, originalNestedData, updateAllRings, showCoordinates: () => coordinateGroup.style("display", "block"), updateAxisPositions, rotateToSlice, cells }); }
+    function getCurrentStepInfo() { return stepMode.getCurrentStepInfo({ getIsStepMode: () => isStepMode }); }
 
     // Initialize - start in full mode
     resetToFull();
@@ -7815,6 +7726,7 @@ return (
       drawFlow,
       clearArrows,
       drawArrow,
+      drawLabelLinks: (connections) => arrows.drawLabelLinks(connections),
       getCellCentroid,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
@@ -8165,33 +8077,8 @@ return (
       function drawCustomArrows(customConnections) {
         viewof_chart.clearArrows();
         const connections = parseArrowConnections(customConnections, dialecticalData);
-
-        connections.forEach((conn, index) => {
-          // Calculate color (same logic as drawAllArrows)
-          let color = "#666";
-          if (conn.fromRing !== 'middle' || conn.toRing !== 'middle') {
-            if ((conn.fromRing === 'inner' && conn.toRing === 'inner') || 
-                (conn.fromRing === 'outer' && conn.toRing === 'outer')) {
-              color = "#16a34a"; // Green for same polarity
-            } else if ((conn.fromRing === 'inner' && conn.toRing === 'outer') || 
-                       (conn.fromRing === 'outer' && conn.toRing === 'inner')) {
-              color = "#dc2626"; // Red for opposite polarity
-            } else {
-              color = "#8b5cf6"; // Purple for mixed connections
-            }
-          } else {
-            const fromIsThesis = conn.from.startsWith('T');
-            const toIsThesis = conn.to.startsWith('T');
-            if (fromIsThesis === toIsThesis) {
-              color = "#2563eb"; // Blue for same type
-            } else {
-              color = "#dc2626"; // Red for opposition
-            }
-          }
-
-          const delay = index * 300;
-          viewof_chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, delay);
-        });
+        // Use the label-node renderer for consistency with main view
+        viewof_chart.drawLabelLinks(connections);
       }
 
       updateBtn.addEventListener('click', () => {
@@ -8715,10 +8602,10 @@ return (
         defs.append("marker")
           .attr("id", id)
           .attr("viewBox", "0 -5 10 10")
-          .attr("refX", 8)
+          .attr("refX", 6)
           .attr("refY", 0)
-          .attr("markerWidth", 6)
-          .attr("markerHeight", 6)
+          .attr("markerWidth", 3.5)
+          .attr("markerHeight", 3.5)
           .attr("orient", "auto")
           .append("path")
           .attr("d", "M0,-5L10,0L0,5")
@@ -8863,21 +8750,13 @@ return (
         const perpX = -dy2 / remainingDistance;
         const perpY = dx2 / remainingDistance;
 
-        // Base curvature scales with remaining distance
-        const baseCurvature = curvature != null ? curvature : Math.min(remainingDistance * 0.4, 80);
-
-        // Dampen curvature for short segments but never to zero
-        // Keep a small baseline at very short distances and ramp to full by 120px
-        const minDamp = 0.2; // ensure nonzero curvature
-        let dampFactor = 1;
-        if (remainingDistance <= 40) {
-          dampFactor = minDamp;
-        } else if (remainingDistance <= 120) {
-          const t = (remainingDistance - 40) / (120 - 40);
-          dampFactor = minDamp + (1 - minDamp) * t;
-        }
-
-        const effectiveCurvature = baseCurvature * dampFactor * 0.7;
+        // Simplified curvature: linear with distance, clamped by a cap.
+        // If a curvature override is passed, use it directly.
+        const CURVE_FACTOR = 0.3;
+        const CURVE_CAP = 120;
+        const effectiveCurvature = (curvature != null)
+          ? curvature
+          : Math.min(remainingDistance * CURVE_FACTOR, CURVE_CAP);
 
         const controlX = midX - perpX * effectiveCurvature;
         const controlY = midY - perpY * effectiveCurvature;
@@ -9804,8 +9683,10 @@ mermaid`graph TD
       CS --> N1`
 );
 }
-function _mermaid_graph_from_suits(suits,mermaid){
-const types = Array.from(new Set(suits.map(d => d.type)));
+function _mermaid_graph_from_suits(mermaid){
+return (
+(suits) => {
+      const types = Array.from(new Set(suits.map(d => d.type)));
       const nodes = Array.from(new Set(suits.flatMap(d => [d.source, d.target])));
 
       const scheme10 = [
@@ -9833,6 +9714,8 @@ const types = Array.from(new Set(suits.map(d => d.type)));
 
       const def = parts.join("\n");
       return mermaid`${def}`;
+    }
+);
 }
 
 function define(runtime, observer) {
@@ -9843,10 +9726,11 @@ function define(runtime, observer) {
   main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
 
   main.variable(observer()).define(["md"], _1);
+  main.variable(observer("makeRings")).define("makeRings", ["arcTween", "d3"], _makeRings);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", ["ringColors", "textColors"], _styles);
-  main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "d3"], _arrowControls);
+  main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "arrowUtilities", "d3"], _arrowControls);
   main.variable(observer()).define(["unFocus", "viewof chart"], _2);
   main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
@@ -9863,7 +9747,15 @@ function define(runtime, observer) {
   main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "d3", "selectedFont", "dialecticalData", "transformToNestedPieData", "getOppositePrefix", "getTextConstraints", "wrapText", "isThesisType", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "initializeBuildSteps"], _chart);
+  main.variable(observer("radii")).define("radii", ["styles"], _radii);
+  main.variable(observer("pie")).define("pie", ["d3"], _pie);
+  main.variable(observer("arcs")).define("arcs", ["d3", "radii", "styles"], _arcs);
+  main.variable(observer("colorScales")).define("colorScales", ["d3", "dialecticalData", "styles"], _colorScales);
+  main.variable(observer("arcTween")).define("arcTween", ["d3"], _arcTween);
+  main.variable(observer("makeTextTransform")).define("makeTextTransform", _makeTextTransform);
+  main.variable(observer("makeAxisModule")).define("makeAxisModule", ["d3"], _makeAxisModule);
+  main.variable(observer("makeStepMode")).define("makeStepMode", ["d3"], _makeStepMode);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "makeAxisModule", "getOppositePrefix", "colorScales", "getTextConstraints", "wrapText", "isThesisType", "arcTween", "makeRings", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "makeStepMode", "initializeBuildSteps"], _chart);
   main.define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html", "viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
@@ -9920,7 +9812,7 @@ function define(runtime, observer) {
   main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
   main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
   main.variable(observer("mermaid_graph")).define("mermaid_graph", ["mermaid"], _mermaid_graph);
-  main.variable(observer("mermaid_graph_from_suits")).define("mermaid_graph_from_suits", ["suits", "mermaid"], _mermaid_graph_from_suits);
+  main.variable(observer("mermaid_graph_from_suits")).define("mermaid_graph_from_suits", ["mermaid"], _mermaid_graph_from_suits);
 
   return main;
 }
