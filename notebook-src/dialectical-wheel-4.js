@@ -493,12 +493,12 @@ return (
 Inputs.toggle({label:"Show sequential flow"})
 );
 }
-function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,invalidation){
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,d3,invalidation){
 return (
 Generators.observe(notify => {
       const node = viewof_showFlow;
       const handler = () => {
-        if (node.value) viewof_chart.drawFlow(); else viewof_chart.clearArrows();
+        if (node.value) viewof_chart.drawFlow(); else d3.select(viewof_chart).selectAll('g.flow-arrows').remove();;
         notify(node.value);
       };
       node.addEventListener("input", handler);
@@ -780,8 +780,10 @@ return (
         arrowsGroup.selectAll("*").remove();
       }
       // Treat <text> labels as nodes and draw force-graph-style links between them
-      function drawLabelLinks(connections) {
-        arrowsGroup.selectAll("*").remove();
+      // options.klass: optional CSS class to tag this batch (e.g., 'flow-arrows')
+      function drawLabelLinks(connections, options = {}) {
+        const klass = options.klass || "";
+        //arrowsGroup.selectAll("*").remove();
 
         // Build node map keyed by unitId:ringType
         const nodeByKey = new Map();
@@ -875,7 +877,7 @@ return (
           const dxA = end.x - start.x, dyA = end.y - start.y;
           const distance = Math.hypot(dxA, dyA) || 1;
           // If very close, choose a better emission point and take a longer route
-          if (distance < 80) {
+          if (distance < 30) {
             // Re-anchor source on the outward side of the ellipse to avoid cramped starts
             if (d.source.hasEllipse) {
               const rlen = Math.hypot(d.source.x, d.source.y) || 1;
@@ -883,6 +885,17 @@ return (
               const towardX = d.source.x + outx * (d.source.ellipseRx + d.source.ellipseRy);
               const towardY = d.source.y + outy * (d.source.ellipseRx + d.source.ellipseRy);
               start = anchorOnEllipse(d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta, towardX, towardY, buffer);
+            }
+            // Re-anchor target outward as the entry point, then back off by arrowheadLen along the link direction
+            if (d.target.hasEllipse) {
+              const rlenT = Math.hypot(d.target.x, d.target.y) || 1;
+              const outxT = d.target.x / rlenT, outyT = d.target.y / rlenT;
+              const towardXT = d.target.x + outxT * (d.target.ellipseRx + d.target.ellipseRy);
+              const towardYT = d.target.y + outyT * (d.target.ellipseRx + d.target.ellipseRy);
+              const outPt = anchorOnEllipse(d.target.x, d.target.y, d.target.ellipseRx, d.target.ellipseRy, d.target.ellipseTheta, towardXT, towardYT, 0);
+              const vdx = outPt.x - start.x, vdy = outPt.y - start.y;
+              const vlen = Math.hypot(vdx, vdy) || 1;
+              end = { x: outPt.x - (vdx / vlen) * arrowheadLen, y: outPt.y - (vdy / vlen) * arrowheadLen };
             }
             // Quadratic curve with boosted curvature, bending outward from the wheel center
             const midX = (start.x + end.x) / 2;
@@ -892,7 +905,7 @@ return (
             // Ensure bend is outward (same direction as radial from center at midpoint)
             const dotOut = perpX * midX + perpY * midY;
             if (dotOut < 0) { perpX = -perpX; perpY = -perpY; }
-            const curve = Math.max(60, distance * 0.9);
+            const curve = Math.max(40, distance * 0.6);
             const cx = midX + perpX * curve;
             const cy = midY + perpY * curve;
             return `M${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`;
@@ -901,15 +914,57 @@ return (
           return `M${start.x},${start.y}A${dr},${dr} 0 0,1 ${end.x},${end.y}`;
         }
 
-        arrowsGroup.append("g").attr("class", "label-link-group")
-          .selectAll("path").data(links)
-          .join("path")
-          .attr("fill", "none")
-          .attr("stroke", d => d.color)
-          .attr("stroke-width", 1.25)
-          .attr("opacity", 0.85)
-          .attr("d", linkArc)
-          .attr("marker-end", d => `url(${new URL(`#${arrowUtilities.getArrowheadId(d.color)}`, location)})`);
+        const linkGroup = arrowsGroup.append("g").attr("class", `label-link-group${klass ? ` ${klass}` : ""}`);
+
+        // Draw links sequentially with a shooting animation
+        function drawNextLink(index) {
+          if (index >= links.length) return;
+          const d = links[index];
+          const pathData = linkArc(d);
+
+          const path = linkGroup.append("path")
+            .attr("fill", "none")
+            .attr("stroke", d.color)
+            .attr("stroke-width", 1.25)
+            .attr("opacity", 0.3)
+            .attr("stroke-dasharray", "3,3")
+            .attr("d", pathData);
+
+          const head = linkGroup.append("polygon")
+            .attr("points", "0,-1.5 4.5,0 0,1.5")
+            .attr("fill", d.color)
+            .attr("opacity", 0);
+
+          head.transition()
+            .duration(900)
+            .ease(d3.easeQuadInOut)
+            .attrTween("transform", function() {
+              const node = path.node();
+              const L = node.getTotalLength();
+              return function(t) {
+                const p = node.getPointAtLength(t * L);
+                const p2 = node.getPointAtLength(Math.min(L, t * L + 1));
+                const ang = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
+                return `translate(${p.x}, ${p.y}) rotate(${ang})`;
+              };
+            })
+            .attr("opacity", 1)
+            .on("start", function() {
+              path.transition().duration(200).attr("opacity", 0.7);
+            })
+            .on("end", function() {
+              head.remove();
+              path
+                .attr("marker-end", () => `url(${new URL(`#${arrowUtilities.getArrowheadId(d.color)}`, location)})`)
+                .attr("stroke-dasharray", "none")
+                .transition()
+                .duration(250)
+                .attr("opacity", 0.85);
+              drawNextLink(index + 1);
+            });
+        }
+
+        drawNextLink(0);
       }
 
       return { arrowsGroup, getCellCentroid, drawArrow, drawLabelLinks, clearArrows };
@@ -2480,9 +2535,9 @@ return (
       arrows.drawLabelLinks(connections);
     }
     function drawFlow() {
-      clearArrows();
+      //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-      arrows.drawLabelLinks(connections);
+      arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
     }
 
     // Step mode module wiring
@@ -4162,6 +4217,40 @@ function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fon
           .attr("paint-order", "stroke")
           .attr("transform", `rotate(0)`);
 
+      // Hover behavior: scale entire node and perturb simulation
+      const HOVER_SCALE = 1.5;
+      function effectiveRadius(n) { return n.radius * (n.scale || 1); }
+
+      node
+        .on("mouseenter", function(event, d) {
+          const start = d.scale || 1;
+          const end = HOVER_SCALE;
+          simulation.force("collide").radius(n => effectiveRadius(n));
+          simulation.alphaTarget(0.25).restart();
+          d3.select(this)
+            .transition()
+            .duration(180)
+            .ease(d3.easeCubicOut)
+            .tween("scale", () => {
+              const i = d3.interpolateNumber(start, end);
+              return t => { d.scale = i(t); };
+            });
+        })
+        .on("mouseleave", function(event, d) {
+          const start = d.scale || 1;
+          const end = 1;
+          simulation.force("collide").radius(n => effectiveRadius(n));
+          d3.select(this)
+            .transition()
+            .duration(180)
+            .ease(d3.easeCubicOut)
+            .tween("scale", () => {
+              const i = d3.interpolateNumber(start, end);
+              return t => { d.scale = i(t); };
+            })
+            .on("end", () => { if (!event.active) simulation.alphaTarget(0); });
+        });
+
       // Calculate node dimensions after text wrapping
       node.each(function(d) {
         const textElement = d3.select(this.querySelector('text'));
@@ -4185,7 +4274,7 @@ function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fon
       // Add collision detection after dimensions are calculated
       simulation
         .force("collide", d3.forceCollide()
-          .radius(d => d.radius)
+          .radius(d => effectiveRadius(d))
           .strength(1.0)
           .iterations(3))
         .force("charge", d3.forceManyBody().strength(-2000))
@@ -4202,8 +4291,8 @@ function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fon
 
         // Use collision radius directly for both source and target
         const buffer = 5; // Small buffer so arrows don't touch the collision boundary
-        const sourceEdgeDistance = d.source.radius*4 + buffer;
-        const targetEdgeDistance = d.target.radius*4 + buffer;
+        const sourceEdgeDistance = effectiveRadius(d.source)*4 + buffer;
+        const targetEdgeDistance = effectiveRadius(d.target)*4 + buffer;
 
         const startX = d.source.x + (dx / distance) * sourceEdgeDistance;
         const startY = d.source.y + (dy / distance) * sourceEdgeDistance;
@@ -4218,7 +4307,7 @@ function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fon
 
       simulation.on("tick", () => {
         link.attr("d", linkArc);
-        node.attr("transform", d => `translate(${d.x},${d.y})`);
+        node.attr("transform", d => `translate(${d.x},${d.y}) scale(${d.scale || 1})`);
       });
 
       invalidation.then(() => simulation.stop());
@@ -4577,7 +4666,7 @@ export default function define(runtime, observer) {
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
   main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
   main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
-  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "invalidation"], _showFlowSubscription);
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
   main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside"], _ringColors);
