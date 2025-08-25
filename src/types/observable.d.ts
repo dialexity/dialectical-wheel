@@ -20,3 +20,7 @@ declare module '@dialexity/dialectical-wheel' {
   };
   export default defineModule;
 } 
+
+declare module '@observablehq/inputs' {
+  export function toggle(config?: any): HTMLElement;
+}
