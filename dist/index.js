@@ -6923,6 +6923,8 @@ return (
     let isTouchDragging = false;
     let touchDragStart = null;
     const TOUCH_DRAG_THRESHOLD = 8;
+    let isRotating = false;
+    let rotationPromise = null;
 
     styles.height;
     const { outerRadius, innerRadius, middleRadius, innerInnerRadius, centerRadius } = radii;
@@ -7083,17 +7085,31 @@ return (
         .duration(duration)
         .ease(d3.easeCubicInOut);
 
-      rotationTransition.tween("rotate", function() {
-        return function(t) {
-          const currentRotation = startRotation + rotationDelta * t;
-          const degrees = (currentRotation * 180) / Math.PI;
-          rotationGroup.attr("transform", `rotate(${degrees})`);
-          // Update text positions during transition
-          updateTextPositions(degrees);
-        };
-      }).on("end", function(){
-        updateChartValue();
+      isRotating = true;
+
+      rotationPromise = new Promise((resolve) => {
+        rotationTransition
+          .tween("rotate", function() {
+            return function(t) {
+              const currentRotation = startRotation + rotationDelta * t;
+              const degrees = (currentRotation * 180) / Math.PI;
+              rotationGroup.attr("transform", `rotate(${degrees})`);
+              // Update text positions during transition
+              updateTextPositions(degrees);
+            };
+          })
+          .on("end", function(){
+            isRotating = false;
+            updateChartValue();
+            resolve();
+          })
+          .on("interrupt", function(){
+            isRotating = false;
+            resolve();
+          });
       });
+
+      return rotationPromise;
     }
 
     // Create groups for each ring (in content group)
@@ -7369,7 +7385,10 @@ return (
     }
 
     // Focus pair function
-    function focusPair(clickedUnitId) {
+    async function focusPair(clickedUnitId) {
+      if (isRotating && rotationPromise) {
+        try { await rotationPromise; } catch (e) {}
+      }
       // Choose which data to modify
       const dataToModify = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
