@@ -62,3 +62,4 @@ export interface DialecticalWheelProps {
   onClickedCellChange?: (clickedCellObject: any) => void;
   debug?: boolean;
 }
+
