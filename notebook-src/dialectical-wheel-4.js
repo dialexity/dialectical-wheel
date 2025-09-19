@@ -512,18 +512,37 @@ return (
 Inputs.toggle({label: "Swap red and white layer"})
 );
 }
-function _ringColors(isWhiteOutside){
+function _userRingColors(){
 return (
-isWhiteOutside
-      ? { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" }
-      : { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" }
+{
+      outer: "#ffffff",    // Outer ring background color
+      middle: "#F9C6CC",   // Middle ring background color  
+      inner: "#C6E5B3"     // Inner ring background color
+    }
 );
 }
-function _textColors(isWhiteOutside){
+function _userTextColors(){
+return (
+{
+      outer: "#333",       // Outer ring text color
+      middle: "#8b1538",   // Middle ring text color
+      inner: "#2d5a2d",    // Inner ring text color
+      coordinates: "#333"  // Coordinate text color
+    }
+);
+}
+function _ringColors(isWhiteOutside,userRingColors){
 return (
 isWhiteOutside
-      ? { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" }
-      : { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" }
+      ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
+      : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+);
+}
+function _textColors(isWhiteOutside,userTextColors){
+return (
+isWhiteOutside
+      ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
 );
 }
 function _whitesOnly(Inputs){
@@ -1086,7 +1105,15 @@ return (
         const axisAngles = [axisAngle, axisAngle + Math.PI];
         const ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
         const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+
+        // Check if opposite unit exists in current data
+        const oppositeUnitId = getOppositePrefix(focusedUnitId);
+        const oppositeExists = dataToUse.middle.some(d => d.unitId === oppositeUnitId);
+
         axisAngles.forEach((angle, sideIndex) => {
+          // Skip the opposite side if it doesn't exist in the current data
+          if (sideIndex === 1 && !oppositeExists) return;
+
           ringRadii.forEach((radius, ringIndex) => {
             const angleOffset = 8 / radius;
             const rotatedAngle = angle + angleOffset;
@@ -3166,8 +3193,12 @@ return (
 (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
+
+          // Filter units based on tOnly condition
+          const filteredUnits = tOnly ? units.filter(unit => unit.charAt(0) === 'T') : units;
+
           return {
-            invisible: units.map((unit,index)=> ({
+            invisible: filteredUnits.map((unit,index)=> ({
               name: `${unit}i`,
               unitId: unit,
               value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
@@ -3176,29 +3207,29 @@ return (
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: units.map(unit => ({
+            [outerKey]: filteredUnits.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].negative,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: units.map(unit => ({
+            [middleKey]: filteredUnits.map(unit => ({
               name: unit,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
+              value: 1,
+              opacity: 1,
               fullText: dialecticalData[unit].statement,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: units.map(unit => ({
+            inner: filteredUnits.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].positive,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -4684,8 +4715,10 @@ export default function define(runtime, observer) {
   main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
-  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside"], _ringColors);
-  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside"], _textColors);
+  main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
+  main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
+  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
+  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside", "userTextColors"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
   main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
