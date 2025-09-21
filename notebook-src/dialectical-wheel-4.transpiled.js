@@ -1,66 +1,12 @@
-mermaid_graph = mermaid`graph TD
-      W["wisdomUnits"] --> T["transformWisdomUnitsToDialecticalData"]
-      C["componentOrder"] --> T
-      T --> D["dialecticalData (Object)"]
-      D --> FC["flowConnections"]
-      D --> CC["contraConnections"]
-      FC --> P["parseArrowConnectionsAsSourceTarget"]
-      CC --> P
-      D --> P
-      P --> FS["flowSuits"]
-      P --> CS["contraSuits"]
-      FS --> G["graph"]
-      CS --> G
-      FZ["fontsize" ] --> G
-      SF["selectedFont" ] --> G
-      STY["styles" ] --> G
-      D3["d3/drag" ] --> G
+import define1 from "https://api.observablehq.com/@d3/color-legend.js?v=3"; 
 
-      classDef note fill:#fff,stroke:#999,color:#333;
-      N1["nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order"]:::note
-      FS --> N1
-      CS --> N1`
-
-// @ts-nocheck
-    /* eslint-disable */
-    mermaid_graph_from_suits = (suits) => {
-      const types = Array.from(new Set(suits.map(d => d.type)));
-      const nodes = Array.from(new Set(suits.flatMap(d => [d.source, d.target])));
-
-      const scheme10 = [
-        "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
-        "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
-      ];
-      const colorForType = (type) => scheme10[types.indexOf(type) % scheme10.length];
-
-      const parts = [];
-      parts.push("graph TD");
-      nodes.forEach(id => {
-        const safeId = String(id).replace(/[^A-Za-z0-9_]/g, "_");
-        parts.push(`${safeId}["${id}"]`);
-      });
-
-      // Edges with labels and per-link styling via linkStyle index
-      suits.forEach((d, i) => {
-        const s = String(d.source).replace(/[^A-Za-z0-9_]/g, "_");
-        const t = String(d.target).replace(/[^A-Za-z0-9_]/g, "_");
-        const label = d.type ? `|${d.type}|` : "";
-        parts.push(`${s} -->${label} ${t}`);
-        const color = colorForType(d.type || "default");
-        parts.push(`linkStyle ${i} stroke:${color},stroke-width:2px,opacity:0.85`);
-      });
-
-      const def = parts.join("\n");
-      return mermaid`${def}`;
-    }
-
-const _1 = (md) => {
+function _1(md){
 return (
 md`# Dialectical Wheel with Arrows`
-)
-};
-
-const _makeRings = function makeRings(arcTween,d3){return(
+);
+}
+function _makeRings(arcTween,d3){
+return (
 ({
       groups,
       labels,
@@ -208,17 +154,20 @@ const _makeRings = function makeRings(arcTween,d3){return(
 
       return { updateAllRings, updateRing, changeData };
     }
-)};
-
-const _dialecticalData = function dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){return(
+);
+}
+function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){
+return (
 transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
-)};
-
-const _width = function width(){return(
+);
+}
+function _width(){
+return (
 500
-)};
-
-const _styles = function styles(ringColors,textColors){return(
+);
+}
+function _styles(ringColors,textColors){
+return (
 {
         // Dimensions
         width: 500,
@@ -268,9 +217,10 @@ const _styles = function styles(ringColors,textColors){return(
           stepRotation: 600
         }
       }
-)};
-
-const _arrowControls = function arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,viewof$chart,isThesisType,arrowUtilities,d3){return(
+);
+}
+function _arrowControls(html,parseArrowConnections,arrowConnections,dialecticalData,viewof_chart,isThesisType,arrowUtilities,d3){
+return (
 (() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">Arrow Connections</div>
@@ -344,7 +294,7 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
       }
 
       function drawArrowsUpToStep(step) {
-        viewof$chart.clearArrows();
+        viewof_chart.clearArrows();
         if (step <= 0) return;
 
         for (let i = 0; i < Math.min(step, parsedArrowConnections.length); i++) {
@@ -409,12 +359,12 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
         }
 
         // Draw this arrow with animation
-        viewof$chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
+        viewof_chart.drawArrow(conn.from, conn.to, color, 2, conn.fromRing, conn.toRing, 0);
       }
 
       function drawStaticArrow(from, to, color = "#666", strokeWidth = 2, fromRing = 'middle', toRing = 'middle') {
-        const fromPos = viewof$chart.getCellCentroid(from, fromRing);
-        const toPos = viewof$chart.getCellCentroid(to, toRing);
+        const fromPos = viewof_chart.getCellCentroid(from, fromRing);
+        const toPos = viewof_chart.getCellCentroid(to, toRing);
 
         if (!fromPos || !toPos) return;
 
@@ -437,7 +387,7 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
         const path = arrowPath.path;
 
         // Get the arrows group from the chart
-        const svg = d3.select(viewof$chart);
+        const svg = d3.select(viewof_chart);
         const arrowsGroup = svg.select('.arrows-group');
 
         // Draw static arrow (no animation)
@@ -453,14 +403,14 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
       // Basic arrow controls
       toggleBtn.addEventListener('click', () => {
         if (arrowsVisible) {
-          viewof$chart.clearArrows();
+          viewof_chart.clearArrows();
           toggleBtn.textContent = 'Show Arrows';
           arrowsVisible = false;
         } else {
           if (arrowStepMode) {
             drawArrowsUpToStep(currentArrowStep);
           } else {
-            viewof$chart.drawAllArrows();
+            viewof_chart.drawAllArrows();
           }
           toggleBtn.textContent = 'Hide Arrows';
           arrowsVisible = true;
@@ -472,7 +422,7 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
           if (arrowStepMode) {
             drawArrowsUpToStep(currentArrowStep);
           } else {
-            viewof$chart.drawAllArrows();
+            viewof_chart.drawAllArrows();
           }
         }
       });
@@ -483,7 +433,7 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
         arrowStepMode = true;
         currentArrowStep = 0;
         if (arrowsVisible) {
-          viewof$chart.clearArrows();
+          viewof_chart.clearArrows();
         }
         updateArrowStepUI();
       });
@@ -513,7 +463,7 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
         arrowStepMode = false;
         currentArrowStep = 0;
         if (arrowsVisible) {
-          viewof$chart.drawAllArrows();
+          viewof_chart.drawAllArrows();
         }
         updateArrowStepUI();
       });
@@ -526,82 +476,92 @@ const _arrowControls = function arrowControls(html,parseArrowConnections,arrowCo
       container.value = "arrow-controls";
       return container;
     })()
-)};
-
-const _2 = function(unFocus,viewof$chart)
-{
-      if(unFocus){
-        viewof$chart.unfocus();
+);
+}
+function _2(unFocus,viewof_chart){
+if(unFocus){
+        viewof_chart.unfocus();
       }
-    };
-
-const _viewof$unFocus = function viewof$unFocus(Inputs){return(
+}
+function _unFocus(Inputs){
+return (
 Inputs.toggle({label:"Unfocus"})
-)};
-
-const _viewof$showFlow = function viewof$showFlow(Inputs){return(
+);
+}
+function _showFlow(Inputs){
+return (
 Inputs.toggle({label:"Show sequential flow"})
-)};
-
-const _showFlowSubscription = function showFlowSubscription(Generators,viewof$showFlow,viewof$chart,d3,invalidation){return(
+);
+}
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,d3,invalidation){
+return (
 Generators.observe(notify => {
-      const node = viewof$showFlow;
+      const node = viewof_showFlow;
       const handler = () => {
-        if (node.value) viewof$chart.drawFlow(); else d3.select(viewof$chart).selectAll('g.flow-arrows').remove();;
+        if (node.value) viewof_chart.drawFlow(); else d3.select(viewof_chart).selectAll('g.flow-arrows').remove();;
         notify(node.value);
       };
       node.addEventListener("input", handler);
       invalidation.then(() => node.removeEventListener("input", handler));
       handler();
     })
-)};
-
-const _viewof$isWhiteOutside = function viewof$isWhiteOutside(Inputs){return(
+);
+}
+function _isWhiteOutside(Inputs){
+return (
 Inputs.toggle({label: "Swap red and white layer"})
-)};
-
-const _userRingColors = function userRingColors(){return(
+);
+}
+function _userRingColors(){
+return (
 {
       outer: "#ffffff",    // Outer ring background color
       middle: "#F9C6CC",   // Middle ring background color  
       inner: "#C6E5B3"     // Inner ring background color
     }
-)};
-
-const _userTextColors = function userTextColors(){return(
+);
+}
+function _userTextColors(){
+return (
 {
       outer: "#333",       // Outer ring text color
       middle: "#8b1538",   // Middle ring text color
       inner: "#2d5a2d",    // Inner ring text color
       coordinates: "#333"  // Coordinate text color
     }
-)};
-
-const _ringColors = function ringColors(isWhiteOutside,userRingColors){return(
+);
+}
+function _ringColors(isWhiteOutside,userRingColors){
+return (
 isWhiteOutside
       ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
       : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
-)};
-
-const _textColors = function textColors(isWhiteOutside,userTextColors){return(
+);
+}
+function _textColors(isWhiteOutside,userTextColors){
+return (
 isWhiteOutside
       ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
       : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
-)};
-
-const _viewof$whitesOnly = function viewof$whitesOnly(Inputs){return(
+);
+}
+function _whitesOnly(Inputs){
+return (
 Inputs.toggle({label: "White cells only"})
-)};
-
-const _viewof$TsOnly = function viewof$TsOnly(Inputs){return(
+);
+}
+function _TsOnly(Inputs){
+return (
 Inputs.toggle({label: "Ts only"})
-)};
-
-const _3 = function(DOM,serialize,viewof$chart){return(
-DOM.download(() => serialize(viewof$chart), undefined, "Save as SVG")
-)};
-
-const _makeArrowsModule = function makeArrowsModule(d3,location){return(
+);
+}
+function _3(DOM,serialize,viewof_chart){
+return (
+DOM.download(() => serialize(viewof_chart), undefined, "Save as SVG")
+);
+}
+function _makeArrowsModule(d3,location){
+return (
 ({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
       const arrowsGroup = contentGroup.append("g")
         .attr("class", "arrows-group")
@@ -1028,9 +988,10 @@ const _makeArrowsModule = function makeArrowsModule(d3,location){return(
 
       return { arrowsGroup, getCellCentroid, drawArrow, drawLabelLinks, clearArrows };
     }
-)};
-
-const _radii = function radii(styles){return(
+);
+}
+function _radii(styles){
+return (
 {
       outerRadius: styles.radii.outer,
       innerRadius: styles.radii.middleOuter,
@@ -1038,22 +999,25 @@ const _radii = function radii(styles){return(
       innerInnerRadius: styles.radii.middleInner,
       centerRadius: styles.radii.inner
     }
-)};
-
-const _pie = function pie(d3){return(
+);
+}
+function _pie(d3){
+return (
 d3.pie().value(d => d.value).sort(null)
-)};
-
-const _arcs = function arcs(d3,radii,styles){return(
+);
+}
+function _arcs(d3,radii,styles){
+return (
 {
       invisibleArc: d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible),
       outerArc: d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius),
       middleArc: d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius),
       innerArc: d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius)
     }
-)};
-
-const _colorScales = function colorScales(d3,dialecticalData,styles){return(
+);
+}
+function _colorScales(d3,dialecticalData,styles){
+return (
 {
       invisibleColor: d3.scaleOrdinal()
         .domain(Object.keys(dialecticalData))
@@ -1068,9 +1032,10 @@ const _colorScales = function colorScales(d3,dialecticalData,styles){return(
         .domain(Object.keys(dialecticalData))
         .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner))
     }
-)};
-
-const _arcTween = function arcTween(d3){return(
+);
+}
+function _arcTween(d3){
+return (
 (arcGenerator) => function(a) {
       const i = d3.interpolate(this._current, a);
       this._current = i(0);
@@ -1078,9 +1043,10 @@ const _arcTween = function arcTween(d3){return(
         return arcGenerator(i(t));
       };
     }
-)};
-
-const _makeTextTransform = function makeTextTransform(){return(
+);
+}
+function _makeTextTransform(){
+return (
 (getCurrentRotationFn) => {
       return function(d, arcGenerator, currentRotationRadians = null) {
         const centroid = arcGenerator.centroid(d);
@@ -1095,9 +1061,10 @@ const _makeTextTransform = function makeTextTransform(){return(
         return `translate(${centroid[0]}, ${centroid[1]}) rotate(${textRotationDegrees})`;
       }
     }
-)};
-
-const _makeAxisModule = function makeAxisModule(d3){return(
+);
+}
+function _makeAxisModule(d3){
+return (
 ({ coordinateGroup, defs, pie, radii, styles, getDataToUse, getOppositePrefix, dialecticalData }) => {
       function updateCoordinateNumbersOpacities() {
         const units = Object.keys(dialecticalData);
@@ -1217,9 +1184,10 @@ const _makeAxisModule = function makeAxisModule(d3){return(
       }
       return { updateCoordinateNumbersOpacities, updateAxisPositions };
     }
-)};
-
-const _makeStepMode = function makeStepMode(d3){return(
+);
+}
+function _makeStepMode(d3){
+return (
 ({
       dialecticalData,
       transformToNestedPieData,
@@ -1368,7 +1336,7 @@ const _makeStepMode = function makeStepMode(d3){return(
         ctx.updateAllRings();
         ctx.showCoordinates();
         ctx.updateAxisPositions(ctx.cells[0]);
-        ctx.rotateToSlice(ctx.cells[0]);
+        ctx.rotateToSlice(ctx.cells[0],undefined,true);
       }
       function getCurrentStepInfo(ctx) {
         if (!ctx.getIsStepMode()) return null;
@@ -1390,9 +1358,10 @@ const _makeStepMode = function makeStepMode(d3){return(
         getCurrentStepInfo
       };
     }
-)};
-
-const _viewof$chart = function viewof$chart(styles,radii,d3,selectedFont,dialecticalData,arcs,makeTextTransform,pie,transformToNestedPieData,makeAxisModule,getOppositePrefix,colorScales,getTextConstraints,wrapText,isThesisType,arcTween,makeRings,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,makeStepMode,initializeBuildSteps){return(
+);
+}
+function _chart(styles,radii,d3,selectedFont,dialecticalData,arcs,makeTextTransform,pie,transformToNestedPieData,makeAxisModule,getOppositePrefix,colorScales,getTextConstraints,wrapText,isThesisType,arcTween,makeRings,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,flowConnections,makeStepMode,initializeBuildSteps){
+return (
 (() => {
 
     let isTouchDragging = false;
@@ -1550,7 +1519,7 @@ const _viewof$chart = function viewof$chart(styles,radii,d3,selectedFont,dialect
     const calculateTextTransform = makeTextTransform(getCurrentRotationFromDOM);
 
     // Reusable function to rotate wheel to center a slice at the top
-    function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
+    function rotateToSlice(unitId, duration = styles.durations.stepRotation, skipAnimation = false) {
       // Choose which data to use based on current mode
       const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
@@ -1575,6 +1544,15 @@ const _viewof$chart = function viewof$chart(styles,radii,d3,selectedFont,dialect
       // Normalize rotation delta to always take the shortest path (-π to π)
       while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
       while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
+
+      // If skipAnimation is true, set rotation immediately without transition
+      if (skipAnimation) {
+        const degrees = (newRotation * 180) / Math.PI;
+        rotationGroup.attr("transform", `rotate(${degrees})`);
+        updateTextPositions(degrees);
+        updateChartValue();
+        return Promise.resolve();
+      }
 
       // Use D3 transition for smooth rotation
       const rotationTransition = d3.transition()
@@ -2656,7 +2634,7 @@ const _viewof$chart = function viewof$chart(styles,radii,d3,selectedFont,dialect
 
     // Initialize - start in full mode
     resetToFull();
-    rotateToSlice(cells[0]);
+    rotateToSlice(cells[0],undefined,true);
     updateAxisPositions(cells[0]);
 
     // Draw initial arrows
@@ -2701,9 +2679,10 @@ const _viewof$chart = function viewof$chart(styles,radii,d3,selectedFont,dialect
       }
     });
     })()
-)};
-
-const _stepControls = function stepControls(html,viewof$chart){return(
+);
+}
+function _stepControls(html,viewof_chart){
+return (
 (() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;">
@@ -2732,7 +2711,7 @@ const _stepControls = function stepControls(html,viewof$chart){return(
       const rotationResetBtn = container.querySelector('#rotation-reset');
 
       function updateUI() {
-        const stepInfo = viewof$chart.getCurrentStepInfo();
+        const stepInfo = viewof_chart.getCurrentStepInfo();
 
         if (stepInfo) {
           // In step mode
@@ -2752,7 +2731,7 @@ const _stepControls = function stepControls(html,viewof$chart){return(
       }
 
       startBtn.addEventListener('click', () => {
-        viewof$chart.startStepMode();
+        viewof_chart.startStepMode();
         updateUI();
       });
 
@@ -2762,12 +2741,12 @@ const _stepControls = function stepControls(html,viewof$chart){return(
       // }); // Hidden - commenting out
 
       nextBtn.addEventListener('click', () => {
-        viewof$chart.stepForward();
+        viewof_chart.stepForward();
         updateUI();
       });
 
       resetBtn.addEventListener('click', () => {
-        viewof$chart.resetToFull();
+        viewof_chart.resetToFull();
         updateUI();
       });
 
@@ -2775,13 +2754,13 @@ const _stepControls = function stepControls(html,viewof$chart){return(
       rotationSlider.addEventListener('input', (e) => {
         const degrees = parseInt(e.target.value);
         const radians = (degrees * Math.PI) / 180;
-        viewof$chart.rotate(radians);
+        viewof_chart.rotate(radians);
         rotationValue.textContent = `${degrees}°`;
       });
 
       rotationResetBtn.addEventListener('click', () => {
         rotationSlider.value = 0;
-        viewof$chart.rotate(0);
+        viewof_chart.rotate(0);
         rotationValue.textContent = '0°';
       });
 
@@ -2792,38 +2771,39 @@ const _stepControls = function stepControls(html,viewof$chart){return(
       container.value = "step-controls";
       return container;
     })()
-)};
+);
+}
+function _focusedSlice(chart){
+//console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
 
-const _focusedSlice = function focusedSlice(chart)
-{ 
-      //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
-
-      return chart.clickedSlice; };
-
-const _4 = function(chart){return(
+      return chart.clickedSlice;
+}
+function _4(chart){
+return (
 chart.focusedPair
-)};
-
-const _viewof$sliceNumber = function viewof$sliceNumber(Inputs,viewof$chart){return(
-Inputs.range([0,viewof$chart.cells.length-1],{value:0,step:1,label:"slice number"})
-)};
-
-const _5 = function(viewof$chart,sliceNumber){return(
-viewof$chart.focusPair(viewof$chart.cells[sliceNumber])
-)};
-
-const _clickedCellObject = function clickedCellObject(chart){return(
+);
+}
+function _sliceNumber(Inputs,viewof_chart){
+return (
+Inputs.range([0,viewof_chart.cells.length-1],{value:0,step:1,label:"slice number"})
+);
+}
+function _5(viewof_chart,sliceNumber){
+return (
+viewof_chart.focusPair(viewof_chart.cells[sliceNumber])
+);
+}
+function _clickedCellObject(chart){
+return (
 chart.clickedCell
-)};
-
-const _clickedCellText = function clickedCellText(chart)
-{
-      if(chart.clickedCell) return chart.clickedCell.fullText;
+);
+}
+function _clickedCellText(chart){
+if(chart.clickedCell) return chart.clickedCell.fullText;
       return null;
-    };
-
-const _topSlice = function topSlice(chart,dialecticalData)
-{// Get current rotation
+}
+function _topSlice(chart,dialecticalData){
+// Get current rotation
         const currentRotation = chart.currentRotation;
         //console.log(`topSlice current rotation at ntbk level: ${currentRotation}`)
 
@@ -2843,9 +2823,10 @@ const _topSlice = function topSlice(chart,dialecticalData)
         // Find which slice this angle falls into
         const sliceIndex = Math.floor(normalizedAngle / angleStep);
         const topUnitId = units[sliceIndex];
-        return topUnitId};
-
-const _topSliceTracker = function topSliceTracker(html,chart,dialecticalData){return(
+        return topUnitId
+}
+function _topSliceTracker(html,chart,dialecticalData){
+return (
 (() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">Top Slice Tracker</div>
@@ -2954,9 +2935,10 @@ const _topSliceTracker = function topSliceTracker(html,chart,dialecticalData){re
 
       return container;
     })()
-)};
-
-const _parseArrowConnections = function parseArrowConnections(){return(
+);
+}
+function _parseArrowConnections(){
+return (
 (dotScript, dialecticalData) => {
       const connections = [];
       const lines = dotScript.split('\n');
@@ -3003,9 +2985,10 @@ const _parseArrowConnections = function parseArrowConnections(){return(
 
       return connections;
     }
-)};
-
-const _dotScriptEditor = function dotScriptEditor(html,dialecticalData,arrowConnections,viewof$chart,parseArrowConnections){return(
+);
+}
+function _dotScriptEditor(html,dialecticalData,arrowConnections,viewof_chart,parseArrowConnections){
+return (
 (() => {
       const container = html`<div style="display: flex; flex-direction: column; align-items: center; margin: 20px 0;">
         <div style="margin-bottom: 10px; font-weight: bold;">DOT Script Editor</div>
@@ -3033,10 +3016,10 @@ const _dotScriptEditor = function dotScriptEditor(html,dialecticalData,arrowConn
 
       // Function to draw arrows from custom connections
       function drawCustomArrows(customConnections) {
-        viewof$chart.clearArrows();
+        viewof_chart.clearArrows();
         const connections = parseArrowConnections(customConnections, dialecticalData);
         // Use the label-node renderer for consistency with main view
-        viewof$chart.drawLabelLinks(connections);
+        viewof_chart.drawLabelLinks(connections);
       }
 
       updateBtn.addEventListener('click', () => {
@@ -3053,9 +3036,10 @@ const _dotScriptEditor = function dotScriptEditor(html,dialecticalData,arrowConn
       container.value = "dot-script-editor";
       return container;
     })()
-)};
-
-const _arrowConnections = function arrowConnections(dialecticalData){return(
+);
+}
+function _arrowConnections(dialecticalData){
+return (
 (() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
@@ -3080,9 +3064,10 @@ const _arrowConnections = function arrowConnections(dialecticalData){return(
 
       return connections.join('\n');
     })()
-)};
-
-const _flowConnections = function flowConnections(dialecticalData){return(
+);
+}
+function _flowConnections(dialecticalData){
+return (
 (() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
@@ -3096,9 +3081,10 @@ const _flowConnections = function flowConnections(dialecticalData){return(
 
       return connections.join('\n');
     })()
-)};
-
-const _contraConnections = function contraConnections(dialecticalData){return(
+);
+}
+function _contraConnections(dialecticalData){
+return (
 (() => {
       const units = Object.keys(dialecticalData);
       let connections = [];
@@ -3112,9 +3098,10 @@ const _contraConnections = function contraConnections(dialecticalData){return(
 
       return connections.join('\n');
     })()
-)};
-
-const _parseArrowConnectionsAsSourceTarget = function parseArrowConnectionsAsSourceTarget(){return(
+);
+}
+function _parseArrowConnectionsAsSourceTarget(){
+return (
 (dotScript, dialecticalData) => {
       const connections = [];
       const lines = dotScript.split('\n');
@@ -3203,13 +3190,15 @@ const _parseArrowConnectionsAsSourceTarget = function parseArrowConnectionsAsSou
 
       return connections;
     }
-)};
-
-const _6 = function(){return(
+);
+}
+function _6(){
+return (
 null
-)};
-
-const _transformToNestedPieData = function transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){return(
+);
+}
+function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
+return (
 (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
@@ -3257,9 +3246,10 @@ const _transformToNestedPieData = function transformToNestedPieData(isWhiteOutsi
           }
 
         }
-)};
-
-const _wrapText = function wrapText(styles,tryWrapWithLineBreaks,truncateWithEllipses){return(
+);
+}
+function _wrapText(styles,tryWrapWithLineBreaks,truncateWithEllipses){
+return (
 (textElement, text, constraints) => {
       const { midWidth, maxHeight, ringType, arcData } = constraints;
       // New: also get angle, innerRadius, outerRadius
@@ -3310,9 +3300,10 @@ const _wrapText = function wrapText(styles,tryWrapWithLineBreaks,truncateWithEll
       const maxWidth = angle * ((innerRadius + outerRadius) / 2) * 0.85;
       return truncateWithEllipses(textElement, text, maxWidth, maxHeight, false);
     }
-)};
-
-const _tryWrapWithLineBreaks = function tryWrapWithLineBreaks(){return(
+);
+}
+function _tryWrapWithLineBreaks(){
+return (
 (textElement, text, maxHeight, angle, innerRadius, outerRadius) => {
       const fontSize = parseFloat(textElement.style("font-size"));
       const lineHeight = fontSize * 1.2;
@@ -3405,9 +3396,10 @@ const _tryWrapWithLineBreaks = function tryWrapWithLineBreaks(){return(
 
       return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
     }
-)};
-
-const _truncateWithEllipses = function truncateWithEllipses(){return(
+);
+}
+function _truncateWithEllipses(){
+return (
 (textElement, text, maxWidth, maxHeight, isNarrowCell) => {
       const fontSize = parseFloat(textElement.style("font-size"));
       const lineHeight = fontSize * 1.2;
@@ -3492,9 +3484,10 @@ const _truncateWithEllipses = function truncateWithEllipses(){return(
 
       return { success: true, lines: lines.length, truncated: lines.some(line => line.includes("...")), totalHeight: totalHeight };
     }
-)};
-
-const _getTextConstraints = function getTextConstraints(styles){return(
+);
+}
+function _getTextConstraints(styles){
+return (
 (ringType, arcData) => {
       const angle = arcData.endAngle - arcData.startAngle;
 
@@ -3539,9 +3532,10 @@ const _getTextConstraints = function getTextConstraints(styles){return(
         arcLength: arcLength
       };
     }
-)};
-
-const _arrowUtilities = function arrowUtilities(isThesisType){return(
+);
+}
+function _arrowUtilities(isThesisType){
+return (
 (() => {
       // Quadratic curve point calculation
       function getPointAlongQuadraticCurve(start, control, end, t) {
@@ -3730,13 +3724,15 @@ const _arrowUtilities = function arrowUtilities(isThesisType){return(
         calculateArrowPath
       };
     })()
-)};
-
-const _getPointAlongQuadraticCurve = function getPointAlongQuadraticCurve(arrowUtilities){return(
+);
+}
+function _getPointAlongQuadraticCurve(arrowUtilities){
+return (
 arrowUtilities.getPointAlongQuadraticCurve
-)};
-
-const _initializeBuildSteps = function initializeBuildSteps(getOppositePrefix,isThesisType){return(
+);
+}
+function _initializeBuildSteps(getOppositePrefix,isThesisType){
+return (
 (dialecticalData) => {
       const buildSteps = [];
 
@@ -3807,9 +3803,10 @@ const _initializeBuildSteps = function initializeBuildSteps(getOppositePrefix,is
 
       return buildSteps;
     }
-)};
-
-const _longPressUtilities = function longPressUtilities(d3){return(
+);
+}
+function _longPressUtilities(d3){
+return (
 (() => {
       // Long press configuration
       const LONG_PRESS_DURATION = 500; // 500ms for long press
@@ -3949,9 +3946,10 @@ const _longPressUtilities = function longPressUtilities(d3){return(
         LONG_PRESS_MOVE_THRESHOLD
       };
     })()
-)};
-
-const _viewof$selectedFont = function viewof$selectedFont(Inputs){return(
+);
+}
+function _selectedFont(Inputs){
+return (
 Inputs.select(
       [
         "Source Serif Pro",
@@ -3975,13 +3973,15 @@ Inputs.select(
         value: "Arial"
       }
     )
-)};
-
-const _parseFont = function parseFont(selectedFont){return(
+);
+}
+function _parseFont(selectedFont){
+return (
 selectedFont.split(" ").join("+")
-)};
-
-const _style = function style(html,parseFont,selectedFont){return(
+);
+}
+function _style(html,parseFont,selectedFont){
+return (
 html`
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap">
 
@@ -3992,15 +3992,15 @@ html`
      }
     </style>
     `
-)};
-
-const _fontCDN = function fontCDN(parseFont){return(
+);
+}
+function _fontCDN(parseFont){
+return (
 `https://fonts.googleapis.com/css2?family=${parseFont}:ital@0;1&display=swap`
-)};
-
-const _serialize = function serialize(NodeFilter)
-{
-      const xmlns = "http://www.w3.org/2000/xmlns/";
+);
+}
+function _serialize(NodeFilter){
+const xmlns = "http://www.w3.org/2000/xmlns/";
       const xlinkns = "http://www.w3.org/1999/xlink";
       const svgns = "http://www.w3.org/2000/svg";
       return function serialize(svg) {
@@ -4020,9 +4020,9 @@ const _serialize = function serialize(NodeFilter)
         const string = serializer.serializeToString(svg);
         return new Blob([string], {type: "image/svg+xml"});
       };
-    };
-
-const _rasterize = function rasterize(DOM,serialize){return(
+}
+function _rasterize(DOM,serialize){
+return (
 function rasterize(svg) {
       let resolve, reject;
       const promise = new Promise((y, n) => (resolve = y, reject = n));
@@ -4037,23 +4037,25 @@ function rasterize(svg) {
       image.src = URL.createObjectURL(serialize(svg));
       return promise;
     }
-)};
-
-const _7 = function(DOM,rasterize,viewof$chart){return(
-DOM.download(() => rasterize(viewof$chart), undefined, "Save as PNG")
-)};
-
-const _viewof$fontsize = function viewof$fontsize(Inputs){return(
+);
+}
+function _7(DOM,rasterize,viewof_chart){
+return (
+DOM.download(() => rasterize(viewof_chart), undefined, "Save as PNG")
+);
+}
+function _fontsize(Inputs){
+return (
 Inputs.range([8,30],{value:20,step:1,label:"Font Size"})
-)};
-
-const _viewof$rotationAngle = function viewof$rotationAngle(Inputs){return(
+);
+}
+function _rotationAngle(Inputs){
+return (
 Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
-)};
-
-const _8 = function(rotationAngle)
-{
-      // effect: apply rotation without restarting simulation
+);
+}
+function _8(rotationAngle){
+// effect: apply rotation without restarting simulation
       const apply = () => {
         const root = document.querySelector('svg .graph-rotate');
         if (!root) return;
@@ -4061,11 +4063,9 @@ const _8 = function(rotationAngle)
         root.querySelectorAll('text').forEach(t => t.setAttribute('transform', `rotate(${-rotationAngle})`));
       };
       apply();
-    };
-
-const _graph = function graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation)
-{
-      // Explicit dependency so the graph re-runs when ordering changes
+}
+function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
+// Explicit dependency so the graph re-runs when ordering changes
       const __componentOrderDep = componentOrder;
       const width = styles.width + 200;
       const height = styles.height + 200;
@@ -4368,9 +4368,9 @@ const _graph = function graph(componentOrder,styles,flowSuits,contraSuits,d3,loc
       invalidation.then(() => simulation.stop());
 
       return Object.assign(svg.node(), {scales: {color}});
-    };
-
-const _drag = function drag(d3){return(
+}
+function _drag(d3){
+return (
 simulation => {
 
       function dragstarted(event, d) {
@@ -4395,34 +4395,25 @@ simulation => {
           .on("drag", dragged)
           .on("end", dragended);
     }
-)};
-
-const _flowSuits = function flowSuits(parseArrowConnectionsAsSourceTarget,flowConnections,dialecticalData){return(
+);
+}
+function _flowSuits(parseArrowConnectionsAsSourceTarget,flowConnections,dialecticalData){
+return (
 parseArrowConnectionsAsSourceTarget(flowConnections, dialecticalData)
-)};
-
-const _contraSuits = function contraSuits(parseArrowConnectionsAsSourceTarget,contraConnections,dialecticalData){return(
+);
+}
+function _contraSuits(parseArrowConnectionsAsSourceTarget,contraConnections,dialecticalData){
+return (
 parseArrowConnectionsAsSourceTarget(contraConnections, dialecticalData)
-)};
-
-const _suits = function suits(flowSuits,contraSuits){return(
+);
+}
+function _suits(flowSuits,contraSuits){
+return (
 [...flowSuits, ...contraSuits]
-)};
-
-const _9 = async (__ojs_runtime,__ojs_observer) => {
-const {Swatches} = await (import("https://api.observablehq.com/@d3/color-legend.js?v=4").then((_) => {
-  const observers = {};
-  const module = __ojs_runtime.module(_.default);
-  const main = __ojs_runtime.module();
-  if (!module.defines("Swatches")) throw new SyntaxError(`export 'Swatches' not found`);
-  main.variable(observers.Swatches = __ojs_observer()).import("Swatches", module);
-  return observers;
-}));
-
-return {Swatches};
-};
-
-const _getOppositePrefix = function getOppositePrefix(){return(
+);
+}
+function _getOppositePrefix(){
+return (
 function getOppositePrefix(unitId) {
       if (unitId.startsWith('Ac')) return unitId.replace('Ac', 'Re');
       if (unitId.startsWith('T')) return unitId.replace('T', 'A');
@@ -4430,29 +4421,33 @@ function getOppositePrefix(unitId) {
       if (unitId.startsWith('Re')) return unitId.replace('Re', 'Ac');
       return unitId; // fallback for unknown prefixes
     }
-)};
-
-const _getUnitType = function getUnitType(){return(
+);
+}
+function _getUnitType(){
+return (
 function getUnitType(unitId) {
       if (unitId.startsWith('T') || unitId.startsWith('Re')) return 'thesis';
       if (unitId.startsWith('A') || unitId.startsWith('Ac')) return 'antithesis';
       return 'unknown'; // fallback for unknown prefixes
     }
-)};
-
-const _isThesisType = function isThesisType(){return(
+);
+}
+function _isThesisType(){
+return (
 function isThesisType(unitId) {
       return unitId.startsWith('T') || unitId.startsWith('Re');
     }
-)};
-
-const _isAntithesisType = function isAntithesisType(){return(
+);
+}
+function _isAntithesisType(){
+return (
 function isAntithesisType(unitId) {
       return unitId.startsWith('A') || unitId.startsWith('Ac');
     }
-)};
-
-const _wisdomUnits = function wisdomUnits(){return(
+);
+}
+function _wisdomUnits(){
+return (
 [
       {
         "t_minus": {
@@ -4583,13 +4578,15 @@ const _wisdomUnits = function wisdomUnits(){return(
         }
       }
     ]
-)};
-
-const _componentOrder = function componentOrder(){return(
+);
+}
+function _componentOrder(){
+return (
 []
-)};
-
-const _extractStatement = function extractStatement(){return(
+);
+}
+function _extractStatement(){
+return (
 (value) => {
         if (typeof value === 'string') return value;
         if (typeof value === 'object' && value !== null) {
@@ -4597,9 +4594,10 @@ const _extractStatement = function extractStatement(){return(
         }
         return '';
       }
-)};
-
-const _transformWisdomUnitsToDialecticalData = function transformWisdomUnitsToDialecticalData(extractStatement){return(
+);
+}
+function _transformWisdomUnitsToDialecticalData(extractStatement){
+return (
 (wisdomUnits, componentOrder) => {
       if (!wisdomUnits || wisdomUnits.length === 0) {
         return {};
@@ -4640,7 +4638,68 @@ const _transformWisdomUnitsToDialecticalData = function transformWisdomUnitsToDi
       });
       return dialecticalDataOrdered;
     }
-)};
+);
+}
+function _mermaid_graph(mermaid){
+return (
+mermaid`graph TD
+      W["wisdomUnits"] --> T["transformWisdomUnitsToDialecticalData"]
+      C["componentOrder"] --> T
+      T --> D["dialecticalData (Object)"]
+      D --> FC["flowConnections"]
+      D --> CC["contraConnections"]
+      FC --> P["parseArrowConnectionsAsSourceTarget"]
+      CC --> P
+      D --> P
+      P --> FS["flowSuits"]
+      P --> CS["contraSuits"]
+      FS --> G["graph"]
+      CS --> G
+      FZ["fontsize" ] --> G
+      SF["selectedFont" ] --> G
+      STY["styles" ] --> G
+      D3["d3/drag" ] --> G
+
+      classDef note fill:#fff,stroke:#999,color:#333;
+      N1["nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order"]:::note
+      FS --> N1
+      CS --> N1`
+);
+}
+function _mermaid_graph_from_suits(mermaid){
+return (
+(suits) => {
+      const types = Array.from(new Set(suits.map(d => d.type)));
+      const nodes = Array.from(new Set(suits.flatMap(d => [d.source, d.target])));
+
+      const scheme10 = [
+        "#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
+        "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
+      ];
+      const colorForType = (type) => scheme10[types.indexOf(type) % scheme10.length];
+
+      const parts = [];
+      parts.push("graph TD");
+      nodes.forEach(id => {
+        const safeId = String(id).replace(/[^A-Za-z0-9_]/g, "_");
+        parts.push(`${safeId}["${id}"]`);
+      });
+
+      // Edges with labels and per-link styling via linkStyle index
+      suits.forEach((d, i) => {
+        const s = String(d.source).replace(/[^A-Za-z0-9_]/g, "_");
+        const t = String(d.target).replace(/[^A-Za-z0-9_]/g, "_");
+        const label = d.type ? `|${d.type}|` : "";
+        parts.push(`${s} -->${label} ${t}`);
+        const color = colorForType(d.type || "default");
+        parts.push(`linkStyle ${i} stroke:${color},stroke-width:2px,opacity:0.85`);
+      });
+
+      const def = parts.join("\n");
+      return mermaid`${def}`;
+    }
+);
+}
 
 export default function define(runtime, observer) {
   const main = runtime.module();
@@ -4654,80 +4713,93 @@ export default function define(runtime, observer) {
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("makeRings")).define("makeRings", ["arcTween", "d3"], _makeRings);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
-  main.variable(observer("width")).define("width", [], _width);
+  main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", ["ringColors", "textColors"], _styles);
-  main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof$chart", "isThesisType", "arrowUtilities", "d3"], _arrowControls);
-  main.variable(observer()).define(["unFocus", "viewof$chart"], _2);
-  main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _viewof$unFocus);
-  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _viewof$showFlow);
-  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof$showFlow", "viewof$chart", "d3", "invalidation"], _showFlowSubscription);
-  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _viewof$isWhiteOutside);
-  main.variable(observer("userRingColors")).define("userRingColors", [], _userRingColors);
-  main.variable(observer("userTextColors")).define("userTextColors", [], _userTextColors);
+  main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "arrowUtilities", "d3"], _arrowControls);
+  main.variable(observer()).define(["unFocus", "viewof chart"], _2);
+  main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
+  main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
+  main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
+  main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
+  main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
+  main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
+  main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
+  main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
   main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
   main.variable(observer("textColors")).define("textColors", ["isWhiteOutside", "userTextColors"], _textColors);
-  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _viewof$whitesOnly);
-  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _viewof$TsOnly);
-  main.variable(observer()).define(["DOM", "serialize", "viewof$chart"], _3);
+  main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
+  main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
+  main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
+  main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
+  main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
   main.variable(observer("radii")).define("radii", ["styles"], _radii);
   main.variable(observer("pie")).define("pie", ["d3"], _pie);
   main.variable(observer("arcs")).define("arcs", ["d3", "radii", "styles"], _arcs);
   main.variable(observer("colorScales")).define("colorScales", ["d3", "dialecticalData", "styles"], _colorScales);
   main.variable(observer("arcTween")).define("arcTween", ["d3"], _arcTween);
-  main.variable(observer("makeTextTransform")).define("makeTextTransform", [], _makeTextTransform);
+  main.variable(observer("makeTextTransform")).define("makeTextTransform", _makeTextTransform);
   main.variable(observer("makeAxisModule")).define("makeAxisModule", ["d3"], _makeAxisModule);
   main.variable(observer("makeStepMode")).define("makeStepMode", ["d3"], _makeStepMode);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "makeAxisModule", "getOppositePrefix", "colorScales", "getTextConstraints", "wrapText", "isThesisType", "arcTween", "makeRings", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "makeStepMode", "initializeBuildSteps"], _viewof$chart);
-  main.variable(observer("stepControls")).define("stepControls", ["html", "viewof$chart"], _stepControls);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "makeAxisModule", "getOppositePrefix", "colorScales", "getTextConstraints", "wrapText", "isThesisType", "arcTween", "makeRings", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "flowConnections", "makeStepMode", "initializeBuildSteps"], _chart);
+  main.define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
+  main.variable(observer("stepControls")).define("stepControls", ["html", "viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
   main.variable(observer()).define(["chart"], _4);
-  main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs", "viewof$chart"], _viewof$sliceNumber);
-  main.variable(observer()).define(["viewof$chart", "sliceNumber"], _5);
+  main.variable(observer("viewof sliceNumber")).define("viewof sliceNumber", ["Inputs", "viewof chart"], _sliceNumber);
+  main.define("sliceNumber", ["Generators", "viewof sliceNumber"], (G, _) => G.input(_));
+  main.variable(observer()).define(["viewof chart", "sliceNumber"], _5);
   main.variable(observer("clickedCellObject")).define("clickedCellObject", ["chart"], _clickedCellObject);
   main.variable(observer("clickedCellText")).define("clickedCellText", ["chart"], _clickedCellText);
   main.variable(observer("topSlice")).define("topSlice", ["chart", "dialecticalData"], _topSlice);
   main.variable(observer("topSliceTracker")).define("topSliceTracker", ["html", "chart", "dialecticalData"], _topSliceTracker);
-  main.variable(observer("parseArrowConnections")).define("parseArrowConnections", [], _parseArrowConnections);
-  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html", "dialecticalData", "arrowConnections", "viewof$chart", "parseArrowConnections"], _dotScriptEditor);
+  main.variable(observer("parseArrowConnections")).define("parseArrowConnections", _parseArrowConnections);
+  main.variable(observer("dotScriptEditor")).define("dotScriptEditor", ["html", "dialecticalData", "arrowConnections", "viewof chart", "parseArrowConnections"], _dotScriptEditor);
   main.variable(observer("arrowConnections")).define("arrowConnections", ["dialecticalData"], _arrowConnections);
   main.variable(observer("flowConnections")).define("flowConnections", ["dialecticalData"], _flowConnections);
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
-  main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", [], _parseArrowConnectionsAsSourceTarget);
-  main.variable(observer()).define([], _6);
+  main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
+  main.variable(observer()).define(_6);
   main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
-  main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", [], _tryWrapWithLineBreaks);
-  main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", [], _truncateWithEllipses);
+  main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
+  main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
   main.variable(observer("getTextConstraints")).define("getTextConstraints", ["styles"], _getTextConstraints);
   main.variable(observer("arrowUtilities")).define("arrowUtilities", ["isThesisType"], _arrowUtilities);
   main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
   main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", ["getOppositePrefix", "isThesisType"], _initializeBuildSteps);
   main.variable(observer("longPressUtilities")).define("longPressUtilities", ["d3"], _longPressUtilities);
-  main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _viewof$selectedFont);
+  main.variable(observer("viewof selectedFont")).define("viewof selectedFont", ["Inputs"], _selectedFont);
+  main.define("selectedFont", ["Generators", "viewof selectedFont"], (G, _) => G.input(_));
   main.variable(observer("parseFont")).define("parseFont", ["selectedFont"], _parseFont);
   main.variable(observer("style")).define("style", ["html", "parseFont", "selectedFont"], _style);
   main.variable(observer("fontCDN")).define("fontCDN", ["parseFont"], _fontCDN);
   main.variable(observer("serialize")).define("serialize", ["NodeFilter"], _serialize);
   main.variable(observer("rasterize")).define("rasterize", ["DOM", "serialize"], _rasterize);
-  main.variable(observer()).define(["DOM", "rasterize", "viewof$chart"], _7);
-  main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _viewof$fontsize);
-  main.variable(observer("viewof rotationAngle")).define("viewof rotationAngle", ["Inputs"], _viewof$rotationAngle);
+  main.variable(observer()).define(["DOM", "rasterize", "viewof chart"], _7);
+  main.variable(observer("viewof fontsize")).define("viewof fontsize", ["Inputs"], _fontsize);
+  main.define("fontsize", ["Generators", "viewof fontsize"], (G, _) => G.input(_));
+  main.variable(observer("viewof rotationAngle")).define("viewof rotationAngle", ["Inputs"], _rotationAngle);
+  main.define("rotationAngle", ["Generators", "viewof rotationAngle"], (G, _) => G.input(_));
   main.variable(observer()).define(["rotationAngle"], _8);
   main.variable(observer("graph")).define("graph", ["componentOrder", "styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
   main.variable(observer("drag")).define("drag", ["d3"], _drag);
   main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
   main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
   main.variable(observer("suits")).define("suits", ["flowSuits", "contraSuits"], _suits);
-  main.variable(observer()).define(["__ojs_runtime", "__ojs_observer"], _9);
-  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", [], _getOppositePrefix);
-  main.variable(observer("getUnitType")).define("getUnitType", [], _getUnitType);
-  main.variable(observer("isThesisType")).define("isThesisType", [], _isThesisType);
-  main.variable(observer("isAntithesisType")).define("isAntithesisType", [], _isAntithesisType);
-  main.variable(observer("wisdomUnits")).define("wisdomUnits", [], _wisdomUnits);
-  main.variable(observer("componentOrder")).define("componentOrder", [], _componentOrder);
-  main.variable(observer("extractStatement")).define("extractStatement", [], _extractStatement);
+  const child1 = runtime.module(define1);
+  main.import("Swatches", child1); 
+  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", _getOppositePrefix);
+  main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
+  main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
+  main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);
+  main.variable(observer("wisdomUnits")).define("wisdomUnits", _wisdomUnits);
+  main.variable(observer("componentOrder")).define("componentOrder", _componentOrder);
+  main.variable(observer("extractStatement")).define("extractStatement", _extractStatement);
   main.variable(observer("transformWisdomUnitsToDialecticalData")).define("transformWisdomUnitsToDialecticalData", ["extractStatement"], _transformWisdomUnitsToDialecticalData);
+  main.variable(observer("mermaid_graph")).define("mermaid_graph", ["mermaid"], _mermaid_graph);
+  main.variable(observer("mermaid_graph_from_suits")).define("mermaid_graph_from_suits", ["mermaid"], _mermaid_graph_from_suits);
 
   return main;
 }

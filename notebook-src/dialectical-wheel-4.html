@@ -1289,7 +1289,7 @@
         ctx.updateAllRings();
         ctx.showCoordinates();
         ctx.updateAxisPositions(ctx.cells[0]);
-        ctx.rotateToSlice(ctx.cells[0]);
+        ctx.rotateToSlice(ctx.cells[0],undefined,true);
       }
       function getCurrentStepInfo(ctx) {
         if (!ctx.getIsStepMode()) return null;
@@ -1470,7 +1470,7 @@
     const calculateTextTransform = makeTextTransform(getCurrentRotationFromDOM);
 
     // Reusable function to rotate wheel to center a slice at the top
-    function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
+    function rotateToSlice(unitId, duration = styles.durations.stepRotation, skipAnimation = false) {
       // Choose which data to use based on current mode
       const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
@@ -1495,6 +1495,15 @@
       // Normalize rotation delta to always take the shortest path (-π to π)
       while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
       while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
+
+      // If skipAnimation is true, set rotation immediately without transition
+      if (skipAnimation) {
+        const degrees = (newRotation * 180) / Math.PI;
+        rotationGroup.attr("transform", `rotate(${degrees})`);
+        updateTextPositions(degrees);
+        updateChartValue();
+        return Promise.resolve();
+      }
 
       // Use D3 transition for smooth rotation
       const rotationTransition = d3.transition()
@@ -2574,10 +2583,76 @@
     function resetToFull() { return stepMode.resetToFull({ setIsStepMode: (v)=>{isStepMode=v;}, cellVisibility, clearFocus: () => { focusedPair = null; }, resetZoom, setRotationDirectly, nestedData, originalNestedData, updateAllRings, showCoordinates: () => coordinateGroup.style("display", "block"), updateAxisPositions, rotateToSlice, cells }); }
     function getCurrentStepInfo() { return stepMode.getCurrentStepInfo({ getIsStepMode: () => isStepMode }); }
 
-    // Initialize - start in full mode
-    resetToFull();
-    rotateToSlice(cells[0]);
-    updateAxisPositions(cells[0]);
+    // Loading animation function
+    function initializeWithLoadingAnimation() {
+      // First, hide all rings and labels initially
+      invisibleGroup.style("opacity", 0);
+      outerGroup.style("opacity", 0);
+      middleGroup.style("opacity", 0);
+      innerGroup.style("opacity", 0);
+      invisibleLabelsGroup.style("opacity", 0);
+      outerLabelsGroup.style("opacity", 0);
+      middleLabelsGroup.style("opacity", 0);
+      innerLabelsGroup.style("opacity", 0);
+      centerCircle.style("opacity", 0);
+      
+      // Initialize the chart data (this will do text wrapping but it's hidden)
+      resetToFull();
+      rotateToSlice(cells[0], undefined, true);
+      updateAxisPositions(cells[0]);
+      
+      // Now animate the rings appearing in sequence
+      const animationDuration = 300; // ms per ring
+      const totalDuration = animationDuration * 5; // 5 elements total
+      
+      // Start with the center hub
+      centerCircle.transition()
+        .duration(animationDuration)
+        .style("opacity", 1);
+      
+      // Then inner ring (green)
+      setTimeout(() => {
+        innerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+        innerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      }, animationDuration);
+      
+      // Then middle ring (white)
+      setTimeout(() => {
+        middleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+        middleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      }, animationDuration * 2);
+      
+      // Then outer ring (red)
+      setTimeout(() => {
+        outerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+        outerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      }, animationDuration * 3);
+      
+      // Finally invisible ring (last)
+      setTimeout(() => {
+        invisibleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+        invisibleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      }, animationDuration * 4);
+    }
+
+    // Initialize with loading animation
+    initializeWithLoadingAnimation();
 
     // Draw initial arrows
     //drawAllArrows();
