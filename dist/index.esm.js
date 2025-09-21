@@ -1,5 +1,6 @@
 import { jsxs, jsx } from 'react/jsx-runtime';
 import { useRef, useState, useEffect } from 'react';
+import define1 from 'https://api.observablehq.com/@d3/color-legend.js?v=3';
 
 function _arrayLikeToArray(r, a) {
   (null == a || a > r.length) && (a = r.length);
@@ -1272,7 +1273,7 @@ function requireFrom(resolver) {
       };
       script.async = true;
       script.src = url;
-      window.define = define$2;
+      window.define = define$1;
       document.head.appendChild(script);
     }));
     return module;
@@ -1326,7 +1327,7 @@ function isbuiltin(name) {
   return name === "exports" || name === "module";
 }
 
-function define$2(name, dependencies, factory) {
+function define$1(name, dependencies, factory) {
   const n = arguments.length;
   if (n < 2) factory = name, dependencies = [];
   else if (n < 3) factory = dependencies, dependencies = typeof name === "string" ? [] : name;
@@ -1347,7 +1348,7 @@ function define$2(name, dependencies, factory) {
   });
 }
 
-define$2.amd = {};
+define$1.amd = {};
 
 // TODO Allow this to be overridden using the Library’s resolver.
 const cdn = "https://cdn.observableusercontent.com/npm/";
@@ -5278,373 +5279,6 @@ function toggle({label, value, values, disabled} = {}) {
   return form;
 }
 
-function _1$1(md){return(
-md`<div style="color: grey; font: 13px/25.5px var(--sans-serif); text-transform: uppercase;"><h1 style="display: none;">Color legend</h1><a href="https://d3js.org/">D3</a> › <a href="/@d3/gallery">Gallery</a></div>
-
-# Color legend
-
-A simple legend for a [color scale](/@d3/color-schemes). Supports [continuous](/@d3/continuous-scales), [sequential](/@d3/sequential-scales), [diverging](/@d3/diverging-scales), [quantize, quantile, threshold](/@d3/quantile-quantize-and-threshold-scales) and [ordinal](/@d3/d3-scaleordinal) scales. To use:
-
-~~~js
-import {Legend, Swatches} from "@d3/color-legend"
-~~~
-
-Then call the legend function as shown below. (For ordinal scales, also consider the swatches function.)`
-)}
-
-function _2$1(Legend,d3){return(
-Legend(d3.scaleSequential([0, 100], d3.interpolateViridis), {
-  title: "Temperature (°F)"
-})
-)}
-
-function _3$1(Legend,d3){return(
-Legend(d3.scaleSequentialSqrt([0, 1], d3.interpolateTurbo), {
-  title: "Speed (kts)"
-})
-)}
-
-function _4$1(Legend,d3){return(
-Legend(d3.scaleDiverging([-0.1, 0, 0.1], d3.interpolatePiYG), {
-  title: "Daily change",
-  tickFormat: "+%"
-})
-)}
-
-function _5$1(Legend,d3){return(
-Legend(d3.scaleDivergingSqrt([-0.1, 0, 0.1], d3.interpolateRdBu), {
-  title: "Daily change",
-  tickFormat: "+%"
-})
-)}
-
-function _6$1(Legend,d3){return(
-Legend(d3.scaleSequentialLog([1, 100], d3.interpolateBlues), {
-  title: "Energy (joules)",
-  ticks: 10
-})
-)}
-
-function _7$1(Legend,d3){return(
-Legend(d3.scaleSequentialQuantile(d3.range(100).map(() => Math.random() ** 2), d3.interpolateBlues), {
-  title: "Quantile",
-  tickFormat: ".2f"
-})
-)}
-
-function _8$1(Legend,d3){return(
-Legend(d3.scaleSqrt([-100, 0, 100], ["blue", "white", "red"]), {
-  title: "Temperature (°C)"
-})
-)}
-
-function _9(Legend,d3){return(
-Legend(d3.scaleQuantize([1, 10], d3.schemePurples[9]), {
-  title: "Unemployment rate (%)"
-})
-)}
-
-function _10(Legend,d3){return(
-Legend(d3.scaleQuantile(d3.range(1000).map(d3.randomNormal(100, 20)), d3.schemeSpectral[9]), {
-  title: "Height (cm)",
-  tickFormat: ".0f"
-})
-)}
-
-function _11(Legend,d3){return(
-Legend(d3.scaleThreshold([2.5, 3.1, 3.5, 3.9, 6, 7, 8, 9.5], d3.schemeRdBu[9]), {
-  title: "Unemployment rate (%)",
-  tickSize: 0
-})
-)}
-
-function _12(Legend,d3){return(
-Legend(d3.scaleOrdinal(["<10", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70-79", "≥80"], d3.schemeSpectral[10]), {
-  title: "Age (years)",
-  tickSize: 0
-})
-)}
-
-function _13(md){return(
-md`But wait, there’s more!
-
-How about swatches for ordinal color scales? Both variable-width swatches and [column layout](https://developer.mozilla.org/en-US/docs/Web/CSS/columns) are supported.`
-)}
-
-function _14(Swatches,d3){return(
-Swatches(d3.scaleOrdinal(["blueberries", "oranges", "apples"], d3.schemeCategory10))
-)}
-
-function _15(Swatches,d3){return(
-Swatches(d3.scaleOrdinal(["Wholesale and Retail Trade", "Manufacturing", "Leisure and hospitality", "Business services", "Construction", "Education and Health", "Government", "Finance", "Self-employed", "Other"], d3.schemeTableau10), {
-  columns: "180px"
-})
-)}
-
-function _16(md){return(
-md`---
-
-## Implementation`
-)}
-
-function _Legend(d3){return(
-function Legend(color, {
-  title,
-  tickSize = 6,
-  width = 320, 
-  height = 44 + tickSize,
-  marginTop = 18,
-  marginRight = 0,
-  marginBottom = 16 + tickSize,
-  marginLeft = 0,
-  ticks = width / 64,
-  tickFormat,
-  tickValues
-} = {}) {
-
-  function ramp(color, n = 256) {
-    const canvas = document.createElement("canvas");
-    canvas.width = n;
-    canvas.height = 1;
-    const context = canvas.getContext("2d");
-    for (let i = 0; i < n; ++i) {
-      context.fillStyle = color(i / (n - 1));
-      context.fillRect(i, 0, 1, 1);
-    }
-    return canvas;
-  }
-
-  const svg = d3.create("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("viewBox", [0, 0, width, height])
-      .style("overflow", "visible")
-      .style("display", "block");
-
-  let tickAdjust = g => g.selectAll(".tick line").attr("y1", marginTop + marginBottom - height);
-  let x;
-
-  // Continuous
-  if (color.interpolate) {
-    const n = Math.min(color.domain().length, color.range().length);
-
-    x = color.copy().rangeRound(d3.quantize(d3.interpolate(marginLeft, width - marginRight), n));
-
-    svg.append("image")
-        .attr("x", marginLeft)
-        .attr("y", marginTop)
-        .attr("width", width - marginLeft - marginRight)
-        .attr("height", height - marginTop - marginBottom)
-        .attr("preserveAspectRatio", "none")
-        .attr("xlink:href", ramp(color.copy().domain(d3.quantize(d3.interpolate(0, 1), n))).toDataURL());
-  }
-
-  // Sequential
-  else if (color.interpolator) {
-    x = Object.assign(color.copy()
-        .interpolator(d3.interpolateRound(marginLeft, width - marginRight)),
-        {range() { return [marginLeft, width - marginRight]; }});
-
-    svg.append("image")
-        .attr("x", marginLeft)
-        .attr("y", marginTop)
-        .attr("width", width - marginLeft - marginRight)
-        .attr("height", height - marginTop - marginBottom)
-        .attr("preserveAspectRatio", "none")
-        .attr("xlink:href", ramp(color.interpolator()).toDataURL());
-
-    // scaleSequentialQuantile doesn’t implement ticks or tickFormat.
-    if (!x.ticks) {
-      if (tickValues === undefined) {
-        const n = Math.round(ticks + 1);
-        tickValues = d3.range(n).map(i => d3.quantile(color.domain(), i / (n - 1)));
-      }
-      if (typeof tickFormat !== "function") {
-        tickFormat = d3.format(tickFormat === undefined ? ",f" : tickFormat);
-      }
-    }
-  }
-
-  // Threshold
-  else if (color.invertExtent) {
-    const thresholds
-        = color.thresholds ? color.thresholds() // scaleQuantize
-        : color.quantiles ? color.quantiles() // scaleQuantile
-        : color.domain(); // scaleThreshold
-
-    const thresholdFormat
-        = tickFormat === undefined ? d => d
-        : typeof tickFormat === "string" ? d3.format(tickFormat)
-        : tickFormat;
-
-    x = d3.scaleLinear()
-        .domain([-1, color.range().length - 1])
-        .rangeRound([marginLeft, width - marginRight]);
-
-    svg.append("g")
-      .selectAll("rect")
-      .data(color.range())
-      .join("rect")
-        .attr("x", (d, i) => x(i - 1))
-        .attr("y", marginTop)
-        .attr("width", (d, i) => x(i) - x(i - 1))
-        .attr("height", height - marginTop - marginBottom)
-        .attr("fill", d => d);
-
-    tickValues = d3.range(thresholds.length);
-    tickFormat = i => thresholdFormat(thresholds[i], i);
-  }
-
-  // Ordinal
-  else {
-    x = d3.scaleBand()
-        .domain(color.domain())
-        .rangeRound([marginLeft, width - marginRight]);
-
-    svg.append("g")
-      .selectAll("rect")
-      .data(color.domain())
-      .join("rect")
-        .attr("x", x)
-        .attr("y", marginTop)
-        .attr("width", Math.max(0, x.bandwidth() - 1))
-        .attr("height", height - marginTop - marginBottom)
-        .attr("fill", color);
-
-    tickAdjust = () => {};
-  }
-
-  svg.append("g")
-      .attr("transform", `translate(0,${height - marginBottom})`)
-      .call(d3.axisBottom(x)
-        .ticks(ticks, typeof tickFormat === "string" ? tickFormat : undefined)
-        .tickFormat(typeof tickFormat === "function" ? tickFormat : undefined)
-        .tickSize(tickSize)
-        .tickValues(tickValues))
-      .call(tickAdjust)
-      .call(g => g.select(".domain").remove())
-      .call(g => g.append("text")
-        .attr("x", marginLeft)
-        .attr("y", marginTop + marginBottom - height - 6)
-        .attr("fill", "currentColor")
-        .attr("text-anchor", "start")
-        .attr("font-weight", "bold")
-        .attr("class", "title")
-        .text(title));
-
-  return svg.node();
-}
-)}
-
-function _legend(Legend){return(
-function legend({color, ...options}) {
-  return Legend(color, options);
-}
-)}
-
-function _Swatches(d3,htl){return(
-function Swatches(color, {
-  columns = null,
-  format,
-  unknown: formatUnknown,
-  swatchSize = 15,
-  swatchWidth = swatchSize,
-  swatchHeight = swatchSize,
-  marginLeft = 0
-} = {}) {
-  const id = `-swatches-${Math.random().toString(16).slice(2)}`;
-  const unknown = formatUnknown == null ? undefined : color.unknown();
-  const unknowns = unknown == null || unknown === d3.scaleImplicit ? [] : [unknown];
-  const domain = color.domain().concat(unknowns);
-  if (format === undefined) format = x => x === unknown ? formatUnknown : x;
-
-  if (columns !== null) return htl.html`<div style="display: flex; align-items: center; margin-left: ${+marginLeft}px; min-height: 33px; font: 10px sans-serif;">
-  <style>
-
-.${id}-item {
-  break-inside: avoid;
-  display: flex;
-  align-items: center;
-  padding-bottom: 1px;
-}
-
-.${id}-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: calc(100% - ${+swatchWidth}px - 0.5em);
-}
-
-.${id}-swatch {
-  width: ${+swatchWidth}px;
-  height: ${+swatchHeight}px;
-  margin: 0 0.5em 0 0;
-}
-
-  </style>
-  <div style=${{width: "100%", columns}}>${domain.map(value => {
-    const label = `${format(value)}`;
-    return htl.html`<div class=${id}-item>
-      <div class=${id}-swatch style=${{background: color(value)}}></div>
-      <div class=${id}-label title=${label}>${label}</div>
-    </div>`;
-  })}
-  </div>
-</div>`;
-
-  return htl.html`<div style="display: flex; align-items: center; min-height: 33px; margin-left: ${+marginLeft}px; font: 10px sans-serif;">
-  <style>
-
-.${id} {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 1em;
-}
-
-.${id}::before {
-  content: "";
-  width: ${+swatchWidth}px;
-  height: ${+swatchHeight}px;
-  margin-right: 0.5em;
-  background: var(--color);
-}
-
-  </style>
-  <div>${domain.map(value => htl.html`<span class="${id}" style="--color: ${color(value)}">${format(value)}</span>`)}</div>`;
-}
-)}
-
-function _swatches(Swatches){return(
-function swatches({color, ...options}) {
-  return Swatches(color, options);
-}
-)}
-
-function define$1(runtime, observer) {
-  const main = runtime.module();
-  main.variable(observer()).define(["md"], _1$1);
-  main.variable(observer()).define(["Legend","d3"], _2$1);
-  main.variable(observer()).define(["Legend","d3"], _3$1);
-  main.variable(observer()).define(["Legend","d3"], _4$1);
-  main.variable(observer()).define(["Legend","d3"], _5$1);
-  main.variable(observer()).define(["Legend","d3"], _6$1);
-  main.variable(observer()).define(["Legend","d3"], _7$1);
-  main.variable(observer()).define(["Legend","d3"], _8$1);
-  main.variable(observer()).define(["Legend","d3"], _9);
-  main.variable(observer()).define(["Legend","d3"], _10);
-  main.variable(observer()).define(["Legend","d3"], _11);
-  main.variable(observer()).define(["Legend","d3"], _12);
-  main.variable(observer()).define(["md"], _13);
-  main.variable(observer()).define(["Swatches","d3"], _14);
-  main.variable(observer()).define(["Swatches","d3"], _15);
-  main.variable(observer()).define(["md"], _16);
-  main.variable(observer("Legend")).define("Legend", ["d3"], _Legend);
-  main.variable(observer("legend")).define("legend", ["Legend"], _legend);
-  main.variable(observer("Swatches")).define("Swatches", ["d3","htl"], _Swatches);
-  main.variable(observer("swatches")).define("swatches", ["Swatches"], _swatches);
-  return main;
-}
-
 function _1(md){
 return (
 md`# Dialectical Wheel with Arrows`
@@ -6153,18 +5787,37 @@ return (
 Inputs.toggle({label: "Swap red and white layer"})
 );
 }
-function _ringColors(isWhiteOutside){
+function _userRingColors(){
 return (
-isWhiteOutside
-      ? { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" }
-      : { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" }
+{
+      outer: "#ffffff",    // Outer ring background color
+      middle: "#F9C6CC",   // Middle ring background color  
+      inner: "#C6E5B3"     // Inner ring background color
+    }
 );
 }
-function _textColors(isWhiteOutside){
+function _userTextColors(){
+return (
+{
+      outer: "#333",       // Outer ring text color
+      middle: "#8b1538",   // Middle ring text color
+      inner: "#2d5a2d",    // Inner ring text color
+      coordinates: "#333"  // Coordinate text color
+    }
+);
+}
+function _ringColors(isWhiteOutside,userRingColors){
 return (
 isWhiteOutside
-      ? { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" }
-      : { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" }
+      ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
+      : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+);
+}
+function _textColors(isWhiteOutside,userTextColors){
+return (
+isWhiteOutside
+      ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
 );
 }
 function _whitesOnly(Inputs){
@@ -6665,7 +6318,15 @@ return (
         const axisAngles = [axisAngle, axisAngle + Math.PI];
         const ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
         const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+
+        // Check if opposite unit exists in current data
+        const oppositeUnitId = getOppositePrefix(focusedUnitId);
+        const oppositeExists = dataToUse.middle.some(d => d.unitId === oppositeUnitId);
+
         axisAngles.forEach((angle, sideIndex) => {
+          // Skip the opposite side if it doesn't exist in the current data
+          if (sideIndex === 1 && !oppositeExists) return;
+
           ringRadii.forEach((radius, ringIndex) => {
             const angleOffset = 8 / radius;
             const rotatedAngle = angle + angleOffset;
@@ -6888,7 +6549,7 @@ return (
         ctx.updateAllRings();
         ctx.showCoordinates();
         ctx.updateAxisPositions(ctx.cells[0]);
-        ctx.rotateToSlice(ctx.cells[0]);
+        ctx.rotateToSlice(ctx.cells[0],undefined,true);
       }
       function getCurrentStepInfo(ctx) {
         if (!ctx.getIsStepMode()) return null;
@@ -7050,7 +6711,7 @@ return (
     const calculateTextTransform = makeTextTransform(getCurrentRotationFromDOM);
 
     // Reusable function to rotate wheel to center a slice at the top
-    function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
+    function rotateToSlice(unitId, duration = styles.durations.stepRotation, skipAnimation = false) {
       // Choose which data to use based on current mode
       const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
@@ -7075,6 +6736,15 @@ return (
       // Normalize rotation delta to always take the shortest path (-π to π)
       while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
       while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
+
+      // If skipAnimation is true, set rotation immediately without transition
+      if (skipAnimation) {
+        const degrees = (newRotation * 180) / Math.PI;
+        rotationGroup.attr("transform", `rotate(${degrees})`);
+        updateTextPositions(degrees);
+        updateChartValue();
+        return Promise.resolve();
+      }
 
       // Use D3 transition for smooth rotation
       const rotationTransition = d3.transition()
@@ -7764,10 +7434,107 @@ return (
     function resetToFull() { return stepMode.resetToFull({ setIsStepMode: (v)=>{isStepMode=v;}, cellVisibility, clearFocus: () => { focusedPair = null; }, resetZoom, setRotationDirectly, nestedData, originalNestedData, updateAllRings, showCoordinates: () => coordinateGroup.style("display", "block"), updateAxisPositions, rotateToSlice, cells }); }
     function getCurrentStepInfo() { return stepMode.getCurrentStepInfo({ getIsStepMode: () => isStepMode }); }
 
-    // Initialize - start in full mode
-    resetToFull();
-    rotateToSlice(cells[0]);
-    updateAxisPositions(cells[0]);
+    // Modified resetToFull that doesn't call updateAxisPositions (for loading animation)
+    function resetToFullWithoutAxisUpdate() {
+      return stepMode.resetToFull({ 
+        setIsStepMode: (v)=>{isStepMode=v;}, 
+        cellVisibility, 
+        clearFocus: () => { focusedPair = null; }, 
+        resetZoom, 
+        setRotationDirectly, 
+        nestedData, 
+        originalNestedData, 
+        updateAllRings, 
+        showCoordinates: () => coordinateGroup.style("display", "block"), 
+        updateAxisPositions: () => {}, // No-op function to prevent axis updates
+        rotateToSlice, 
+        cells 
+      });
+    }
+
+    // Loading animation function that returns a promise
+    async function initializeWithLoadingAnimation() {
+      // First, hide all rings, labels, and axes initially
+      invisibleGroup.style("opacity", 0);
+      outerGroup.style("opacity", 0);
+      middleGroup.style("opacity", 0);
+      innerGroup.style("opacity", 0);
+      invisibleLabelsGroup.style("opacity", 0);
+      outerLabelsGroup.style("opacity", 0);
+      middleLabelsGroup.style("opacity", 0);
+      innerLabelsGroup.style("opacity", 0);
+      centerCircle.style("opacity", 0);
+      coordinateGroup.style("opacity", 0); // Hide axes labels
+      
+      // Initialize the chart data (this will do text wrapping but it's hidden)
+      // Use a modified resetToFull that doesn't call updateAxisPositions
+      resetToFullWithoutAxisUpdate();
+      rotateToSlice(cells[0], undefined, true);
+      
+      // Animate rings emanating in sequence and wait for completion
+      const animationDuration = 300; // ms per ring
+      
+      // Start with the center hub
+      await new Promise(resolve => {
+        centerCircle.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+      });
+      
+      // Then inner ring (green)
+      await new Promise(resolve => {
+        innerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        innerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then middle ring (white)
+      await new Promise(resolve => {
+        middleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        middleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then outer ring (red)
+      await new Promise(resolve => {
+        outerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        outerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Finally invisible ring (last)
+      await new Promise(resolve => {
+        invisibleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        invisibleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // After all rings have finished emanating, show axes and update positions
+      coordinateGroup.transition()
+        .duration(300)
+        .style("opacity", 1);
+      updateAxisPositions(cells[0]);
+    }
+
+    // Initialize with loading animation
+    initializeWithLoadingAnimation();
 
     // Draw initial arrows
     //drawAllArrows();
@@ -8334,8 +8101,12 @@ return (
 (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
+
+          // Filter units based on tOnly condition
+          const filteredUnits = tOnly ? units.filter(unit => unit.charAt(0) === 'T') : units;
+
           return {
-            invisible: units.map((unit,index)=> ({
+            invisible: filteredUnits.map((unit,index)=> ({
               name: `${unit}i`,
               unitId: unit,
               value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
@@ -8344,29 +8115,29 @@ return (
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: units.map(unit => ({
+            [outerKey]: filteredUnits.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].negative,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: units.map(unit => ({
+            [middleKey]: filteredUnits.map(unit => ({
               name: unit,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
+              value: 1,
+              opacity: 1,
               fullText: dialecticalData[unit].statement,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: units.map(unit => ({
+            inner: filteredUnits.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].positive,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -9191,8 +8962,8 @@ function _8(rotationAngle){
       apply();
 }
 function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
-      const width = styles.width + 200;
-      const height = styles.height + 200;
+      const width = styles.width;
+      const height = styles.height;
       // Build link datasets from both flow and contra connections
       const flowLinksData = flowSuits.map(d => Object.assign({}, d, { isContra: false }));
       const contraLinksData = contraSuits.map(d => Object.assign({}, d, { isContra: true }));
@@ -9846,8 +9617,10 @@ function define(runtime, observer) {
   main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
-  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside"], _ringColors);
-  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside"], _textColors);
+  main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
+  main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
+  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
+  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside", "userTextColors"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
   main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
@@ -9908,7 +9681,7 @@ function define(runtime, observer) {
   main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
   main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
   main.variable(observer("suits")).define("suits", ["flowSuits", "contraSuits"], _suits);
-  const child1 = runtime.module(define$1);
+  const child1 = runtime.module(define1);
   main.import("Swatches", child1); 
   main.variable(observer("getOppositePrefix")).define("getOppositePrefix", _getOppositePrefix);
   main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);

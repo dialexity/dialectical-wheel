@@ -496,15 +496,30 @@
   <script id="1210" type="application/vnd.observable.javascript">
     viewof isWhiteOutside = Inputs.toggle({label: "Swap red and white layer"});
   </script>
+  <script id="2409" type="application/vnd.observable.javascript">
+    userRingColors = ({
+      outer: "#ffffff",    // Outer ring background color
+      middle: "#F9C6CC",   // Middle ring background color  
+      inner: "#C6E5B3"     // Inner ring background color
+    })
+  </script>
+  <script id="2410" type="application/vnd.observable.javascript">
+    userTextColors = ({
+      outer: "#333",       // Outer ring text color
+      middle: "#8b1538",   // Middle ring text color
+      inner: "#2d5a2d",    // Inner ring text color
+      coordinates: "#333"  // Coordinate text color
+    })
+  </script>
   <script id="1560" type="application/vnd.observable.javascript">
     ringColors = isWhiteOutside
-      ? { outer: "#ffffff", middle: "#F9C6CC", inner: "#C6E5B3" }
-      : { outer: "#F9C6CC", middle: "#ffffff", inner: "#C6E5B3" }
+      ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
+      : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
   </script>
   <script id="1561" type="application/vnd.observable.javascript">
     textColors = isWhiteOutside
-      ? { outer: "#333", middle: "#8b1538", inner: "#2d5a2d", coordinates: "#333" }
-      : { outer: "#8b1538", middle: "#333", inner: "#2d5a2d", coordinates: "#333" }
+      ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
   </script>
   <script id="1253" type="application/vnd.observable.javascript">
     viewof whitesOnly = Inputs.toggle({label: "White cells only"});
@@ -1045,7 +1060,15 @@
         const axisAngles = [axisAngle, axisAngle + Math.PI];
         const ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
         const axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+
+        // Check if opposite unit exists in current data
+        const oppositeUnitId = getOppositePrefix(focusedUnitId);
+        const oppositeExists = dataToUse.middle.some(d => d.unitId === oppositeUnitId);
+
         axisAngles.forEach((angle, sideIndex) => {
+          // Skip the opposite side if it doesn't exist in the current data
+          if (sideIndex === 1 && !oppositeExists) return;
+
           ringRadii.forEach((radius, ringIndex) => {
             const angleOffset = 8 / radius;
             const rotatedAngle = angle + angleOffset;
@@ -1266,7 +1289,7 @@
         ctx.updateAllRings();
         ctx.showCoordinates();
         ctx.updateAxisPositions(ctx.cells[0]);
-        ctx.rotateToSlice(ctx.cells[0]);
+        ctx.rotateToSlice(ctx.cells[0],undefined,true);
       }
       function getCurrentStepInfo(ctx) {
         if (!ctx.getIsStepMode()) return null;
@@ -1447,7 +1470,7 @@
     const calculateTextTransform = makeTextTransform(getCurrentRotationFromDOM);
 
     // Reusable function to rotate wheel to center a slice at the top
-    function rotateToSlice(unitId, duration = styles.durations.stepRotation) {
+    function rotateToSlice(unitId, duration = styles.durations.stepRotation, skipAnimation = false) {
       // Choose which data to use based on current mode
       const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
@@ -1472,6 +1495,15 @@
       // Normalize rotation delta to always take the shortest path (-π to π)
       while (rotationDelta > Math.PI) rotationDelta -= 2 * Math.PI;
       while (rotationDelta < -Math.PI) rotationDelta += 2 * Math.PI;
+
+      // If skipAnimation is true, set rotation immediately without transition
+      if (skipAnimation) {
+        const degrees = (newRotation * 180) / Math.PI;
+        rotationGroup.attr("transform", `rotate(${degrees})`);
+        updateTextPositions(degrees);
+        updateChartValue();
+        return Promise.resolve();
+      }
 
       // Use D3 transition for smooth rotation
       const rotationTransition = d3.transition()
@@ -2551,10 +2583,107 @@
     function resetToFull() { return stepMode.resetToFull({ setIsStepMode: (v)=>{isStepMode=v;}, cellVisibility, clearFocus: () => { focusedPair = null; }, resetZoom, setRotationDirectly, nestedData, originalNestedData, updateAllRings, showCoordinates: () => coordinateGroup.style("display", "block"), updateAxisPositions, rotateToSlice, cells }); }
     function getCurrentStepInfo() { return stepMode.getCurrentStepInfo({ getIsStepMode: () => isStepMode }); }
 
-    // Initialize - start in full mode
-    resetToFull();
-    rotateToSlice(cells[0]);
-    updateAxisPositions(cells[0]);
+    // Modified resetToFull that doesn't call updateAxisPositions (for loading animation)
+    function resetToFullWithoutAxisUpdate() {
+      return stepMode.resetToFull({ 
+        setIsStepMode: (v)=>{isStepMode=v;}, 
+        cellVisibility, 
+        clearFocus: () => { focusedPair = null; }, 
+        resetZoom, 
+        setRotationDirectly, 
+        nestedData, 
+        originalNestedData, 
+        updateAllRings, 
+        showCoordinates: () => coordinateGroup.style("display", "block"), 
+        updateAxisPositions: () => {}, // No-op function to prevent axis updates
+        rotateToSlice, 
+        cells 
+      });
+    }
+
+    // Loading animation function that returns a promise
+    async function initializeWithLoadingAnimation() {
+      // First, hide all rings, labels, and axes initially
+      invisibleGroup.style("opacity", 0);
+      outerGroup.style("opacity", 0);
+      middleGroup.style("opacity", 0);
+      innerGroup.style("opacity", 0);
+      invisibleLabelsGroup.style("opacity", 0);
+      outerLabelsGroup.style("opacity", 0);
+      middleLabelsGroup.style("opacity", 0);
+      innerLabelsGroup.style("opacity", 0);
+      centerCircle.style("opacity", 0);
+      coordinateGroup.style("opacity", 0); // Hide axes labels
+      
+      // Initialize the chart data (this will do text wrapping but it's hidden)
+      // Use a modified resetToFull that doesn't call updateAxisPositions
+      resetToFullWithoutAxisUpdate();
+      rotateToSlice(cells[0], undefined, true);
+      
+      // Animate rings emanating in sequence and wait for completion
+      const animationDuration = 300; // ms per ring
+      
+      // Start with the center hub
+      await new Promise(resolve => {
+        centerCircle.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+      });
+      
+      // Then inner ring (green)
+      await new Promise(resolve => {
+        innerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        innerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then middle ring (white)
+      await new Promise(resolve => {
+        middleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        middleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then outer ring (red)
+      await new Promise(resolve => {
+        outerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        outerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Finally invisible ring (last)
+      await new Promise(resolve => {
+        invisibleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        invisibleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // After all rings have finished emanating, show axes and update positions
+      coordinateGroup.transition()
+        .duration(300)
+        .style("opacity", 1);
+      updateAxisPositions(cells[0]);
+    }
+
+    // Initialize with loading animation
+    initializeWithLoadingAnimation();
 
     // Draw initial arrows
     //drawAllArrows();
@@ -3097,8 +3226,12 @@
     transformToNestedPieData = (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
+
+          // Filter units based on tOnly condition
+          const filteredUnits = tOnly ? units.filter(unit => unit.charAt(0) === 'T') : units;
+
           return {
-            invisible: units.map((unit,index)=> ({
+            invisible: filteredUnits.map((unit,index)=> ({
               name: `${unit}i`,
               unitId: unit,
               value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
@@ -3107,29 +3240,29 @@
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: units.map(unit => ({
+            [outerKey]: filteredUnits.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].negative,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: units.map(unit => ({
+            [middleKey]: filteredUnits.map(unit => ({
               name: unit,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: 1,
+              value: 1,
+              opacity: 1,
               fullText: dialecticalData[unit].statement,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: units.map(unit => ({
+            inner: filteredUnits.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
-              value: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly ? 0: 1,
-              opacity: (unit.charAt(0) != 'T' && tOnly) ? 0: whiteOnly? 0: 1,
+              value: whiteOnly ? 0: 1,
+              opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].positive,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
@@ -3930,8 +4063,8 @@
     graph = {
       // Explicit dependency so the graph re-runs when ordering changes
       const __componentOrderDep = componentOrder;
-      const width = styles.width + 200;
-      const height = styles.height + 200;
+      const width = styles.width;
+      const height = styles.height;
       // Build link datasets from both flow and contra connections
       const flowLinksData = flowSuits.map(d => Object.assign({}, d, { isContra: false }));
       const contraLinksData = contraSuits.map(d => Object.assign({}, d, { isContra: true }));

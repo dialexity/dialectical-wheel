@@ -1,6 +1,6 @@
 {
   "name": "dialectical-wheel",
-  "version": "1.1.35",
+  "version": "1.1.36",
   "type": "module",
   "description": "React components for interactive dialectical wheel visualization",
   "main": "dist/index.js",
@@ -20,7 +20,9 @@
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "type-check": "tsc --noEmit",
     "build:types": "tsc --emitDeclarationOnly --outDir dist",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "keywords": [
     "react",
@@ -52,23 +54,34 @@
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
+    "@storybook/addon-docs": "^9.1.7",
+    "@storybook/addon-onboarding": "^9.1.7",
+    "@storybook/react-vite": "^9.1.7",
     "@types/d3": "^7.4.3",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "eslint": "^8.50.0",
     "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-storybook": "^9.1.7",
     "jest": "^29.0.0",
     "rollup": "^4.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-postcss": "^4.0.2",
+    "storybook": "^9.1.7",
     "tslib": "^2.8.1",
     "typescript": "^5.0.0"
   },
   "dependencies": {
     "@dialexity/dialectical-wheel": "https://api.observablehq.com/@dialexity/dialectical-wheel@1569.tgz?v=3",
-    "@observablehq/inputs": "^0.12.0",
-    "@observablehq/runtime": "^5.9.9",
     "@hpcc-js/observablehq-compiler": "^3.3.9",
+    "@observablehq/inputs": "^0.12.0",
+    "@observablehq/notebook-kit": "^1.4.1",
+    "@observablehq/runtime": "^5.9.9",
     "d3": "^7.8.5"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:storybook/recommended"
+    ]
   }
 }
