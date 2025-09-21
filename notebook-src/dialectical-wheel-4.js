@@ -2632,10 +2632,107 @@ return (
     function resetToFull() { return stepMode.resetToFull({ setIsStepMode: (v)=>{isStepMode=v;}, cellVisibility, clearFocus: () => { focusedPair = null; }, resetZoom, setRotationDirectly, nestedData, originalNestedData, updateAllRings, showCoordinates: () => coordinateGroup.style("display", "block"), updateAxisPositions, rotateToSlice, cells }); }
     function getCurrentStepInfo() { return stepMode.getCurrentStepInfo({ getIsStepMode: () => isStepMode }); }
 
-    // Initialize - start in full mode
-    resetToFull();
-    rotateToSlice(cells[0],undefined,true);
-    updateAxisPositions(cells[0]);
+    // Modified resetToFull that doesn't call updateAxisPositions (for loading animation)
+    function resetToFullWithoutAxisUpdate() {
+      return stepMode.resetToFull({ 
+        setIsStepMode: (v)=>{isStepMode=v;}, 
+        cellVisibility, 
+        clearFocus: () => { focusedPair = null; }, 
+        resetZoom, 
+        setRotationDirectly, 
+        nestedData, 
+        originalNestedData, 
+        updateAllRings, 
+        showCoordinates: () => coordinateGroup.style("display", "block"), 
+        updateAxisPositions: () => {}, // No-op function to prevent axis updates
+        rotateToSlice, 
+        cells 
+      });
+    }
+
+    // Loading animation function that returns a promise
+    async function initializeWithLoadingAnimation() {
+      // First, hide all rings, labels, and axes initially
+      invisibleGroup.style("opacity", 0);
+      outerGroup.style("opacity", 0);
+      middleGroup.style("opacity", 0);
+      innerGroup.style("opacity", 0);
+      invisibleLabelsGroup.style("opacity", 0);
+      outerLabelsGroup.style("opacity", 0);
+      middleLabelsGroup.style("opacity", 0);
+      innerLabelsGroup.style("opacity", 0);
+      centerCircle.style("opacity", 0);
+      coordinateGroup.style("opacity", 0); // Hide axes labels
+      
+      // Initialize the chart data (this will do text wrapping but it's hidden)
+      // Use a modified resetToFull that doesn't call updateAxisPositions
+      resetToFullWithoutAxisUpdate();
+      rotateToSlice(cells[0], undefined, true);
+      
+      // Animate rings emanating in sequence and wait for completion
+      const animationDuration = 300; // ms per ring
+      
+      // Start with the center hub
+      await new Promise(resolve => {
+        centerCircle.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+      });
+      
+      // Then inner ring (green)
+      await new Promise(resolve => {
+        innerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        innerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then middle ring (white)
+      await new Promise(resolve => {
+        middleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        middleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Then outer ring (red)
+      await new Promise(resolve => {
+        outerGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        outerLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // Finally invisible ring (last)
+      await new Promise(resolve => {
+        invisibleGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1)
+          .on("end", resolve);
+        invisibleLabelsGroup.transition()
+          .duration(animationDuration)
+          .style("opacity", 1);
+      });
+      
+      // After all rings have finished emanating, show axes and update positions
+      coordinateGroup.transition()
+        .duration(300)
+        .style("opacity", 1);
+      updateAxisPositions(cells[0]);
+    }
+
+    // Initialize with loading animation
+    initializeWithLoadingAnimation();
 
     // Draw initial arrows
     //drawAllArrows();
@@ -4067,8 +4164,8 @@ function _8(rotationAngle){
 function _graph(componentOrder,styles,flowSuits,contraSuits,d3,location,drag,fontsize,selectedFont,invalidation){
 // Explicit dependency so the graph re-runs when ordering changes
       const __componentOrderDep = componentOrder;
-      const width = styles.width + 200;
-      const height = styles.height + 200;
+      const width = styles.width;
+      const height = styles.height;
       // Build link datasets from both flow and contra connections
       const flowLinksData = flowSuits.map(d => Object.assign({}, d, { isContra: false }));
       const contraLinksData = contraSuits.map(d => Object.assign({}, d, { isContra: true }));
