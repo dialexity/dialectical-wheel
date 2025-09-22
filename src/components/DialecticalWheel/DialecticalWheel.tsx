@@ -15,10 +15,26 @@ const DEFAULT_PREFERENCES = {
   graphView: false
 };
 
+const DEFAULT_COLORS = {
+  userRingColors: {
+    outer: "#F9C6CC",
+    middle: "#ffffff",
+    inner: "#C6E5B3"
+  },
+  userTextColors: {
+    outer: "#8b1538",
+    middle: "#333",
+    inner: "#2d5a2d",
+    coordinates: "#333"
+  },
+  userHubColor: "#ffff7a"
+};
+
 export default function DialecticalWheel({
   wisdomUnits,
   componentOrder,
   preferences = DEFAULT_PREFERENCES,
+  colors = DEFAULT_COLORS,
   arrowConnections = '',
   style = {},
   onChartReady,
@@ -119,6 +135,9 @@ export default function DialecticalWheel({
         module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
         module.redefine('viewof isWhiteOutside', toggle({label: 'Swap red and white layer', value: preferences.isWhiteOutside}));
         module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
+        module.redefine('userRingColors', (colors.userRingColors));
+        module.redefine('userTextColors', (colors.userTextColors));
+        module.redefine('userHubColor', colors.userHubColor);
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }
@@ -130,6 +149,10 @@ export default function DialecticalWheel({
     preferences.TsOnly,
     preferences.isWhiteOutside,
     preferences.showFlow,
+    preferences.graphView,
+    colors.userRingColors,
+    colors.userTextColors,
+    colors.userHubColor,
     arrowConnections,
     module
   ]);
