@@ -176,7 +176,7 @@
         },
         // Colors
         colors: {
-          hub: "#ffff7a", // Khaki
+          hub: userHubColor, // Khaki
           rings: ringColors,
           text: textColors,
           strokes: { default: "#000", middleRing: "#000", zoom: null },
@@ -498,28 +498,31 @@
   </script>
   <script id="2409" type="application/vnd.observable.javascript">
     userRingColors = ({
-      outer: "#ffffff",    // Outer ring background color
-      middle: "#F9C6CC",   // Middle ring background color  
+      outer: "#F9C6CC",    // Outer ring background color
+      middle: "#ffffff",   // Middle ring background color  
       inner: "#C6E5B3"     // Inner ring background color
     })
   </script>
   <script id="2410" type="application/vnd.observable.javascript">
-    userTextColors = ({
-      outer: "#333",       // Outer ring text color
-      middle: "#8b1538",   // Middle ring text color
-      inner: "#2d5a2d",    // Inner ring text color
+    userTextColors = ({ 
+      outer: "#8b1538",  // Outer ring text color
+      middle: "#333",   // Middle ring text color
+      inner: "#2d5a2d",   // Inner ring text color
       coordinates: "#333"  // Coordinate text color
     })
   </script>
+  <script id="2411" type="application/vnd.observable.javascript">
+    userHubColor = ("#ffff7a");
+  </script>
   <script id="1560" type="application/vnd.observable.javascript">
     ringColors = isWhiteOutside
-      ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
-      : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+      ? { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+      : { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
   </script>
   <script id="1561" type="application/vnd.observable.javascript">
     textColors = isWhiteOutside
-      ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
-      : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      ? { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      : { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
   </script>
   <script id="1253" type="application/vnd.observable.javascript">
     viewof whitesOnly = Inputs.toggle({label: "White cells only"});

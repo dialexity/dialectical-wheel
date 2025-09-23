@@ -42,10 +42,25 @@ export interface Preferences {
     showFlow: boolean;
     graphView: boolean;
 }
+export interface Colors {
+    userRingColors: {
+        outer: string;
+        middle: string;
+        inner: string;
+    };
+    userTextColors: {
+        outer: string;
+        middle: string;
+        inner: string;
+        coordinates: string;
+    };
+    userHubColor: string;
+}
 export interface DialecticalWheelProps {
     wisdomUnits: WisdomUnit[];
     componentOrder: string[];
     preferences?: Preferences;
+    colors?: Colors;
     arrowConnections?: string;
     style?: React.CSSProperties;
     onChartReady?: (chart: any) => void;

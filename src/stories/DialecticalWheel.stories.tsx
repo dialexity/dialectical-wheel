@@ -176,6 +176,20 @@ export const Default: Story = {
       showFlow: true,
       graphView: false
     },
+    colors: {
+      userRingColors: {
+        outer: "#ffffff",
+        middle: "#F9C6CC",
+        inner: "#C6E5B3"
+      },
+      userTextColors: {
+        outer: "#333",
+        middle: "#8b1538",
+        inner: "#2d5a2d",
+        coordinates: "#333"
+      },
+      userHubColor: "#ffff7a"
+    },
     arrowConnections: '',
     debug: true,
     onChartReady: (chart) => {
@@ -190,6 +204,26 @@ export const Default: Story = {
     onClickedCellChange: (cell) => {
       console.log('Clicked cell changed:', cell);
     }
+  },
+};
+
+export const CustomColors: Story = {
+  args: {
+    ...Default.args,
+    colors: {
+      userRingColors: {
+        outer: "#F9C6CC",
+        middle: "#ffffff",
+        inner: "#C6E5B3"
+      },
+      userTextColors: {
+        outer: "#8b1538",
+        middle: "#333",
+        inner: "#2d5a2d",
+        coordinates: "#333"
+      },
+      userHubColor: "#ffff7a"
+    },
   },
 };
 
@@ -245,15 +279,15 @@ export const GraphView: Story = {
   },
 };
 
-export const NoFlow: Story = {
+export const ShowFlow: Story = {
   args: {
     ...Default.args,
     preferences: {
-      "whitesOnly": false,
-      "TsOnly": false,
-      "isWhiteOutside": false,
-      "showFlow": true,
-      "graphView": false
+      whitesOnly: false,
+      TsOnly: false,
+      isWhiteOutside: false,
+      showFlow: true,
+      graphView: false
     },
   },
 };

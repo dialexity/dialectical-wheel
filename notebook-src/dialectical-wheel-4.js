@@ -166,7 +166,7 @@ return (
 500
 );
 }
-function _styles(ringColors,textColors){
+function _styles(userHubColor,ringColors,textColors){
 return (
 {
         // Dimensions
@@ -183,7 +183,7 @@ return (
         },
         // Colors
         colors: {
-          hub: "#ffff7a", // Khaki
+          hub: userHubColor, // Khaki
           rings: ringColors,
           text: textColors,
           strokes: { default: "#000", middleRing: "#000", zoom: null },
@@ -515,34 +515,39 @@ Inputs.toggle({label: "Swap red and white layer"})
 function _userRingColors(){
 return (
 {
-      outer: "#ffffff",    // Outer ring background color
-      middle: "#F9C6CC",   // Middle ring background color  
+      outer: "#F9C6CC",    // Outer ring background color
+      middle: "#ffffff",   // Middle ring background color  
       inner: "#C6E5B3"     // Inner ring background color
     }
 );
 }
 function _userTextColors(){
 return (
-{
-      outer: "#333",       // Outer ring text color
-      middle: "#8b1538",   // Middle ring text color
-      inner: "#2d5a2d",    // Inner ring text color
+{ 
+      outer: "#8b1538",  // Outer ring text color
+      middle: "#333",   // Middle ring text color
+      inner: "#2d5a2d",   // Inner ring text color
       coordinates: "#333"  // Coordinate text color
     }
+);
+}
+function _userHubColor(){
+return (
+"#ffff7a"
 );
 }
 function _ringColors(isWhiteOutside,userRingColors){
 return (
 isWhiteOutside
-      ? { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
-      : { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+      ? { outer: userRingColors.middle, middle: userRingColors.outer, inner: userRingColors.inner }
+      : { outer: userRingColors.outer, middle: userRingColors.middle, inner: userRingColors.inner }
 );
 }
 function _textColors(isWhiteOutside,userTextColors){
 return (
 isWhiteOutside
-      ? { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
-      : { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      ? { outer: userTextColors.middle, middle: userTextColors.outer, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
+      : { outer: userTextColors.outer, middle: userTextColors.middle, inner: userTextColors.inner, coordinates: userTextColors.coordinates }
 );
 }
 function _whitesOnly(Inputs){
@@ -4811,7 +4816,7 @@ export default function define(runtime, observer) {
   main.variable(observer("makeRings")).define("makeRings", ["arcTween", "d3"], _makeRings);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
-  main.variable(observer("styles")).define("styles", ["ringColors", "textColors"], _styles);
+  main.variable(observer("styles")).define("styles", ["userHubColor", "ringColors", "textColors"], _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "arrowUtilities", "d3"], _arrowControls);
   main.variable(observer()).define(["unFocus", "viewof chart"], _2);
   main.variable(observer("viewof unFocus")).define("viewof unFocus", ["Inputs"], _unFocus);
@@ -4823,6 +4828,7 @@ export default function define(runtime, observer) {
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
   main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
   main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
+  main.variable(observer("userHubColor")).define("userHubColor", _userHubColor);
   main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
   main.variable(observer("textColors")).define("textColors", ["isWhiteOutside", "userTextColors"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
