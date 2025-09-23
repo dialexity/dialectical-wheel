@@ -137,7 +137,7 @@ export default function DialecticalWheel({
         module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
         module.redefine('userRingColors', (colors.userRingColors));
         module.redefine('userTextColors', (colors.userTextColors));
-        module.redefine('userHubColor', colors.userHubColor);
+        module.redefine('userHubColor', (colors.userHubColor));
       } catch (error) {
         console.warn('Could not redefine variables in notebook:', error);
       }

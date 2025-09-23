@@ -178,13 +178,13 @@ export const Default: Story = {
     },
     colors: {
       userRingColors: {
-        outer: "#ffffff",
-        middle: "#F9C6CC",
+        outer: "#F9C6CC",
+        middle: "#ffffff",
         inner: "#C6E5B3"
       },
       userTextColors: {
-        outer: "#333",
-        middle: "#8b1538",
+        outer: "#8b1538",
+        middle: "#333",
         inner: "#2d5a2d",
         coordinates: "#333"
       },
@@ -296,11 +296,7 @@ export const WithArrowConnections: Story = {
   args: {
     ...Default.args,
     arrowConnections: `
-      T1 -> A1
-      A1 -> S1
-      S1 -> T2
-      T2 -> A2
-      A2 -> S2
+      ${sampleWisdomUnits.map((unit) => `${unit.t.alias} -> ${unit.a.alias}`).join('\n')}
     `,
   },
 };

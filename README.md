@@ -1,17 +1,8 @@
 # Dialectical Wheel
 
-A React component library for creating interactive dialectical wheel visualizations. Explore thesis-antithesis relationships through an intuitive, interactive wheel interface built with TypeScript and D3.js.
+A React component for creating interactive dialectical wheel visualizations. It wraps the Observable notebook and exposes a simple React API with TypeScript types.
 
-This is a wrapper for the [ObservableHQ Dialectical Wheel notebook](https://observablehq.com/@dialexity/dialectical-wheel)
-
-## Features
-
-- 🎯 **Interactive Dialectical Wheels** - Visualize thesis-antithesis relationships
-- 🎨 **Customizable Styling** - Separate layout and font CSS for easy customization
-- 📱 **Responsive Design** - Works on desktop and mobile devices
-- 🔧 **TypeScript Support** - Full type safety and IntelliSense
-- 🚀 **Zero Build Step** - Direct source imports for instant development
-- 🎭 **Observable Integration** - Built on Observable notebooks for powerful data visualization
+Built on the [ObservableHQ Dialectical Wheel notebook](https://observablehq.com/@dialexity/dialectical-wheel).
 
 ## Installation
 
@@ -19,172 +10,150 @@ This is a wrapper for the [ObservableHQ Dialectical Wheel notebook](https://obse
 npm install dialectical-wheel
 ```
 
-**Note:** This library uses source files directly, so no build step is required for development.
-
 ## Quick Start
 
 ```jsx
 import React from 'react';
-import { DialecticalWheel } from 'dialectical-wheel';
+import DialecticalWheel from 'dialectical-wheel';
 
-function App() {
-  const dialecticalData = {
-    "T1": {
-      "statement": "Invest in renewable energy",
-      "positive": "Reduces carbon emissions",
-      "negative": "High initial costs"
-    },
-    "A1": {
-      "statement": "Focus on fossil fuels",
-      "positive": "Lower immediate costs",
-      "negative": "Environmental damage"
-    },
-    "T2": {
-      "statement": "Government regulation",
-      "positive": "Ensures compliance",
-      "negative": "Reduces innovation"
-    },
-    "A2": {
-      "statement": "Free market approach",
-      "positive": "Encourages innovation",
-      "negative": "May ignore externalities"
-    }
-  };
+const sampleWisdomUnits = [
+  {
+    t_minus: { alias: 'T-', statement: 'Risk group lives', explanation: '' },
+    t:       { alias: 'T',  statement: 'Pursue minister elimination', explanation: '' },
+    t_plus:  { alias: 'T+', statement: 'Achieve strategic goals', explanation: '' },
+    a_plus:  { alias: 'A+', statement: 'Ensure survival peacefully', explanation: '' },
+    a:       { alias: 'A',  statement: 'Accept ransom offer', explanation: '' },
+    a_minus: { alias: 'A-', statement: 'Compromise core ideals', explanation: '' }
+  }
+];
 
+export default function App() {
   return (
-    <DialecticalWheel 
-      dialecticalData={dialecticalData}
-      arrowConnections="T1 -> A1\nT2 -> A2"
-      style={{ width: '600px', height: '400px' }}
-      debug={true}
+    <DialecticalWheel
+      wisdomUnits={sampleWisdomUnits}
+      componentOrder={[]}
+      preferences={{ whitesOnly: false, TsOnly: false, isWhiteOutside: false, showFlow: true, graphView: false }}
+      colors={{
+        userRingColors: { outer: '#F9C6CC', middle: '#ffffff', inner: '#C6E5B3' },
+        userTextColors: { outer: '#8b1538', middle: '#333', inner: '#2d5a2d', coordinates: '#333' },
+        userHubColor: '#ffff7a'
+      }}
+      arrowConnections={''}
+      debug
+      onChartReady={(chart) => console.log('Chart ready:', chart)}
+      onTopSliceChange={(slice) => console.log('Top slice changed:', slice)}
+      onFocusedSliceChange={(slice) => console.log('Focused slice changed:', slice)}
+      onClickedCellChange={(cell) => console.log('Clicked cell changed:', cell)}
     />
   );
 }
 ```
 
-## Core Components
+## Component
 
-### DialecticalWheel
+### `DialecticalWheel`
 
-The main interactive wheel component that renders dialectical relationships.
+The interactive wheel component that renders wisdom units and optional flow/graph.
 
-**Props:**
-- `dialecticalData` (object): Required. Object containing thesis/antithesis statements with positive/negative points
-- `arrowConnections` (string): Optional. Connection notation for linking statements (e.g., "T1 -> A1\nT2 -> A2")
-- `style` (object): Optional. CSS styles for the container
-- `onChartReady` (function): Optional. Callback when chart is initialized
-- `onTopSliceChange` (function): Optional. Callback when top slice changes
-- `onFocusedSliceChange` (function): Optional. Callback when focused slice changes
-- `debug` (boolean): Optional. Show debug information
+**Props**
+- `wisdomUnits` (array, required): Array of wisdom unit objects (see Data Format).
+- `componentOrder` (array): Order of components in the wheel.
+- `preferences` (object): Display preferences.
+  - `whitesOnly` (boolean)
+  - `TsOnly` (boolean)
+  - `isWhiteOutside` (boolean)
+  - `showFlow` (boolean)
+  - `graphView` (boolean)
+- `colors` (object): Custom colors.
+  - `userRingColors` { `outer`, `middle`, `inner` }
+  - `userTextColors` { `outer`, `middle`, `inner`, `coordinates` }
+  - `userHubColor` (string)
+- `arrowConnections` (string): Newline-delimited connections, e.g. `"T1 -> A1\nT2 -> A2"`.
+- `style` (object): Inline styles for the container.
+- `debug` (boolean): Show debug info under the chart.
+- `onChartReady(chart)` (function)
+- `onTopSliceChange(slice)` (function)
+- `onFocusedSliceChange(slice)` (function)
+- `onClickedCellChange(cell)` (function)
 
-**Example:**
-```jsx
-<DialecticalWheel 
-  dialecticalData={{
-    "T1": {
-      "statement": "Centralized control",
-      "positive": "Clear direction",
-      "negative": "Bureaucratic overhead"
-    },
-    "A1": {
-      "statement": "Distributed autonomy",
-      "positive": "Flexibility",
-      "negative": "Coordination challenges"
-    },
-    "T2": {
-      "statement": "Structured planning",
-      "positive": "Predictable outcomes",
-      "negative": "Rigid approach"
-    },
-    "A2": {
-      "statement": "Emergent strategy",
-      "positive": "Adaptive",
-      "negative": "Unpredictable"
-    }
-  }}
-  arrowConnections="T1 -> A1\nT2 -> A2"
-  onChartReady={(chart) => console.log('Chart ready:', chart)}
-  debug={true}
-/>
-```
+### Preferences
 
+Use `preferences` to control what is rendered and how the wheel is displayed:
 
+- `whitesOnly` (default: `false`): Hides red and green rings, showing only the white ring cells.
+- `TsOnly` (default: `false`): Shows only Thesis slices (T, T-, T+). Antithesis slices (A, A-, A+) are hidden.
+- `isWhiteOutside` (default: `false`): Swaps white and red rings, placing the white ring on the outermost layer.
+- `showFlow` (default: `true`): Displays arrow flow on the outer edge to indicate sequence or linkage.
+- `graphView` (default: `false`): Renders the graph (Cycle view) instead of the radial wheel. When `true`, the SVG wheel is hidden.
 
-
-## Styling
-
-The components come with default CSS styling that is automatically imported. The styling is split into two files:
-
-- **Layout styles**: `DialecticalWheel.css` - Responsive layout and component styling
-- **Font styles**: `DialecticalWheel-fonts.css` - Font family imports and text styling
-
-### Customizing Fonts
-
-To use different fonts, you can override the font CSS:
-
-```css
-/* Override the default Ubuntu Mono font */
-.dialectical-wheel-container {
-  font-family: 'Inter', sans-serif;
-}
-
-.dialectical-wheel-container svg text {
-  font-family: 'Inter', sans-serif;
-}
-```
-
-### Custom Styling
+Example:
 
 ```jsx
-import { DialecticalWheel } from 'dialectical-wheel';
-import './my-custom-styles.css'; // Your overrides
+preferences={{ whitesOnly: false, TsOnly: false, isWhiteOutside: false, showFlow: true, graphView: false }}
+```
+
+### Colors
+
+Customize ring fills and text colors. All values are CSS color strings.
+
+- `userRingColors`
+  - `outer`: Fill color for the outer ring
+  - `middle`: Fill color for the middle ring
+  - `inner`: Fill color for the inner ring
+- `userTextColors`
+  - `outer`: Text color used on outer ring
+  - `middle`: Text color used on middle ring
+  - `inner`: Text color used on inner ring
+  - `coordinates`: Text color for coordinate labels
+- `userHubColor`: Fill color for the hub (center) region
+
+Defaults mirror the Storybook example:
+
+```js
+colors={{
+  userRingColors: { outer: '#F9C6CC', middle: '#ffffff', inner: '#C6E5B3' },
+  userTextColors: { outer: '#8b1538', middle: '#333', inner: '#2d5a2d', coordinates: '#333' },
+  userHubColor: '#ffff7a'
+}}
 ```
 
 ## Data Format
 
-### Dialectical Data Structure
+### Wisdom Unit
+
+Each element of `wisdomUnits` includes six fields (thesis/antithesis and +/- variants):
 
 ```javascript
-const dialecticalData = {
-  "T1": {
-    "statement": "Central thesis statement",
-    "positive": "Positive aspect",
-    "negative": "Negative aspect"
-  },
-  "A1": {
-    "statement": "Opposing statement",
-    "positive": "Positive aspect",
-    "negative": "Negative aspect"
-  },
-  "T2": {
-    "statement": "Another thesis",
-    "positive": "Positive aspect",
-    "negative": "Negative aspect"
-  },
-  "A2": {
-    "statement": "Another antithesis",
-    "positive": "Positive aspect",
-    "negative": "Negative aspect"
-  }
-  // ... more statements
+const wisdomUnit = {
+  t_minus: { alias: 'T-', statement: '...', explanation: '...' },
+  t:       { alias: 'T',  statement: '...', explanation: '...' },
+  t_plus:  { alias: 'T+', statement: '...', explanation: '...' },
+  a_plus:  { alias: 'A+', statement: '...', explanation: '...' },
+  a:       { alias: 'A',  statement: '...', explanation: '...' },
+  a_minus: { alias: 'A-', statement: '...', explanation: '...' }
 };
 ```
 
 ### Arrow Connections
 
-Use connection notation to link statements:
+Provide connections as newline-separated pairs:
 
 ```javascript
-// Connect T1 to A1, and T2 to A2
-const arrowConnections = "T1 -> A1\nT2 -> A2";
+const arrowConnections = `
+T1 -> A1
+T2 -> A2
+`;
+```
 
-// Multiple connections
-const arrowConnections = "T1 -> A1\nT2 -> A2\nA1 -> T2"; // Complex flow
+## Styling
+
+Default fonts are included via `DialecticalWheel-fonts.css` inside the component. You can still override text styles in your app if needed:
+
+```css
+.dialectical-wheel-wrapper svg text { font-family: Inter, system-ui, sans-serif; }
 ```
 
 ## Development
-
-This library uses source files directly, making development much simpler:
 
 ```bash
 # Clone the repository
@@ -200,21 +169,13 @@ npm run type-check
 # Linting
 npm run lint
 
-# Testing
-npm test
+# Storybook (local docs)
+npm run storybook
 ```
 
-No build step is required - changes are reflected immediately when importing the source files.
+## TypeScript
 
-## TypeScript Support
-
-TypeScript definitions are included in the package. The library is written in TypeScript and exports source files directly, providing full type safety and IntelliSense support.
-
-## Browser Support
-
-- Modern browsers with ES6+ support
-- Mobile browsers (iOS Safari, Chrome Mobile)
-- Responsive design for all screen sizes
+Type definitions are included. You can import helper types from `dialectical-wheel` if needed.
 
 ## License
 
@@ -230,4 +191,4 @@ MIT
 
 ## Support
 
-For issues and feature requests, please use the [GitHub issue tracker](https://github.com/dialexity/dialectical-wheel/issues). 
+For issues and feature requests, please use the GitHub issue tracker.
