@@ -45,6 +45,7 @@ export interface WheelStructure {
 export interface Preferences {
   whitesOnly: boolean; //white ring only, hides red and green rings when true
   TsOnly: boolean; //Theses slices only, hides Antitheses slices when true (pending behavior on Ac/Re)
+  AsOnly: boolean; //Antitheses slices only, hides Theses slices when true (pending behavior on Ac/Re)
   isWhiteOutside: boolean; //swap red and white rings, white ring on the outermost layer when true
   showFlow: boolean; //show arrows on the outermost edge of the wheel when true
   graphView: boolean; //show graph view (Cycle view) when true

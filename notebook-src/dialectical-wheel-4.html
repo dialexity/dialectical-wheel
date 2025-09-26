@@ -155,7 +155,7 @@
     }
   </script>
   <script id="9" type="application/vnd.observable.javascript">
-    dialecticalData = transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
+    dialecticalData = transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder, TsOnly, AsOnly)
   </script>
   <script id="379" type="application/vnd.observable.javascript" pinned="">
     width = 500
@@ -529,6 +529,9 @@
   </script>
   <script id="1263" type="application/vnd.observable.javascript">
     viewof TsOnly = Inputs.toggle({label: "Ts only"});
+  </script>
+  <script id="2412" type="application/vnd.observable.javascript" pinned="">
+    viewof AsOnly = Inputs.toggle({label: "As only"});
   </script>
   <script id="1274" type="application/vnd.observable.javascript">
     DOM.download(() => serialize(viewof chart), undefined, "Save as SVG")
@@ -2617,15 +2620,15 @@
       innerLabelsGroup.style("opacity", 0);
       centerCircle.style("opacity", 0);
       coordinateGroup.style("opacity", 0); // Hide axes labels
-      
+
       // Initialize the chart data (this will do text wrapping but it's hidden)
       // Use a modified resetToFull that doesn't call updateAxisPositions
       resetToFullWithoutAxisUpdate();
       rotateToSlice(cells[0], undefined, true);
-      
+
       // Animate rings emanating in sequence and wait for completion
       const animationDuration = 300; // ms per ring
-      
+
       // Start with the center hub
       await new Promise(resolve => {
         centerCircle.transition()
@@ -2633,7 +2636,7 @@
           .style("opacity", 1)
           .on("end", resolve);
       });
-      
+
       // Then inner ring (green)
       await new Promise(resolve => {
         innerGroup.transition()
@@ -2644,7 +2647,7 @@
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Then middle ring (white)
       await new Promise(resolve => {
         middleGroup.transition()
@@ -2655,7 +2658,7 @@
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Then outer ring (red)
       await new Promise(resolve => {
         outerGroup.transition()
@@ -2666,7 +2669,7 @@
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Finally invisible ring (last)
       await new Promise(resolve => {
         invisibleGroup.transition()
@@ -2677,7 +2680,7 @@
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // After all rings have finished emanating, show axes and update positions
       coordinateGroup.transition()
         .duration(300)
@@ -3226,24 +3229,21 @@
     null
   </script>
   <script id="168" type="application/vnd.observable.javascript">
-    transformToNestedPieData = (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
+    transformToNestedPieData = (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
 
-          // Filter units based on tOnly condition
-          const filteredUnits = tOnly ? units.filter(unit => unit.charAt(0) === 'T') : units;
-
           return {
-            invisible: filteredUnits.map((unit,index)=> ({
+            invisible: units.map((unit,index)=> ({
               name: `${unit}i`,
               unitId: unit,
-              value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-              opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+              value: 1,
+              opacity: 1,
               fullText: `${unit}`,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: filteredUnits.map(unit => ({
+            [outerKey]: units.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
@@ -3252,7 +3252,7 @@
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: filteredUnits.map(unit => ({
+            [middleKey]: units.map(unit => ({
               name: unit,
               unitId: unit,
               value: 1,
@@ -3261,7 +3261,7 @@
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: filteredUnits.map(unit => ({
+            inner: units.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
@@ -4411,11 +4411,9 @@
   </script>
   <script id="1425" type="application/vnd.observable.javascript">
     function getOppositePrefix(unitId) {
-      if (unitId.startsWith('Ac')) return unitId.replace('Ac', 'Re');
-      if (unitId.startsWith('T')) return unitId.replace('T', 'A');
-      if (unitId.startsWith('A')) return unitId.replace('A', 'T');
-      if (unitId.startsWith('Re')) return unitId.replace('Re', 'Ac');
-      return unitId; // fallback for unknown prefixes
+      const unit = dialecticalData && dialecticalData[unitId];
+      if (unit && unit.pairWith) return unit.pairWith;
+      return unitId; // fallback when pair not found
     }
   </script>
   <script id="1427" type="application/vnd.observable.javascript">
@@ -4580,12 +4578,13 @@
       };
   </script>
   <script id="1460" type="application/vnd.observable.javascript">
-    transformWisdomUnitsToDialecticalData = (wisdomUnits, componentOrder) => {
+    transformWisdomUnitsToDialecticalData = (wisdomUnits, componentOrder, TOnly=false, AOnly=false) => {
       if (!wisdomUnits || wisdomUnits.length === 0) {
         return {};
       }
       const diabolicalData = {};
-      wisdomUnits.forEach((unit, index) => {
+      if (!AOnly) {
+        wisdomUnits.forEach((unit, index) => {
         const thesisKey = unit.t.alias || `T${index + 1}`;
         diabolicalData[thesisKey] = {
           statement: extractStatement(unit.t),
@@ -4595,8 +4594,10 @@
           pairId: `${(unit.t.alias + "_" + unit.a.alias) || `T${index + 1}_A${index + 1}`}`
         };
       })
+      }
 
-      wisdomUnits.forEach((unit, index) => {
+      if (!TOnly) {
+        wisdomUnits.forEach((unit, index) => {
         const antithesisKey = unit.a.alias || `A${index + 1}`;
         diabolicalData[antithesisKey] = {
           statement: extractStatement(unit.a),
@@ -4607,6 +4608,7 @@
         };
 
       });
+    }
       if (!componentOrder || componentOrder.length === 0) {
         return diabolicalData;
       }

@@ -10,8 +10,9 @@ import type { DialecticalWheelProps } from '../../types';
 const DEFAULT_PREFERENCES = {
   whitesOnly: false,
   TsOnly: false,
+  AsOnly: false,
   isWhiteOutside: false,
-  showFlow: true,
+  showFlow: false,
   graphView: false
 };
 
@@ -133,6 +134,7 @@ export default function DialecticalWheel({
         // Redefine the actual view cells so downstream `Generators.input(viewof ...)` works
         module.redefine('viewof whitesOnly', toggle({label: 'White cells only', value: preferences.whitesOnly}));
         module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
+        module.redefine('viewof AsOnly', toggle({label: 'As only', value: preferences.AsOnly}));
         module.redefine('viewof isWhiteOutside', toggle({label: 'Swap red and white layer', value: preferences.isWhiteOutside}));
         module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
         module.redefine('userRingColors', (colors.userRingColors));
@@ -147,6 +149,7 @@ export default function DialecticalWheel({
     componentOrder,
     preferences.whitesOnly,
     preferences.TsOnly,
+    preferences.AsOnly,
     preferences.isWhiteOutside,
     preferences.showFlow,
     preferences.graphView,
