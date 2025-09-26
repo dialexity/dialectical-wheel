@@ -156,9 +156,9 @@ return (
     }
 );
 }
-function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder){
+function _dialecticalData(transformWisdomUnitsToDialecticalData,wisdomUnits,componentOrder,TsOnly,AsOnly){
 return (
-transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder)
+transformWisdomUnitsToDialecticalData(wisdomUnits,componentOrder, TsOnly, AsOnly)
 );
 }
 function _width(){
@@ -558,6 +558,11 @@ Inputs.toggle({label: "White cells only"})
 function _TsOnly(Inputs){
 return (
 Inputs.toggle({label: "Ts only"})
+);
+}
+function _AsOnly(Inputs){
+return (
+Inputs.toggle({label: "As only"})
 );
 }
 function _3(DOM,serialize,viewof_chart){
@@ -2668,15 +2673,15 @@ return (
       innerLabelsGroup.style("opacity", 0);
       centerCircle.style("opacity", 0);
       coordinateGroup.style("opacity", 0); // Hide axes labels
-      
+
       // Initialize the chart data (this will do text wrapping but it's hidden)
       // Use a modified resetToFull that doesn't call updateAxisPositions
       resetToFullWithoutAxisUpdate();
       rotateToSlice(cells[0], undefined, true);
-      
+
       // Animate rings emanating in sequence and wait for completion
       const animationDuration = 300; // ms per ring
-      
+
       // Start with the center hub
       await new Promise(resolve => {
         centerCircle.transition()
@@ -2684,7 +2689,7 @@ return (
           .style("opacity", 1)
           .on("end", resolve);
       });
-      
+
       // Then inner ring (green)
       await new Promise(resolve => {
         innerGroup.transition()
@@ -2695,7 +2700,7 @@ return (
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Then middle ring (white)
       await new Promise(resolve => {
         middleGroup.transition()
@@ -2706,7 +2711,7 @@ return (
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Then outer ring (red)
       await new Promise(resolve => {
         outerGroup.transition()
@@ -2717,7 +2722,7 @@ return (
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // Finally invisible ring (last)
       await new Promise(resolve => {
         invisibleGroup.transition()
@@ -2728,7 +2733,7 @@ return (
           .duration(animationDuration)
           .style("opacity", 1);
       });
-      
+
       // After all rings have finished emanating, show axes and update positions
       coordinateGroup.transition()
         .duration(300)
@@ -3299,26 +3304,23 @@ return (
 null
 );
 }
-function _transformToNestedPieData(isWhiteOutside,whitesOnly,TsOnly){
+function _transformToNestedPieData(isWhiteOutside,whitesOnly){
 return (
-(dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly, tOnly = TsOnly) => {
+(dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly) => {
           const units = Object.keys(dialecticalData);
           const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
 
-          // Filter units based on tOnly condition
-          const filteredUnits = tOnly ? units.filter(unit => unit.charAt(0) === 'T') : units;
-
           return {
-            invisible: filteredUnits.map((unit,index)=> ({
+            invisible: units.map((unit,index)=> ({
               name: `${unit}i`,
               unitId: unit,
-              value: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
-              opacity: (unit.charAt(0) == 'A' && tOnly) ? 0: 1,
+              value: 1,
+              opacity: 1,
               fullText: `${unit}`,
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: filteredUnits.map(unit => ({
+            [outerKey]: units.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
@@ -3327,7 +3329,7 @@ return (
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: filteredUnits.map(unit => ({
+            [middleKey]: units.map(unit => ({
               name: unit,
               unitId: unit,
               value: 1,
@@ -3336,7 +3338,7 @@ return (
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: filteredUnits.map(unit => ({
+            inner: units.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
@@ -4514,14 +4516,12 @@ return (
 [...flowSuits, ...contraSuits]
 );
 }
-function _getOppositePrefix(){
+function _getOppositePrefix(dialecticalData){
 return (
 function getOppositePrefix(unitId) {
-      if (unitId.startsWith('Ac')) return unitId.replace('Ac', 'Re');
-      if (unitId.startsWith('T')) return unitId.replace('T', 'A');
-      if (unitId.startsWith('A')) return unitId.replace('A', 'T');
-      if (unitId.startsWith('Re')) return unitId.replace('Re', 'Ac');
-      return unitId; // fallback for unknown prefixes
+      const unit = dialecticalData && dialecticalData[unitId];
+      if (unit && unit.pairWith) return unit.pairWith;
+      return unitId; // fallback when pair not found
     }
 );
 }
@@ -4700,12 +4700,13 @@ return (
 }
 function _transformWisdomUnitsToDialecticalData(extractStatement){
 return (
-(wisdomUnits, componentOrder) => {
+(wisdomUnits, componentOrder, TOnly=false, AOnly=false) => {
       if (!wisdomUnits || wisdomUnits.length === 0) {
         return {};
       }
       const diabolicalData = {};
-      wisdomUnits.forEach((unit, index) => {
+      if (!AOnly) {
+        wisdomUnits.forEach((unit, index) => {
         const thesisKey = unit.t.alias || `T${index + 1}`;
         diabolicalData[thesisKey] = {
           statement: extractStatement(unit.t),
@@ -4715,8 +4716,10 @@ return (
           pairId: `${(unit.t.alias + "_" + unit.a.alias) || `T${index + 1}_A${index + 1}`}`
         };
       })
+      }
 
-      wisdomUnits.forEach((unit, index) => {
+      if (!TOnly) {
+        wisdomUnits.forEach((unit, index) => {
         const antithesisKey = unit.a.alias || `A${index + 1}`;
         diabolicalData[antithesisKey] = {
           statement: extractStatement(unit.a),
@@ -4727,6 +4730,7 @@ return (
         };
 
       });
+    }
       if (!componentOrder || componentOrder.length === 0) {
         return diabolicalData;
       }
@@ -4814,7 +4818,7 @@ export default function define(runtime, observer) {
 
   main.variable(observer()).define(["md"], _1);
   main.variable(observer("makeRings")).define("makeRings", ["arcTween", "d3"], _makeRings);
-  main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder"], _dialecticalData);
+  main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder", "TsOnly", "AsOnly"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", ["userHubColor", "ringColors", "textColors"], _styles);
   main.variable(observer("arrowControls")).define("arrowControls", ["html", "parseArrowConnections", "arrowConnections", "dialecticalData", "viewof chart", "isThesisType", "arrowUtilities", "d3"], _arrowControls);
@@ -4835,6 +4839,8 @@ export default function define(runtime, observer) {
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
   main.variable(observer("viewof TsOnly")).define("viewof TsOnly", ["Inputs"], _TsOnly);
   main.define("TsOnly", ["Generators", "viewof TsOnly"], (G, _) => G.input(_));
+  main.variable(observer("viewof AsOnly")).define("viewof AsOnly", ["Inputs"], _AsOnly);
+  main.define("AsOnly", ["Generators", "viewof AsOnly"], (G, _) => G.input(_));
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
   main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
   main.variable(observer("radii")).define("radii", ["styles"], _radii);
@@ -4864,7 +4870,7 @@ export default function define(runtime, observer) {
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
   main.variable(observer()).define(_6);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly", "TsOnly"], _transformToNestedPieData);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly"], _transformToNestedPieData);
   main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
@@ -4893,7 +4899,7 @@ export default function define(runtime, observer) {
   main.variable(observer("suits")).define("suits", ["flowSuits", "contraSuits"], _suits);
   const child1 = runtime.module(define1);
   main.import("Swatches", child1); 
-  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", _getOppositePrefix);
+  main.variable(observer("getOppositePrefix")).define("getOppositePrefix", ["dialecticalData"], _getOppositePrefix);
   main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
   main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
   main.variable(observer("isAntithesisType")).define("isAntithesisType", _isAntithesisType);

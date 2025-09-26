@@ -82,6 +82,7 @@ Use `preferences` to control what is rendered and how the wheel is displayed:
 
 - `whitesOnly` (default: `false`): Hides red and green rings, showing only the white ring cells.
 - `TsOnly` (default: `false`): Shows only Thesis slices (T, T-, T+). Antithesis slices (A, A-, A+) are hidden.
+- `AsOnly` (default: `false`): Shows only Antithesis slices (A, A-, A+). Thesis slices (T, T-, T+) are hidden.
 - `isWhiteOutside` (default: `false`): Swaps white and red rings, placing the white ring on the outermost layer.
 - `showFlow` (default: `true`): Displays arrow flow on the outer edge to indicate sequence or linkage.
 - `graphView` (default: `false`): Renders the graph (Cycle view) instead of the radial wheel. When `true`, the SVG wheel is hidden.
@@ -91,6 +92,14 @@ Example:
 ```jsx
 preferences={{ whitesOnly: false, TsOnly: false, isWhiteOutside: false, showFlow: true, graphView: false }}
 ```
+
+Notes on interactions:
+
+- Set at most one of `TsOnly` or `AsOnly` to `true`. They are mutually exclusive filters.
+- When `graphView: true`:
+  - The radial wheel SVG is hidden; the graph is shown.
+  - `TsOnly` and `AsOnly` still act as filters for which nodes/edges are included in the graph.
+  - `showFlow` has no visible effect in graph view (it only applies to the wheel’s outer-edge arrows).
 
 ### Colors
 

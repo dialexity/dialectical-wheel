@@ -38,6 +38,7 @@ export interface WheelStructure {
 export interface Preferences {
     whitesOnly: boolean;
     TsOnly: boolean;
+    AsOnly: boolean;
     isWhiteOutside: boolean;
     showFlow: boolean;
     graphView: boolean;

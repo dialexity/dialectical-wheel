@@ -253,6 +253,20 @@ export const TsOnly: Story = {
   },
 };
 
+export const AsOnly: Story = {
+  args: {
+    ...Default.args,
+    preferences: {
+      whitesOnly: false,
+      TsOnly: false,
+      AsOnly: true,
+      isWhiteOutside: false,
+      showFlow: true,
+      graphView: false
+    },
+  },
+};
+
 export const SwappedColors: Story = {
   args: {
     ...Default.args,
@@ -262,19 +276,6 @@ export const SwappedColors: Story = {
       isWhiteOutside: true,
       showFlow: true,
       graphView: false
-    },
-  },
-};
-
-export const GraphView: Story = {
-  args: {
-    ...Default.args,
-    preferences: {
-      whitesOnly: false,
-      TsOnly: false,
-      isWhiteOutside: false,
-      showFlow: true,
-      graphView: true
     },
   },
 };
@@ -300,3 +301,46 @@ export const WithArrowConnections: Story = {
     `,
   },
 };
+
+export const GraphView: Story = {
+  args: {
+    ...Default.args,
+    preferences: {
+      whitesOnly: false,
+      TsOnly: false,
+      isWhiteOutside: false,
+      showFlow: true,
+      graphView: true
+    },
+  },
+};
+
+export const GraphViewAsOnly: Story = {
+  args: {
+    ...Default.args,
+    preferences: {
+      whitesOnly: false,
+      TsOnly: false,
+      AsOnly: true,
+      isWhiteOutside: false,
+      showFlow: false,
+      graphView: true
+    },
+  },
+};
+
+export const GraphViewTsOnly: Story = {
+  args: {
+    ...Default.args,
+    preferences: {
+      whitesOnly: false,
+      TsOnly: true,
+      AsOnly: false,
+      isWhiteOutside: false,
+      showFlow: false,
+      graphView: true
+    },
+  },
+};
+
+
