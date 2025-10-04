@@ -493,12 +493,12 @@ return (
 Inputs.toggle({label:"Show sequential flow"})
 );
 }
-function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,d3,invalidation){
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,invalidation){
 return (
 Generators.observe(notify => {
       const node = viewof_showFlow;
       const handler = () => {
-        if (node.value) viewof_chart.drawFlow(); else d3.select(viewof_chart).selectAll('g.flow-arrows').remove();;
+        viewof_chart.toggleFlowArrows(node.value);
         notify(node.value);
       };
       node.addEventListener("input", handler);
@@ -2600,6 +2600,13 @@ return (
       const connections = parseArrowConnections(flowConnections, dialecticalData);
       arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
     }
+    function toggleFlowArrows(show) {
+      if (show) {
+        drawFlow();
+      } else {
+        d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+      }
+    }
 
     // Step mode module wiring
     const stepMode = makeStepMode({
@@ -2776,6 +2783,7 @@ return (
       drawArrow,
       drawLabelLinks: (connections) => arrows.drawLabelLinks(connections),
       getCellCentroid,
+      toggleFlowArrows,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
         // Toggle the visibility of invisible ring borders (not text)
@@ -4827,7 +4835,7 @@ export default function define(runtime, observer) {
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
   main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
   main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
-  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
   main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
