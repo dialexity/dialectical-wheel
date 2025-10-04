@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import React from 'react';
 import DialecticalWheel from '../components/DialecticalWheel/DialecticalWheel';
 
 // Sample wisdom units data from the HTML file
@@ -290,6 +291,56 @@ export const ShowFlow: Story = {
       showFlow: true,
       graphView: false
     },
+  },
+};
+
+export const DynamicFlowToggle: Story = {
+  render: (args) => {
+    const [showFlow, setShowFlow] = React.useState(true);
+    const [chart, setChart] = React.useState<any>(null);
+    
+    const toggleFlow = () => {
+      setShowFlow(!showFlow);
+    };
+    
+    return (
+      <div>
+        <div style={{ marginBottom: '20px' }}>
+          <button 
+            onClick={toggleFlow}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: showFlow ? '#007bff' : '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            {showFlow ? 'Hide Flow' : 'Show Flow'}
+          </button>
+          {chart && (
+            <span style={{ marginLeft: '10px', fontSize: '14px', color: '#666' }}>
+              Chart methods available: {Object.keys(chart).filter(k => typeof chart[k] === 'function').join(', ')}
+            </span>
+          )}
+        </div>
+        <DialecticalWheel
+          {...args}
+          preferences={{
+            ...args.preferences,
+            showFlow: showFlow
+          }}
+          onChartReady={(chartInstance) => {
+            console.log('Chart ready with methods:', Object.keys(chartInstance).filter(k => typeof chartInstance[k] === 'function'));
+            setChart(chartInstance);
+          }}
+        />
+      </div>
+    );
+  },
+  args: {
+    ...Default.args,
   },
 };
 

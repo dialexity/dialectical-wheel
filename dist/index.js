@@ -6139,12 +6139,13 @@ return (
 Inputs.toggle({label:"Show sequential flow"})
 );
 }
-function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,d3,invalidation){
+function _showFlowSubscription(Generators,viewof_showFlow,viewof_chart,invalidation){
 return (
 Generators.observe(notify => {
       const node = viewof_showFlow;
       const handler = () => {
-        if (node.value) viewof_chart.drawFlow(); else d3.select(viewof_chart).selectAll('g.flow-arrows').remove();        notify(node.value);
+        viewof_chart.toggleFlowArrows(node.value);
+        notify(node.value);
       };
       node.addEventListener("input", handler);
       invalidation.then(() => node.removeEventListener("input", handler));
@@ -7772,6 +7773,13 @@ return (
       const connections = parseArrowConnections(flowConnections, dialecticalData);
       arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
     }
+    function toggleFlowArrows(show) {
+      if (show) {
+        drawFlow();
+      } else {
+        d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+      }
+    }
 
     // Step mode module wiring
     const stepMode = makeStepMode({
@@ -7948,6 +7956,7 @@ return (
       drawArrow,
       drawLabelLinks: (connections) => arrows.drawLabelLinks(connections),
       getCellCentroid,
+      toggleFlowArrows,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
         // Toggle the visibility of invisible ring borders (not text)
@@ -9993,7 +10002,7 @@ function define(runtime, observer) {
   main.define("unFocus", ["Generators", "viewof unFocus"], (G, _) => G.input(_));
   main.variable(observer("viewof showFlow")).define("viewof showFlow", ["Inputs"], _showFlow);
   main.define("showFlow", ["Generators", "viewof showFlow"], (G, _) => G.input(_));
-  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "d3", "invalidation"], _showFlowSubscription);
+  main.variable(observer("showFlowSubscription")).define("showFlowSubscription", ["Generators", "viewof showFlow", "viewof chart", "invalidation"], _showFlowSubscription);
   main.variable(observer("viewof isWhiteOutside")).define("viewof isWhiteOutside", ["Inputs"], _isWhiteOutside);
   main.define("isWhiteOutside", ["Generators", "viewof isWhiteOutside"], (G, _) => G.input(_));
   main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
@@ -10124,7 +10133,10 @@ function DialecticalWheel(_ref) {
     _useState2 = _slicedToArray(_useState, 2),
     module = _useState2[0],
     setModule = _useState2[1];
-  //const [chart, setChart] = useState<any>(null);
+  var _useState3 = react.useState(null),
+    _useState4 = _slicedToArray(_useState3, 2),
+    chart = _useState4[0],
+    setChart = _useState4[1];
   //const [runtime, setRuntime] = useState<any>(null);
   react.useEffect(function () {
     console.log('Loading Observable notebook from local npm package...');
@@ -10145,7 +10157,7 @@ function DialecticalWheel(_ref) {
             key: "fulfilled",
             value: function fulfilled(value) {
               // The chart value IS the SVG node with methods attached
-              //setChart(value);
+              setChart(value);
               if (onChartReady) onChartReady(value);
               return _superPropGet(_class, "fulfilled", this, 3)([value]);
             }
@@ -10194,7 +10206,7 @@ function DialecticalWheel(_ref) {
     setModule(main);
     return function () {
       setModule(null);
-      //setChart(null);
+      setChart(null);
       //setRuntime(null);
       runtime.dispose();
     };
@@ -10224,10 +10236,7 @@ function DialecticalWheel(_ref) {
           label: 'Swap red and white layer',
           value: preferences.isWhiteOutside
         }));
-        module.redefine('viewof showFlow', toggle({
-          label: 'Show sequential flow',
-          value: preferences.showFlow
-        }));
+        //module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
         module.redefine('userRingColors', colors.userRingColors);
         module.redefine('userTextColors', colors.userTextColors);
         module.redefine('userHubColor', colors.userHubColor);
@@ -10235,7 +10244,19 @@ function DialecticalWheel(_ref) {
         console.warn('Could not redefine variables in notebook:', error);
       }
     }
-  }, [wisdomUnits, componentOrder, preferences.whitesOnly, preferences.TsOnly, preferences.AsOnly, preferences.isWhiteOutside, preferences.showFlow, preferences.graphView, colors.userRingColors, colors.userTextColors, colors.userHubColor, arrowConnections, module]);
+  }, [wisdomUnits, componentOrder, preferences.whitesOnly, preferences.TsOnly, preferences.AsOnly, preferences.isWhiteOutside,
+  //preferences.showFlow,
+  preferences.graphView, colors.userRingColors, colors.userTextColors, colors.userHubColor, arrowConnections, module]);
+  // Dynamic chart control useEffect - handles real-time flow toggling
+  react.useEffect(function () {
+    if (chart) {
+      if (preferences.showFlow) {
+        chart.toggleFlowArrows(true);
+      } else {
+        chart.toggleFlowArrows(false);
+      }
+    }
+  }, [chart, preferences.showFlow]);
   return jsxRuntime.jsxs("div", {
     className: "dialectical-wheel-wrapper",
     children: [jsxRuntime.jsx("div", {

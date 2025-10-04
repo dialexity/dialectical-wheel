@@ -485,7 +485,7 @@
     showFlowSubscription = Generators.observe(notify => {
       const node = viewof showFlow;
       const handler = () => {
-        if (node.value) viewof chart.drawFlow(); else d3.select(viewof chart).selectAll('g.flow-arrows').remove();;
+        viewof chart.toggleFlowArrows(node.value);
         notify(node.value);
       };
       node.addEventListener("input", handler);
@@ -2547,6 +2547,13 @@
       const connections = parseArrowConnections(flowConnections, dialecticalData);
       arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
     }
+    function toggleFlowArrows(show) {
+      if (show) {
+        drawFlow();
+      } else {
+        d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+      }
+    }
 
     // Step mode module wiring
     const stepMode = makeStepMode({
@@ -2723,6 +2730,7 @@
       drawArrow,
       drawLabelLinks: (connections) => arrows.drawLabelLinks(connections),
       getCellCentroid,
+      toggleFlowArrows,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
         // Toggle the visibility of invisible ring borders (not text)

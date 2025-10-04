@@ -47,7 +47,7 @@ export default function DialecticalWheel({
   const chartRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<HTMLDivElement>(null);
   const [module, setModule] = useState<any>(null);
-  //const [chart, setChart] = useState<any>(null);
+  const [chart, setChart] = useState<any>(null);
   //const [runtime, setRuntime] = useState<any>(null);
   
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function DialecticalWheel({
           }
           fulfilled(value: any) {
             // The chart value IS the SVG node with methods attached
-            //setChart(value);
+            setChart(value);
             if (onChartReady) onChartReady(value);
             return super.fulfilled(value);
           }
@@ -117,7 +117,7 @@ export default function DialecticalWheel({
     
     return () => {
       setModule(null);
-      //setChart(null);
+      setChart(null);
       //setRuntime(null);
       runtime.dispose();
     };
@@ -136,7 +136,7 @@ export default function DialecticalWheel({
         module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
         module.redefine('viewof AsOnly', toggle({label: 'As only', value: preferences.AsOnly}));
         module.redefine('viewof isWhiteOutside', toggle({label: 'Swap red and white layer', value: preferences.isWhiteOutside}));
-        module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
+        //module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
         module.redefine('userRingColors', (colors.userRingColors));
         module.redefine('userTextColors', (colors.userTextColors));
         module.redefine('userHubColor', (colors.userHubColor));
@@ -151,7 +151,7 @@ export default function DialecticalWheel({
     preferences.TsOnly,
     preferences.AsOnly,
     preferences.isWhiteOutside,
-    preferences.showFlow,
+    //preferences.showFlow,
     preferences.graphView,
     colors.userRingColors,
     colors.userTextColors,
@@ -159,6 +159,17 @@ export default function DialecticalWheel({
     arrowConnections,
     module
   ]);
+
+  // Dynamic chart control useEffect - handles real-time flow toggling
+  useEffect(() => {
+    if (chart) {
+      if (preferences.showFlow) {
+        chart.toggleFlowArrows(true);
+      } else {
+        chart.toggleFlowArrows(false);
+      }
+    }
+  }, [chart, preferences.showFlow]);
 
   return (
     <div className="dialectical-wheel-wrapper">
