@@ -7771,6 +7771,7 @@ return (
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
+      
       arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
     }
     function toggleFlowArrows(show) {
@@ -7925,7 +7926,7 @@ return (
     initializeWithLoadingAnimation();
 
     // Draw initial arrows
-    //drawAllArrows();
+    drawAllArrows();
 
     // --- MAKE CHART REACTIVE INITIALLY ---
     updateChartValue();
