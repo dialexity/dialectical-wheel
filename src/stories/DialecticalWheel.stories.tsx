@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
-import DialecticalWheel from '../components/DialecticalWheel/DialecticalWheel';
+// Test the built package from dist
+import DialecticalWheel from '../../dist/index.esm.js';
+// Import the CSS from the built package
+import '../../dist/index.esm.css';
 
 // Sample wisdom units data from the HTML file
 const sampleWisdomUnits = [

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Built Package</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@observablehq/runtime@5/dist/runtime.umd.js"></script>
+    <script src="https://unpkg.com/@observablehq/inputs@0.12/dist/inputs.umd.js"></script>
+    <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+    <script src="https://unpkg.com/@observablehq/notebook-kit@1.4/dist/notebook-kit.umd.js"></script>
+    <script src="https://unpkg.com/@hpcc-js/observablehq-compiler@3.3/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@dialexity/dialectical-wheel@1569/dist/index.umd.js"></script>
+    <link rel="stylesheet" href="dist/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script>
+        const { DialecticalWheel } = window.DialecticalWheel;
+        
+        // Sample data
+        const sampleWisdomUnits = [
+            {
+                "t_minus": {
+                    "alias": "T-",
+                    "statement": "Risk group lives",
+                    "color": "#ff6b6b"
+                },
+                "t_plus": {
+                    "alias": "T+", 
+                    "statement": "Risk group dies",
+                    "color": "#4ecdc4"
+                },
+                "a_minus": {
+                    "alias": "A-",
+                    "statement": "Non-risk group lives", 
+                    "color": "#45b7d1"
+                },
+                "a_plus": {
+                    "alias": "A+",
+                    "statement": "Non-risk group dies",
+                    "color": "#f9ca24"
+                }
+            }
+        ];
+        
+        const componentOrder = ["t_minus", "t_plus", "a_minus", "a_plus"];
+        
+        function TestApp() {
+            const [showFlow, setShowFlow] = React.useState(false);
+            
+            return React.createElement('div', { style: { padding: '20px' } }, [
+                React.createElement('h1', { key: 'title' }, 'Testing Built Package'),
+                React.createElement('button', {
+                    key: 'toggle',
+                    onClick: () => setShowFlow(!showFlow),
+                    style: { marginBottom: '20px', padding: '10px' }
+                }, `Toggle Flow Arrows (${showFlow ? 'ON' : 'OFF'})`),
+                React.createElement(DialecticalWheel, {
+                    key: 'wheel',
+                    wisdomUnits: sampleWisdomUnits,
+                    componentOrder: componentOrder,
+                    preferences: {
+                        whitesOnly: false,
+                        TsOnly: false,
+                        AsOnly: false,
+                        isWhiteOutside: false,
+                        showFlow: showFlow,
+                        graphView: false
+                    },
+                    onChartReady: (chart) => {
+                        console.log('Chart ready! Available methods:', Object.getOwnPropertyNames(chart));
+                        console.log('toggleFlowArrows exists:', typeof chart.toggleFlowArrows);
+                    }
+                })
+            ]);
+        }
+        
+        ReactDOM.render(React.createElement(TestApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
