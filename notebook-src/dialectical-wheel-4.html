@@ -888,7 +888,13 @@
             stretchEffect = 1 - (distanceInRange / stretchRange);
           }
 
-          const effectiveBow = bow * (1 + stretchEffect * stretch);
+          // Apply inverse distance scaling to bow: shorter arrows get more bow, longer arrows get less
+          // Reference length for bow scaling (typical medium arrow)
+          const bowReferenceLength = 100;
+          const bowLengthScale = Math.max(0.3, Math.min(1.5, bowReferenceLength / distance));
+          
+          // Combine stretch and distance scaling effects
+          const effectiveBow = bow * (1 + stretchEffect * stretch) * bowLengthScale;
 
           // Check for straight lines at 45° angles if straights enabled
           if (straights && effectiveBow === 0) {
@@ -2908,25 +2914,25 @@
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
 
-      // Use arrowOptions if available, otherwise use defaults
-      const options = typeof arrowOptions !== 'undefined' ? {
+      // Use flowArrowOptions if available, otherwise use defaults
+      const options = typeof flowArrowOptions !== 'undefined' ? {
         klass: "flow-arrows",
-        bow: arrowOptions[0],
-        stretch: arrowOptions[1],
-        minStretch: arrowOptions[2],
-        maxStretch: arrowOptions[3],
-        padStart: arrowOptions[4],
-        padEnd: arrowOptions[5],
-        flip: arrowOptions[6],
-        straights: arrowOptions[7]
+        bow: flowArrowOptions[0],
+        stretch: flowArrowOptions[1],
+        minStretch: flowArrowOptions[2],
+        maxStretch: flowArrowOptions[3],
+        padStart: flowArrowOptions[4],
+        padEnd: flowArrowOptions[5],
+        flip: flowArrowOptions[6],
+        straights: flowArrowOptions[7]
       } : {
         klass: "flow-arrows",
-        bow: 0,
+        bow: 0.5,
         stretch: 0.5,
         minStretch: 0,
         maxStretch: 420,
-        padStart: 0,
-        padEnd: 12,
+        padStart: 0.05,
+        padEnd: 0.05,
         flip: false,
         straights: true
       };
@@ -3157,6 +3163,15 @@
       },
       getCellCentroid,
       toggleFlowArrows,
+      redrawFlowArrows: () => {
+        // Check if flow arrows are currently visible
+        const flowVisible = d3.select(svg.node()).selectAll('g.flow-arrows').size() > 0;
+        if (flowVisible) {
+          // Clear and redraw flow arrows with current options
+          d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+          drawFlow();
+        }
+      },
       toggleAnchorPoints,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
@@ -3272,10 +3287,28 @@
       Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
       Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
       Inputs.range([0, 0.5], { value: 0, step: 0.01, label: "Pad Start (%)" }),
-      Inputs.range([0, 0.5], { value: 0, step: 0.01, label: "Pad End (%)" }),
+      Inputs.range([0, 0.5], { value: 0.2, step: 0.01, label: "Pad End (%)" }),
       Inputs.toggle({ label: "Flip", value: false }),
       Inputs.toggle({ label: "Straights", value: true })
-    ], { template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` })
+    ], { 
+      label: "Main Arrow Options",
+      template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` 
+    })
+  </script>
+  <script id="2415" type="application/vnd.observable.javascript" pinned="">
+    viewof flowArrowOptions = Inputs.form([
+      Inputs.range([0, 2], { value: 0.1, step: 0.1, label: "Bow" }),
+      Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
+      Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
+      Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
+      Inputs.range([0, 0.5], { value: 0.45, step: 0.01, label: "Pad Start (%)" }),
+      Inputs.range([0, 0.5], { value: 0.45, step: 0.01, label: "Pad End (%)" }),
+      Inputs.toggle({ label: "Flip", value: false }),
+      Inputs.toggle({ label: "Straights", value: true })
+    ], { 
+      label: "Flow Arrow Options",
+      template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` 
+    })
   </script>
   <script id="1117" type="application/vnd.observable.javascript" pinned="">
     chart.focusedPair
@@ -4504,6 +4537,15 @@
         viewof_chart.drawAllArrows();
       }
       return arrowOptions;
+    }
+  </script>
+  <script id="2416" type="application/vnd.observable.javascript">
+    // Reactive flow arrow redraw when flowArrowOptions change
+    {
+      if (typeof viewof_chart !== 'undefined' && viewof_chart.redrawFlowArrows) {
+        viewof_chart.redrawFlowArrows();
+      }
+      return flowArrowOptions;
     }
   </script>
   <script id="1403" type="application/vnd.observable.javascript">
