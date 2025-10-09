@@ -787,12 +787,42 @@
         // Also remove arrow masks from defs
         defs.selectAll("mask[id^='arrow-mask-']").remove();
       }
-      // Treat <text> labels as nodes and draw force-graph-style links between them
-      // options.klass: optional CSS class to tag this batch (e.g., 'flow-arrows')
-      // options.shortenBy: amount (in pixels) to proportionally shorten arrow at both ends
+      /**
+       * Draw arrows between label nodes using perfect-arrows inspired API.
+       * 
+       * Based on https://github.com/steveruizok/perfect-arrows
+       * 
+       * @param {Array} connections - Array of connection objects with from/to/fromRing/toRing
+       * @param {Object} options - Arrow styling options
+       * @param {string} options.klass - Optional CSS class to tag this batch (e.g., 'flow-arrows')
+       * @param {number} options.bow - Natural bow/curvature of the arrow. At 0, all lines will be straight. Default: 0
+       * @param {number} options.stretch - The effect that the arrow's length will have on the bow (0-1). 
+       *                                    At 0, the stretch will have no effect. Default: 0.5
+       * @param {number} options.minStretch - The length of the arrow where the line should be most stretched. 
+       *                                       Shorter distances will have no additional effect. Default: 0
+       * @param {number} options.maxStretch - The length of the arrow at which the stretch should have no effect. Default: 420
+       * @param {number} options.padStart - How far the arrow's starting point should be from the provided start point (px). Default: 0
+       * @param {number} options.padEnd - How far the arrow's ending point should be from the provided end point (px). Default: 0
+       * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
+       * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
+       * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
+       */
       function drawLabelLinks(connections, options = {}) {
         const klass = options.klass || "";
+
+        // Arrow style options (perfect-arrows compatible)
+        const bow = options.bow !== undefined ? options.bow : 0;
+        const stretch = options.stretch !== undefined ? options.stretch : 0.5;
+        const minStretch = options.minStretch !== undefined ? options.minStretch : 0;
+        const maxStretch = options.maxStretch !== undefined ? options.maxStretch : 420;
+        const padStart = options.padStart !== undefined ? options.padStart : 0;
+        const padEnd = options.padEnd !== undefined ? options.padEnd : 0;
+        const flip = options.flip !== undefined ? options.flip : false;
+        const straights = options.straights !== undefined ? options.straights : true;
+
+        // Backward compatibility
         const shortenBy = options.shortenBy || 0;
+
         // Generate unique ID for this batch of arrows
         const batchId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         //arrowsGroup.selectAll("*").remove();
@@ -846,32 +876,87 @@
 
         // Curved centroid to centroid arrows (full path, will be clipped via SVG clip-path)
         function linkArc(d) {
-          // Draw full curve from source center to target center
-          const start = { x: d.source.x, y: d.source.y };
-          const end = { x: d.target.x, y: d.target.y };
-          
-          const dx = end.x - start.x;
-          const dy = end.y - start.y;
+          // Draw full curve from source center to target center (perfect-arrows inspired)
+          let startX = d.source.x;
+          let startY = d.source.y;
+          let endX = d.target.x;
+          let endY = d.target.y;
+
+          const dx = endX - startX;
+          const dy = endY - startY;
           const distance = Math.hypot(dx, dy) || 1;
-          
-          // For close arrows, use quadratic curve
-          if (distance < 80) {
-            const midX = (start.x + end.x) / 2;
-            const midY = (start.y + end.y) / 2;
-            let perpX = -dy / distance;
-            let perpY = dx / distance;
-            // Ensure bend is outward (same direction as radial from center at midpoint)
+
+          // Apply padding (like perfect-arrows padStart/padEnd)
+          const actualPadStart = padStart + shortenBy;
+          const actualPadEnd = padEnd + shortenBy;
+
+          if (actualPadStart > 0 || actualPadEnd > 0) {
+            const angle = Math.atan2(dy, dx);
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            if (actualPadStart > 0) {
+              startX += cos * actualPadStart;
+              startY += sin * actualPadStart;
+            }
+            if (actualPadEnd > 0) {
+              endX -= cos * actualPadEnd;
+              endY -= sin * actualPadEnd;
+            }
+          }
+
+          const paddedDx = endX - startX;
+          const paddedDy = endY - startY;
+          const paddedDistance = Math.hypot(paddedDx, paddedDy) || 1;
+
+          // Calculate bow amount based on stretch
+          let stretchEffect = 0;
+          if (stretch > 0 && paddedDistance > minStretch) {
+            const stretchRange = maxStretch - minStretch;
+            const distanceInRange = Math.min(paddedDistance - minStretch, stretchRange);
+            stretchEffect = 1 - (distanceInRange / stretchRange);
+          }
+
+          const effectiveBow = bow * (1 + stretchEffect * stretch);
+
+          // Check for straight lines at 45° angles if straights enabled
+          if (straights && effectiveBow === 0) {
+            const angle = Math.abs(Math.atan2(paddedDy, paddedDx) * (180 / Math.PI));
+            const angleMod = angle % 90;
+            if (Math.abs(angleMod - 45) < 2 || Math.abs(angleMod) < 2 || Math.abs(angleMod - 90) < 2) {
+              return `M${startX},${startY} L${endX},${endY}`;
+            }
+          }
+
+          // No bow - straight line
+          if (effectiveBow === 0) {
+            return `M${startX},${startY} L${endX},${endY}`;
+          }
+
+          // Calculate control point for curved arrow
+          const midX = (startX + endX) / 2;
+          const midY = (startY + endY) / 2;
+
+          // Perpendicular direction
+          let perpX = -paddedDy / paddedDistance;
+          let perpY = paddedDx / paddedDistance;
+
+          // Flip if requested
+          if (flip) {
+            perpX = -perpX;
+            perpY = -perpY;
+          } else {
+            // Default: ensure bend is outward (away from origin)
             const dotOut = perpX * midX + perpY * midY;
             if (dotOut < 0) { perpX = -perpX; perpY = -perpY; }
-            const curve = Math.max(30, distance * 0.5);
-            const cx = midX + perpX * curve;
-            const cy = midY + perpY * curve;
-            return `M${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`;
           }
-          
-          // For longer arrows, use arc
-          const dr = distance * 1;
-          return `M${start.x},${start.y}A${dr},${dr} 0 0,1 ${end.x},${end.y}`;
+
+          // Apply bow
+          const curveAmount = effectiveBow * paddedDistance;
+          const cx = midX + perpX * curveAmount;
+          const cy = midY + perpY * curveAmount;
+
+          return `M${startX},${startY} Q ${cx},${cy} ${endX},${endY}`;
         }
 
         // Helper: Check if a point is inside an ellipse
@@ -886,20 +971,20 @@
           // Check if point is inside ellipse
           return (localX * localX) / (rx * rx) + (localY * localY) / (ry * ry) <= 1;
         }
-        
+
         // Helper: Find where path enters target ellipse using binary search
         function findEllipseIntersection(pathData, cx, cy, rx, ry, theta) {
           // Create a temporary path element to sample the FULL path (before masking)
           const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
           tempPath.setAttribute("d", pathData);
-          
+
           const L = tempPath.getTotalLength();
-          
+
           // Binary search to find intersection point
           let tMin = 0;
           let tMax = 1;
           const epsilon = 0.0001; // precision threshold
-          
+
           // First check if end point is outside (no intersection)
           const endPoint = tempPath.getPointAtLength(L);
           if (!isPointInEllipse(endPoint.x, endPoint.y, cx, cy, rx, ry, theta)) {
@@ -908,12 +993,12 @@
             const angle = Math.atan2(endPoint.y - p2.y, endPoint.x - p2.x) * 180 / Math.PI;
             return { x: endPoint.x, y: endPoint.y, angle, t: 1 };
           }
-          
+
           // Binary search for the intersection point
           while (tMax - tMin > epsilon) {
             const tMid = (tMin + tMax) / 2;
             const p = tempPath.getPointAtLength(tMid * L);
-            
+
             if (isPointInEllipse(p.x, p.y, cx, cy, rx, ry, theta)) {
               // Point is inside, intersection is earlier
               tMax = tMid;
@@ -922,16 +1007,16 @@
               tMin = tMid;
             }
           }
-          
+
           // Get intersection point and angle
           const tIntersect = (tMin + tMax) / 2;
           const intersectionPoint = tempPath.getPointAtLength(tIntersect * L);
-          
+
           // Calculate tangent angle at intersection
           const delta = 0.01;
           const p2 = tempPath.getPointAtLength(Math.max(0, (tIntersect - delta) * L));
           const angle = Math.atan2(intersectionPoint.y - p2.y, intersectionPoint.x - p2.x) * 180 / Math.PI;
-          
+
           return { x: intersectionPoint.x, y: intersectionPoint.y, angle, t: tIntersect };
         }
 
@@ -942,11 +1027,11 @@
           if (index >= links.length) return;
           const d = links[index];
           const pathData = linkArc(d);
-          
+
           // Create a unique clip path for this arrow using mask instead
           const maskId = `arrow-mask-${batchId}-${index}`;
           const mask = defs.append("mask").attr("id", maskId);
-          
+
           // White rectangle = visible area
           mask.append("rect")
             .attr("x", -10000)
@@ -954,7 +1039,7 @@
             .attr("width", 20000)
             .attr("height", 20000)
             .attr("fill", "white");
-          
+
           // Black ellipses = hidden areas (subtract from visible)
           if (d.source.hasEllipse) {
             mask.append("ellipse")
@@ -971,7 +1056,7 @@
               .attr("r", d.source.radius)
               .attr("fill", "black");
           }
-          
+
           if (d.target.hasEllipse) {
             mask.append("ellipse")
               .attr("cx", d.target.x)
@@ -1019,7 +1104,7 @@
                   t: 1
                 };
               })();
-          
+
           const tIntersect = arrowheadPos.t;
 
           const head = linkGroup.append("polygon")
@@ -1035,7 +1120,7 @@
               const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
               tempPath.setAttribute("d", pathData);
               const L = tempPath.getTotalLength();
-              
+
               return function(t) {
                 // Only animate up to the intersection point
                 const tActual = t * tIntersect;
@@ -1058,7 +1143,7 @@
                 .attr("fill", d.color)
                 .attr("transform", `translate(${arrowheadPos.x}, ${arrowheadPos.y}) rotate(${arrowheadPos.angle})`)
                 .attr("opacity", 0.85);
-              
+
               path
                 .attr("stroke-dasharray", "none")
                 .transition()
@@ -1070,12 +1155,12 @@
 
         drawNextLink(0);
       }
-      
+
       // Visualize anchor points for all cells
       function visualizeAnchorPoints() {
         const anchorGroup = arrowsGroup.append("g")
           .attr("class", "anchor-points-visualization");
-        
+
         // For each ring type
         const ringTypes = ['invisible', 'outer', 'middle', 'inner'];
         const ringColors = {
@@ -1084,17 +1169,17 @@
           middle: '#666',
           inner: '#16a34a'
         };
-        
+
         // Get all unit IDs from nested data
         const unitIds = nestedData.middle.map(d => d.unitId);
-        
+
         unitIds.forEach(unitId => {
           ringTypes.forEach(ringType => {
             const cellInfo = getCellCentroid(unitId, ringType);
             if (!cellInfo) return;
-            
+
             const color = ringColors[ringType];
-            
+
             // Draw centroid as a circle
             anchorGroup.append("circle")
               .attr("cx", cellInfo.x)
@@ -1104,7 +1189,7 @@
               .attr("stroke", "white")
               .attr("stroke-width", 1)
               .attr("opacity", 0.8);
-            
+
             // Draw label with unitId and ring type
             anchorGroup.append("text")
               .attr("x", cellInfo.x)
@@ -1116,14 +1201,14 @@
               .attr("stroke-width", 0.3)
               .attr("paint-order", "stroke")
               .text(`${unitId}:${ringType.charAt(0)}`);
-            
+
             // If there's label info (ellipse), draw the bounding box
             const labelInfo = getLabelInfo(unitId, ringType);
             if (labelInfo && labelInfo.labelWidth && labelInfo.labelHeight) {
               const w2 = labelInfo.labelWidth / 2;
               const h2 = labelInfo.labelHeight / 2;
               const theta = labelInfo.labelRotationRadians || 0;
-              
+
               // Calculate rotated rectangle corners
               const corners = [
                 { x: -w2, y: -h2 },
@@ -1131,7 +1216,7 @@
                 { x: w2, y: h2 },
                 { x: -w2, y: h2 }
               ];
-              
+
               const rotatedCorners = corners.map(c => {
                 const cosT = Math.cos(theta);
                 const sinT = Math.sin(theta);
@@ -1140,13 +1225,13 @@
                   y: labelInfo.y + (sinT * c.x + cosT * c.y)
                 };
               });
-              
+
               // Draw rectangle
               const pathData = `M${rotatedCorners[0].x},${rotatedCorners[0].y} ` +
                 `L${rotatedCorners[1].x},${rotatedCorners[1].y} ` +
                 `L${rotatedCorners[2].x},${rotatedCorners[2].y} ` +
                 `L${rotatedCorners[3].x},${rotatedCorners[3].y} Z`;
-              
+
               anchorGroup.append("path")
                 .attr("d", pathData)
                 .attr("fill", "none")
@@ -1154,11 +1239,11 @@
                 .attr("stroke-width", 1)
                 .attr("stroke-dasharray", "2,2")
                 .attr("opacity", 0.5);
-              
+
               // Draw inscribed ellipse: fits inside the bounding box
               const rx = w2;
               const ry = h2;
-              
+
               anchorGroup.append("ellipse")
                 .attr("cx", labelInfo.x)
                 .attr("cy", labelInfo.y)
@@ -1173,7 +1258,7 @@
           });
         });
       }
-      
+
       function clearAnchorPoints() {
         arrowsGroup.selectAll(".anchor-points-visualization").remove();
       }
@@ -2757,14 +2842,58 @@
     function drawAllArrows() {
       clearArrows();
       const connections = parseArrowConnections(arrowConnections, dialecticalData);
-      const shortenValue = typeof shortenBy !== 'undefined' ? shortenBy : 0;
-      arrows.drawLabelLinks(connections, { shortenBy: shortenValue });
+
+      // Use arrowOptions if available, otherwise use defaults
+      const options = typeof arrowOptions !== 'undefined' ? {
+        bow: arrowOptions[0],
+        stretch: arrowOptions[1],
+        minStretch: arrowOptions[2],
+        maxStretch: arrowOptions[3],
+        padStart: arrowOptions[4],
+        padEnd: arrowOptions[5],
+        flip: arrowOptions[6],
+        straights: arrowOptions[7]
+      } : {
+        bow: 0,
+        stretch: 0.5,
+        minStretch: 0,
+        maxStretch: 420,
+        padStart: 0,
+        padEnd: 12,
+        flip: false,
+        straights: true
+      };
+
+      arrows.drawLabelLinks(connections, options);
     }
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-      const shortenValue = typeof shortenBy !== 'undefined' ? shortenBy : 0;
-      arrows.drawLabelLinks(connections, { klass: "flow-arrows", shortenBy: shortenValue });
+
+      // Use arrowOptions if available, otherwise use defaults
+      const options = typeof arrowOptions !== 'undefined' ? {
+        klass: "flow-arrows",
+        bow: arrowOptions[0],
+        stretch: arrowOptions[1],
+        minStretch: arrowOptions[2],
+        maxStretch: arrowOptions[3],
+        padStart: arrowOptions[4],
+        padEnd: arrowOptions[5],
+        flip: arrowOptions[6],
+        straights: arrowOptions[7]
+      } : {
+        klass: "flow-arrows",
+        bow: 0,
+        stretch: 0.5,
+        minStretch: 0,
+        maxStretch: 420,
+        padStart: 0,
+        padEnd: 12,
+        flip: false,
+        straights: true
+      };
+
+      arrows.drawLabelLinks(connections, options);
     }
     function toggleFlowArrows(show) {
       if (show) {
@@ -2773,7 +2902,7 @@
         d3.select(svg.node()).selectAll('g.flow-arrows').remove();
       }
     }
-    
+
     let anchorPointsVisible = false;
     function toggleAnchorPoints() {
       if (anchorPointsVisible) {
@@ -2932,8 +3061,8 @@
       // Ensure labels/layout are computed before drawing arrows to avoid centroid fallback
       // Make chart reactive first so text layout/wrapping runs
       // Then schedule arrow drawing on subsequent frames
-      // --- MAKE CHART REACTIVE INITIALLY ---
-      updateChartValue();
+    // --- MAKE CHART REACTIVE INITIALLY ---
+    updateChartValue();
 
       // Draw initial arrows after layout settles - use timeout to ensure text wrapping completes
       setTimeout(() => {
@@ -2966,8 +3095,27 @@
       clearArrows,
       drawArrow,
       drawLabelLinks: (connections, options = {}) => {
-        const shortenValue = typeof shortenBy !== 'undefined' ? shortenBy : 0;
-        return arrows.drawLabelLinks(connections, { ...options, shortenBy: shortenValue });
+        // Merge current arrowOptions with provided options (provided options take precedence)
+        const currentOptions = typeof arrowOptions !== 'undefined' ? {
+          bow: arrowOptions[0],
+          stretch: arrowOptions[1],
+          minStretch: arrowOptions[2],
+          maxStretch: arrowOptions[3],
+          padStart: arrowOptions[4],
+          padEnd: arrowOptions[5],
+          flip: arrowOptions[6],
+          straights: arrowOptions[7]
+        } : {
+          bow: 0,
+          stretch: 0.5,
+          minStretch: 0,
+          maxStretch: 420,
+          padStart: 0,
+          padEnd: 12,
+          flip: false,
+          straights: true
+        };
+        return arrows.drawLabelLinks(connections, { ...currentOptions, ...options });
       },
       getCellCentroid,
       toggleFlowArrows,
@@ -3078,6 +3226,18 @@
       //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
 
       return chart.clickedSlice; }
+  </script>
+  <script id="2413" type="application/vnd.observable.javascript" pinned="">
+    viewof arrowOptions = Inputs.form([
+      Inputs.range([0, 2], { value: 0, step: 0.1, label: "Bow" }),
+      Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
+      Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
+      Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
+      Inputs.range([0, 40], { value: 0, step: 1, label: "Pad Start (px)" }),
+      Inputs.range([0, 40], { value: 12, step: 1, label: "Pad End (px)" }),
+      Inputs.toggle({ label: "Flip", value: false }),
+      Inputs.toggle({ label: "Straights", value: true })
+    ], { template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` })
   </script>
   <script id="1117" type="application/vnd.observable.javascript" pinned="">
     chart.focusedPair
@@ -4299,15 +4459,13 @@
   <script id="1402" type="application/vnd.observable.javascript" pinned="">
     viewof rotationAngle = Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
   </script>
-  <script id="2413" type="application/vnd.observable.javascript" pinned="">
-    viewof shortenBy = Inputs.range([0,40], { value: 12, step: 1, label: "Arrow shorten (px)" })
-  </script>
   <script id="2414" type="application/vnd.observable.javascript">
-    // Reactive arrow redraw when shortenBy changes
+    // Reactive arrow redraw when arrowOptions change
     {
       if (typeof viewof_chart !== 'undefined' && viewof_chart.drawAllArrows) {
         viewof_chart.drawAllArrows();
       }
+      return arrowOptions;
     }
   </script>
   <script id="1403" type="application/vnd.observable.javascript">
