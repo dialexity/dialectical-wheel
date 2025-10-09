@@ -784,8 +784,6 @@
       }
       function clearArrows() {
         arrowsGroup.selectAll("*").remove();
-        // Also remove arrow masks from defs
-        defs.selectAll("mask[id^='arrow-mask-']").remove();
       }
       /**
        * Draw arrows between label nodes using perfect-arrows inspired API.
@@ -822,10 +820,6 @@
 
         // Backward compatibility
         const shortenBy = options.shortenBy || 0;
-
-        // Generate unique ID for this batch of arrows
-        const batchId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        //arrowsGroup.selectAll("*").remove();
 
         // Build node map keyed by unitId:ringType
         const nodeByKey = new Map();
@@ -1026,51 +1020,108 @@
         function drawNextLink(index) {
           if (index >= links.length) return;
           const d = links[index];
-          const pathData = linkArc(d);
-
-          // Create a unique clip path for this arrow using mask instead
-          const maskId = `arrow-mask-${batchId}-${index}`;
-          const mask = defs.append("mask").attr("id", maskId);
-
-          // White rectangle = visible area
-          mask.append("rect")
-            .attr("x", -10000)
-            .attr("y", -10000)
-            .attr("width", 20000)
-            .attr("height", 20000)
-            .attr("fill", "white");
-
-          // Black ellipses = hidden areas (subtract from visible)
+          
+          // Generate full path from source to target center
+          const fullPathData = linkArc(d);
+          
+          // Create temp path to sample and find intersection points
+          const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          tempPath.setAttribute("d", fullPathData);
+          const totalLength = tempPath.getTotalLength();
+          
+          // Find where path exits source ellipse/circle
+          let tStart = 0;
           if (d.source.hasEllipse) {
-            mask.append("ellipse")
-              .attr("cx", d.source.x)
-              .attr("cy", d.source.y)
-              .attr("rx", d.source.ellipseRx)
-              .attr("ry", d.source.ellipseRy)
-              .attr("transform", `rotate(${d.source.ellipseTheta * 180 / Math.PI}, ${d.source.x}, ${d.source.y})`)
-              .attr("fill", "black");
+            // Binary search from start to find where we exit source ellipse
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              if (isPointInEllipse(p.x, p.y, d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta)) {
+                tMin = tMid; // Still inside, need to go further
+              } else {
+                tMax = tMid; // Outside, go back
+              }
+            }
+            tStart = (tMin + tMax) / 2;
           } else {
-            mask.append("circle")
-              .attr("cx", d.source.x)
-              .attr("cy", d.source.y)
-              .attr("r", d.source.radius)
-              .attr("fill", "black");
+            // For circles, find exit point
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              const dist = Math.hypot(p.x - d.source.x, p.y - d.source.y);
+              if (dist < d.source.radius) {
+                tMin = tMid;
+              } else {
+                tMax = tMid;
+              }
+            }
+            tStart = (tMin + tMax) / 2;
           }
-
+          
+          // Find where path enters target ellipse/circle (from the end, going backwards)
+          let tEnd = 1;
           if (d.target.hasEllipse) {
-            mask.append("ellipse")
-              .attr("cx", d.target.x)
-              .attr("cy", d.target.y)
-              .attr("rx", d.target.ellipseRx)
-              .attr("ry", d.target.ellipseRy)
-              .attr("transform", `rotate(${d.target.ellipseTheta * 180 / Math.PI}, ${d.target.x}, ${d.target.y})`)
-              .attr("fill", "black");
+            const result = findEllipseIntersection(
+              fullPathData,
+              d.target.x, d.target.y,
+              d.target.ellipseRx, d.target.ellipseRy,
+              d.target.ellipseTheta
+            );
+            tEnd = result.t;
           } else {
-            mask.append("circle")
-              .attr("cx", d.target.x)
-              .attr("cy", d.target.y)
-              .attr("r", d.target.radius)
-              .attr("fill", "black");
+            // For circles
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              const dist = Math.hypot(p.x - d.target.x, p.y - d.target.y);
+              if (dist > d.target.radius) {
+                tMin = tMid; // Still outside, move forward
+              } else {
+                tMax = tMid; // Inside, move back
+              }
+            }
+            tEnd = (tMin + tMax) / 2;
+          }
+          
+          // Get the actual start and end points
+          const startPoint = tempPath.getPointAtLength(tStart * totalLength);
+          const endPoint = tempPath.getPointAtLength(tEnd * totalLength);
+          
+          // Calculate arrowhead angle at end point
+          const endPointPrev = tempPath.getPointAtLength(Math.max(0, tEnd * totalLength - 1));
+          const arrowheadAngle = Math.atan2(endPoint.y - endPointPrev.y, endPoint.x - endPointPrev.x) * 180 / Math.PI;
+          
+          // Now create the clipped path using the same curve type but with new endpoints
+          let clippedPathData;
+          if (fullPathData.includes('Q')) {
+            // Quadratic bezier - extract control point and create new path
+            const match = fullPathData.match(/M([^ ]+),([^ ]+) Q ([^ ]+),([^ ]+) ([^ ]+),([^ ]+)/);
+            if (match) {
+              const cx = parseFloat(match[3]);
+              const cy = parseFloat(match[4]);
+              clippedPathData = `M${startPoint.x},${startPoint.y} Q ${cx},${cy} ${endPoint.x},${endPoint.y}`;
+            } else {
+              clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
+            }
+          } else if (fullPathData.includes('A')) {
+            // Arc - use same radius
+            const match = fullPathData.match(/A([^ ]+),([^ ]+)/);
+            if (match) {
+              const rx = parseFloat(match[1]);
+              const ry = parseFloat(match[2]);
+              clippedPathData = `M${startPoint.x},${startPoint.y} A${rx},${ry} 0 0,1 ${endPoint.x},${endPoint.y}`;
+            } else {
+              clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
+            }
+          } else {
+            // Straight line
+            clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
           }
 
           const path = linkGroup.append("path")
@@ -1079,33 +1130,9 @@
             .attr("stroke-width", 1.25)
             .attr("opacity", 0.3)
             .attr("stroke-dasharray", "3,3")
-            .attr("d", pathData)
-            .attr("mask", `url(#${maskId})`);
+            .attr("d", clippedPathData);
 
-          // Pre-calculate intersection point for animation
-          const arrowheadPos = d.target.hasEllipse 
-            ? findEllipseIntersection(
-                pathData,
-                d.target.x, d.target.y,
-                d.target.ellipseRx, d.target.ellipseRy,
-                d.target.ellipseTheta
-              )
-            : (() => {
-                // For simple circles, use end point
-                const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                tempPath.setAttribute("d", pathData);
-                const L = tempPath.getTotalLength();
-                const p = tempPath.getPointAtLength(L);
-                const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
-                return {
-                  x: p.x,
-                  y: p.y,
-                  angle: Math.atan2(p.y - p2.y, p.x - p2.x) * 180 / Math.PI,
-                  t: 1
-                };
-              })();
-
-          const tIntersect = arrowheadPos.t;
+          const tIntersect = 1; // Always animate to the end of the clipped path
 
           const head = linkGroup.append("polygon")
             .attr("points", "0,-1.5 4.5,0 0,1.5")
@@ -1116,16 +1143,14 @@
             .duration(900)
             .ease(d3.easeQuadInOut)
             .attrTween("transform", function() {
-              // Create temp path for animation (unmasked)
-              const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-              tempPath.setAttribute("d", pathData);
-              const L = tempPath.getTotalLength();
+              // Create temp path for animation using the clipped path
+              const animPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+              animPath.setAttribute("d", clippedPathData);
+              const L = animPath.getTotalLength();
 
               return function(t) {
-                // Only animate up to the intersection point
-                const tActual = t * tIntersect;
-                const p = tempPath.getPointAtLength(tActual * L);
-                const p2 = tempPath.getPointAtLength(Math.min(L, tActual * L + 1));
+                const p = animPath.getPointAtLength(t * L);
+                const p2 = animPath.getPointAtLength(Math.min(L, t * L + 1));
                 const ang = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
                 return `translate(${p.x}, ${p.y}) rotate(${ang})`;
               };
@@ -1135,13 +1160,12 @@
               path.transition().duration(200).attr("opacity", 0.7);
             })
             .on("end", function() {
-              // Use the pre-calculated arrowhead position
-              // Replace animated head with static arrowhead at intersection
+              // Replace animated head with static arrowhead at end point
               head.remove();
               linkGroup.append("polygon")
                 .attr("points", "0,-1.5 4.5,0 0,1.5")
                 .attr("fill", d.color)
-                .attr("transform", `translate(${arrowheadPos.x}, ${arrowheadPos.y}) rotate(${arrowheadPos.angle})`)
+                .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle})`)
                 .attr("opacity", 0.85);
 
               path
@@ -2869,7 +2893,7 @@
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-
+      
       // Use arrowOptions if available, otherwise use defaults
       const options = typeof arrowOptions !== 'undefined' ? {
         klass: "flow-arrows",
