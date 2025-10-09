@@ -898,7 +898,7 @@
           // Binary search to find intersection point
           let tMin = 0;
           let tMax = 1;
-          const epsilon = 0.001; // precision threshold
+          const epsilon = 0.0001; // precision threshold
           
           // First check if end point is outside (no intersection)
           const endPoint = tempPath.getPointAtLength(L);
@@ -906,7 +906,7 @@
             // Path doesn't intersect ellipse, use end point
             const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
             const angle = Math.atan2(endPoint.y - p2.y, endPoint.x - p2.x) * 180 / Math.PI;
-            return { x: endPoint.x, y: endPoint.y, angle };
+            return { x: endPoint.x, y: endPoint.y, angle, t: 1 };
           }
           
           // Binary search for the intersection point
@@ -932,7 +932,7 @@
           const p2 = tempPath.getPointAtLength(Math.max(0, (tIntersect - delta) * L));
           const angle = Math.atan2(intersectionPoint.y - p2.y, intersectionPoint.x - p2.x) * 180 / Math.PI;
           
-          return { x: intersectionPoint.x, y: intersectionPoint.y, angle };
+          return { x: intersectionPoint.x, y: intersectionPoint.y, angle, t: tIntersect };
         }
 
         const linkGroup = arrowsGroup.append("g").attr("class", `label-link-group${klass ? ` ${klass}` : ""}`);
@@ -997,6 +997,31 @@
             .attr("d", pathData)
             .attr("mask", `url(#${maskId})`);
 
+          // Pre-calculate intersection point for animation
+          const arrowheadPos = d.target.hasEllipse 
+            ? findEllipseIntersection(
+                pathData,
+                d.target.x, d.target.y,
+                d.target.ellipseRx, d.target.ellipseRy,
+                d.target.ellipseTheta
+              )
+            : (() => {
+                // For simple circles, use end point
+                const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                tempPath.setAttribute("d", pathData);
+                const L = tempPath.getTotalLength();
+                const p = tempPath.getPointAtLength(L);
+                const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
+                return {
+                  x: p.x,
+                  y: p.y,
+                  angle: Math.atan2(p.y - p2.y, p.x - p2.x) * 180 / Math.PI,
+                  t: 1
+                };
+              })();
+          
+          const tIntersect = arrowheadPos.t;
+
           const head = linkGroup.append("polygon")
             .attr("points", "0,-1.5 4.5,0 0,1.5")
             .attr("fill", d.color)
@@ -1006,11 +1031,16 @@
             .duration(900)
             .ease(d3.easeQuadInOut)
             .attrTween("transform", function() {
-              const node = path.node();
-              const L = node.getTotalLength();
+              // Create temp path for animation (unmasked)
+              const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+              tempPath.setAttribute("d", pathData);
+              const L = tempPath.getTotalLength();
+              
               return function(t) {
-                const p = node.getPointAtLength(t * L);
-                const p2 = node.getPointAtLength(Math.min(L, t * L + 1));
+                // Only animate up to the intersection point
+                const tActual = t * tIntersect;
+                const p = tempPath.getPointAtLength(tActual * L);
+                const p2 = tempPath.getPointAtLength(Math.min(L, tActual * L + 1));
                 const ang = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
                 return `translate(${p.x}, ${p.y}) rotate(${ang})`;
               };
@@ -1020,29 +1050,7 @@
               path.transition().duration(200).attr("opacity", 0.7);
             })
             .on("end", function() {
-              // Find where the path intersects the target ellipse
-              let arrowheadPos;
-              if (d.target.hasEllipse) {
-                arrowheadPos = findEllipseIntersection(
-                  pathData,  // Use original path data, not the masked node
-                  d.target.x, d.target.y,
-                  d.target.ellipseRx, d.target.ellipseRy,
-                  d.target.ellipseTheta
-                );
-              } else {
-                // For simple circles, sample the original path
-                const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                tempPath.setAttribute("d", pathData);
-                const L = tempPath.getTotalLength();
-                const p = tempPath.getPointAtLength(L);
-                const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
-                arrowheadPos = {
-                  x: p.x,
-                  y: p.y,
-                  angle: Math.atan2(p.y - p2.y, p.x - p2.x) * 180 / Math.PI
-                };
-              }
-              
+              // Use the pre-calculated arrowhead position
               // Replace animated head with static arrowhead at intersection
               head.remove();
               linkGroup.append("polygon")
