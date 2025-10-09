@@ -874,6 +874,67 @@
           return `M${start.x},${start.y}A${dr},${dr} 0 0,1 ${end.x},${end.y}`;
         }
 
+        // Helper: Check if a point is inside an ellipse
+        function isPointInEllipse(px, py, cx, cy, rx, ry, theta) {
+          // Rotate point into ellipse local frame
+          const dx = px - cx;
+          const dy = py - cy;
+          const c = Math.cos(-theta);
+          const s = Math.sin(-theta);
+          const localX = dx * c - dy * s;
+          const localY = dx * s + dy * c;
+          // Check if point is inside ellipse
+          return (localX * localX) / (rx * rx) + (localY * localY) / (ry * ry) <= 1;
+        }
+        
+        // Helper: Find where path enters target ellipse using binary search
+        function findEllipseIntersection(pathData, cx, cy, rx, ry, theta) {
+          // Create a temporary path element to sample the FULL path (before masking)
+          const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          tempPath.setAttribute("d", pathData);
+          
+          const L = tempPath.getTotalLength();
+          
+          // Binary search to find intersection point
+          let tMin = 0;
+          let tMax = 1;
+          const epsilon = 0.001; // precision threshold
+          
+          // First check if end point is outside (no intersection)
+          const endPoint = tempPath.getPointAtLength(L);
+          if (!isPointInEllipse(endPoint.x, endPoint.y, cx, cy, rx, ry, theta)) {
+            // Path doesn't intersect ellipse, use end point
+            const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
+            const angle = Math.atan2(endPoint.y - p2.y, endPoint.x - p2.x) * 180 / Math.PI;
+            return { x: endPoint.x, y: endPoint.y, angle };
+          }
+          
+          // Binary search for the intersection point
+          while (tMax - tMin > epsilon) {
+            const tMid = (tMin + tMax) / 2;
+            const p = tempPath.getPointAtLength(tMid * L);
+            
+            if (isPointInEllipse(p.x, p.y, cx, cy, rx, ry, theta)) {
+              // Point is inside, intersection is earlier
+              tMax = tMid;
+            } else {
+              // Point is outside, intersection is later
+              tMin = tMid;
+            }
+          }
+          
+          // Get intersection point and angle
+          const tIntersect = (tMin + tMax) / 2;
+          const intersectionPoint = tempPath.getPointAtLength(tIntersect * L);
+          
+          // Calculate tangent angle at intersection
+          const delta = 0.01;
+          const p2 = tempPath.getPointAtLength(Math.max(0, (tIntersect - delta) * L));
+          const angle = Math.atan2(intersectionPoint.y - p2.y, intersectionPoint.x - p2.x) * 180 / Math.PI;
+          
+          return { x: intersectionPoint.x, y: intersectionPoint.y, angle };
+        }
+
         const linkGroup = arrowsGroup.append("g").attr("class", `label-link-group${klass ? ` ${klass}` : ""}`);
 
         // Draw links sequentially with a shooting animation
@@ -959,9 +1020,38 @@
               path.transition().duration(200).attr("opacity", 0.7);
             })
             .on("end", function() {
+              // Find where the path intersects the target ellipse
+              let arrowheadPos;
+              if (d.target.hasEllipse) {
+                arrowheadPos = findEllipseIntersection(
+                  pathData,  // Use original path data, not the masked node
+                  d.target.x, d.target.y,
+                  d.target.ellipseRx, d.target.ellipseRy,
+                  d.target.ellipseTheta
+                );
+              } else {
+                // For simple circles, sample the original path
+                const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                tempPath.setAttribute("d", pathData);
+                const L = tempPath.getTotalLength();
+                const p = tempPath.getPointAtLength(L);
+                const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
+                arrowheadPos = {
+                  x: p.x,
+                  y: p.y,
+                  angle: Math.atan2(p.y - p2.y, p.x - p2.x) * 180 / Math.PI
+                };
+              }
+              
+              // Replace animated head with static arrowhead at intersection
               head.remove();
+              linkGroup.append("polygon")
+                .attr("points", "0,-1.5 4.5,0 0,1.5")
+                .attr("fill", d.color)
+                .attr("transform", `translate(${arrowheadPos.x}, ${arrowheadPos.y}) rotate(${arrowheadPos.angle})`)
+                .attr("opacity", 0.85);
+              
               path
-                .attr("marker-end", () => `url(${new URL(`#${arrowUtilities.getArrowheadId(d.color)}`, location)})`)
                 .attr("stroke-dasharray", "none")
                 .transition()
                 .duration(250)
