@@ -799,8 +799,9 @@
        * @param {number} options.minStretch - The length of the arrow where the line should be most stretched. 
        *                                       Shorter distances will have no additional effect. Default: 0
        * @param {number} options.maxStretch - The length of the arrow at which the stretch should have no effect. Default: 420
-       * @param {number} options.padStart - Padding at arrow start. Uses inverse relationship with length (0-1 scale). Default: 0
-       * @param {number} options.padEnd - Padding at arrow end. Uses inverse relationship with length (0-1 scale). Default: 0
+       * @param {number} options.padStart - Padding at arrow start in pixels. Uses adaptive scaling (min of px or max %). Default: 0
+       * @param {number} options.padEnd - Padding at arrow end in pixels. Uses adaptive scaling (min of px or max %). Default: 0
+       * @param {number} options.maxPadPercent - Maximum padding as percentage of path length (0-1). Default: 0.25
        * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
        * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
        * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
@@ -813,8 +814,9 @@
         const stretch = options.stretch !== undefined ? options.stretch : 0.5;
         const minStretch = options.minStretch !== undefined ? options.minStretch : 0;
         const maxStretch = options.maxStretch !== undefined ? options.maxStretch : 420;
-        const padStart = options.padStart !== undefined ? options.padStart : 0;
-        const padEnd = options.padEnd !== undefined ? options.padEnd : 0;
+        const padStart = options.padStart !== undefined ? options.padStart : 0; // in pixels
+        const padEnd = options.padEnd !== undefined ? options.padEnd : 0; // in pixels
+        const maxPadPercent = options.maxPadPercent !== undefined ? options.maxPadPercent : 0.25; // max 25% of path
         const flip = options.flip !== undefined ? options.flip : false;
         const straights = options.straights !== undefined ? options.straights : true;
 
@@ -1072,24 +1074,20 @@
             tEnd = (tMin + tMax) / 2;
           }
 
-          // Apply padStart and padEnd with logarithmic scaling
-          // Longer arrows get proportionally more padding, shorter arrows get less
-          // This makes padding changes affect long arrows more than short arrows
+          // Apply adaptive padding: use minimum of (fixed pixels OR maximum percentage)
+          // This protects short arrows from disappearing while giving consistent gaps on long arrows
           
-          // Reference length for the scaling (typical medium arrow length)
-          const referenceLength = 200;
-          
-          // Calculate scaling factor: longer arrows -> higher factor, shorter arrows -> lower factor
-          // Using relationship: scale = totalLength / referenceLength
-          // Clamp to reasonable range (0.5x to 2x)
-          const lengthScale = Math.max(0.5, Math.min(2, totalLength / referenceLength));
+          // Convert pixel padding to percentage of path length
+          const padStartPercent = (padStart || 0) / totalLength;
+          const padEndPercent = (padEnd || 0) / totalLength;
           
           // Convert shortenBy (px) to percentage for backward compatibility
           const shortenByPercent = (shortenBy || 0) / totalLength;
           
-          // Apply the length scale to padding values
-          const actualPadStart = ((padStart || 0) * lengthScale) + shortenByPercent;
-          const actualPadEnd = ((padEnd || 0) * lengthScale) + shortenByPercent;
+          // Use whichever is smaller: the pixel-based percentage or the maximum allowed percentage
+          // This means: "Use Npx gap, but never more than X% of the arrow"
+          const actualPadStart = Math.min(padStartPercent, maxPadPercent) + shortenByPercent;
+          const actualPadEnd = Math.min(padEndPercent, maxPadPercent) + shortenByPercent;
           
           let finalTStart = tStart;
           let finalTEnd = tEnd;
@@ -2895,15 +2893,17 @@
         maxStretch: arrowOptions[3],
         padStart: arrowOptions[4],
         padEnd: arrowOptions[5],
-        flip: arrowOptions[6],
-        straights: arrowOptions[7]
+        maxPadPercent: arrowOptions[6],
+        flip: arrowOptions[7],
+        straights: arrowOptions[8]
       } : {
         bow: 0,
         stretch: 0.5,
         minStretch: 0,
         maxStretch: 420,
         padStart: 0,
-        padEnd: 12,
+        padEnd: 20,
+        maxPadPercent: 0.25,
         flip: false,
         straights: true
       };
@@ -2913,7 +2913,7 @@
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-
+      
       // Use flowArrowOptions if available, otherwise use defaults
       const options = typeof flowArrowOptions !== 'undefined' ? {
         klass: "flow-arrows",
@@ -2923,16 +2923,18 @@
         maxStretch: flowArrowOptions[3],
         padStart: flowArrowOptions[4],
         padEnd: flowArrowOptions[5],
-        flip: flowArrowOptions[6],
-        straights: flowArrowOptions[7]
+        maxPadPercent: flowArrowOptions[6],
+        flip: flowArrowOptions[7],
+        straights: flowArrowOptions[8]
       } : {
         klass: "flow-arrows",
-        bow: 0.5,
+        bow: 0.1,
         stretch: 0.5,
         minStretch: 0,
         maxStretch: 420,
-        padStart: 0.05,
-        padEnd: 0.05,
+        padStart: 30,
+        padEnd: 30,
+        maxPadPercent: 0.35,
         flip: false,
         straights: true
       };
@@ -3147,15 +3149,17 @@
           maxStretch: arrowOptions[3],
           padStart: arrowOptions[4],
           padEnd: arrowOptions[5],
-          flip: arrowOptions[6],
-          straights: arrowOptions[7]
+          maxPadPercent: arrowOptions[6],
+          flip: arrowOptions[7],
+          straights: arrowOptions[8]
         } : {
           bow: 0,
           stretch: 0.5,
           minStretch: 0,
           maxStretch: 420,
           padStart: 0,
-          padEnd: 12,
+          padEnd: 20,
+          maxPadPercent: 0.25,
           flip: false,
           straights: true
         };
@@ -3286,8 +3290,9 @@
       Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
       Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
       Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
-      Inputs.range([0, 0.5], { value: 0, step: 0.01, label: "Pad Start (%)" }),
-      Inputs.range([0, 0.5], { value: 0.2, step: 0.01, label: "Pad End (%)" }),
+      Inputs.range([0, 100], { value: 5, step: 1, label: "Pad Start (px)" }),
+      Inputs.range([0, 100], { value: 5, step: 1, label: "Pad End (px)" }),
+      Inputs.range([0, 0.5], { value: 0.25, step: 0.05, label: "Max Pad (%)" }),
       Inputs.toggle({ label: "Flip", value: false }),
       Inputs.toggle({ label: "Straights", value: true })
     ], { 
@@ -3301,8 +3306,9 @@
       Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
       Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
       Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
-      Inputs.range([0, 0.5], { value: 0.45, step: 0.01, label: "Pad Start (%)" }),
-      Inputs.range([0, 0.5], { value: 0.45, step: 0.01, label: "Pad End (%)" }),
+      Inputs.range([0, 100], { value: 60, step: 1, label: "Pad Start (px)" }),
+      Inputs.range([0, 100], { value: 60, step: 1, label: "Pad End (px)" }),
+      Inputs.range([0, 0.5], { value: 0.35, step: 0.05, label: "Max Pad (%)" }),
       Inputs.toggle({ label: "Flip", value: false }),
       Inputs.toggle({ label: "Straights", value: true })
     ], { 
