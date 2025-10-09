@@ -799,8 +799,8 @@
        * @param {number} options.minStretch - The length of the arrow where the line should be most stretched. 
        *                                       Shorter distances will have no additional effect. Default: 0
        * @param {number} options.maxStretch - The length of the arrow at which the stretch should have no effect. Default: 420
-       * @param {number} options.padStart - How far the arrow's starting point should be from the provided start point (px). Default: 0
-       * @param {number} options.padEnd - How far the arrow's ending point should be from the provided end point (px). Default: 0
+       * @param {number} options.padStart - Padding at arrow start. Uses inverse relationship with length (0-1 scale). Default: 0
+       * @param {number} options.padEnd - Padding at arrow end. Uses inverse relationship with length (0-1 scale). Default: 0
        * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
        * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
        * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
@@ -868,46 +868,23 @@
           links.push({ source: s, target: t, color });
         });
 
-        // Curved centroid to centroid arrows (full path, will be clipped via SVG clip-path)
+        // Generate arrow path from source center to target center (perfect-arrows inspired)
         function linkArc(d) {
-          // Draw full curve from source center to target center (perfect-arrows inspired)
-          let startX = d.source.x;
-          let startY = d.source.y;
-          let endX = d.target.x;
-          let endY = d.target.y;
+          // Start from centroids (before any padding)
+          const startX = d.source.x;
+          const startY = d.source.y;
+          const endX = d.target.x;
+          const endY = d.target.y;
 
           const dx = endX - startX;
           const dy = endY - startY;
           const distance = Math.hypot(dx, dy) || 1;
 
-          // Apply padding (like perfect-arrows padStart/padEnd)
-          const actualPadStart = padStart + shortenBy;
-          const actualPadEnd = padEnd + shortenBy;
-
-          if (actualPadStart > 0 || actualPadEnd > 0) {
-            const angle = Math.atan2(dy, dx);
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-
-            if (actualPadStart > 0) {
-              startX += cos * actualPadStart;
-              startY += sin * actualPadStart;
-            }
-            if (actualPadEnd > 0) {
-              endX -= cos * actualPadEnd;
-              endY -= sin * actualPadEnd;
-            }
-          }
-
-          const paddedDx = endX - startX;
-          const paddedDy = endY - startY;
-          const paddedDistance = Math.hypot(paddedDx, paddedDy) || 1;
-
-          // Calculate bow amount based on stretch
+          // Calculate bow amount based on stretch (perfect-arrows algorithm)
           let stretchEffect = 0;
-          if (stretch > 0 && paddedDistance > minStretch) {
+          if (stretch > 0 && distance > minStretch) {
             const stretchRange = maxStretch - minStretch;
-            const distanceInRange = Math.min(paddedDistance - minStretch, stretchRange);
+            const distanceInRange = Math.min(distance - minStretch, stretchRange);
             stretchEffect = 1 - (distanceInRange / stretchRange);
           }
 
@@ -915,7 +892,7 @@
 
           // Check for straight lines at 45° angles if straights enabled
           if (straights && effectiveBow === 0) {
-            const angle = Math.abs(Math.atan2(paddedDy, paddedDx) * (180 / Math.PI));
+            const angle = Math.abs(Math.atan2(dy, dx) * (180 / Math.PI));
             const angleMod = angle % 90;
             if (Math.abs(angleMod - 45) < 2 || Math.abs(angleMod) < 2 || Math.abs(angleMod - 90) < 2) {
               return `M${startX},${startY} L${endX},${endY}`;
@@ -932,8 +909,8 @@
           const midY = (startY + endY) / 2;
 
           // Perpendicular direction
-          let perpX = -paddedDy / paddedDistance;
-          let perpY = paddedDx / paddedDistance;
+          let perpX = -dy / distance;
+          let perpY = dx / distance;
 
           // Flip if requested
           if (flip) {
@@ -946,7 +923,7 @@
           }
 
           // Apply bow
-          const curveAmount = effectiveBow * paddedDistance;
+          const curveAmount = effectiveBow * distance;
           const cx = midX + perpX * curveAmount;
           const cy = midY + perpY * curveAmount;
 
@@ -1020,15 +997,15 @@
         function drawNextLink(index) {
           if (index >= links.length) return;
           const d = links[index];
-          
+
           // Generate full path from source to target center
           const fullPathData = linkArc(d);
-          
+
           // Create temp path to sample and find intersection points
           const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
           tempPath.setAttribute("d", fullPathData);
           const totalLength = tempPath.getTotalLength();
-          
+
           // Find where path exits source ellipse/circle
           let tStart = 0;
           if (d.source.hasEllipse) {
@@ -1061,7 +1038,7 @@
             }
             tStart = (tMin + tMax) / 2;
           }
-          
+
           // Find where path enters target ellipse/circle (from the end, going backwards)
           let tEnd = 1;
           if (d.target.hasEllipse) {
@@ -1088,15 +1065,43 @@
             }
             tEnd = (tMin + tMax) / 2;
           }
+
+          // Apply padStart and padEnd with logarithmic scaling
+          // Longer arrows get proportionally more padding, shorter arrows get less
+          // This makes padding changes affect long arrows more than short arrows
           
-          // Get the actual start and end points
-          const startPoint = tempPath.getPointAtLength(tStart * totalLength);
-          const endPoint = tempPath.getPointAtLength(tEnd * totalLength);
+          // Reference length for the scaling (typical medium arrow length)
+          const referenceLength = 200;
           
-          // Calculate arrowhead angle at end point
-          const endPointPrev = tempPath.getPointAtLength(Math.max(0, tEnd * totalLength - 1));
-          const arrowheadAngle = Math.atan2(endPoint.y - endPointPrev.y, endPoint.x - endPointPrev.x) * 180 / Math.PI;
+          // Calculate scaling factor: longer arrows -> higher factor, shorter arrows -> lower factor
+          // Using relationship: scale = totalLength / referenceLength
+          // Clamp to reasonable range (0.5x to 2x)
+          const lengthScale = Math.max(0.5, Math.min(2, totalLength / referenceLength));
           
+          // Convert shortenBy (px) to percentage for backward compatibility
+          const shortenByPercent = (shortenBy || 0) / totalLength;
+          
+          // Apply the length scale to padding values
+          const actualPadStart = ((padStart || 0) * lengthScale) + shortenByPercent;
+          const actualPadEnd = ((padEnd || 0) * lengthScale) + shortenByPercent;
+          
+          let finalTStart = tStart;
+          let finalTEnd = tEnd;
+          
+          if (actualPadStart > 0) {
+            // Move forward from tStart by actualPadStart (as % of total path length)
+            finalTStart = Math.min(1, tStart + actualPadStart);
+          }
+          
+          if (actualPadEnd > 0) {
+            // Move backward from tEnd by actualPadEnd (as % of total path length)
+            finalTEnd = Math.max(0, tEnd - actualPadEnd);
+          }
+
+          // Get the actual start and end points after padding
+          const startPoint = tempPath.getPointAtLength(finalTStart * totalLength);
+          const endPoint = tempPath.getPointAtLength(finalTEnd * totalLength);
+
           // Now create the clipped path using the same curve type but with new endpoints
           let clippedPathData;
           if (fullPathData.includes('Q')) {
@@ -1123,6 +1128,15 @@
             // Straight line
             clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
           }
+          
+          // Calculate arrowhead angle using the clipped path
+          // Look at the tangent direction by comparing the end point with a point slightly before it
+          const clippedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          clippedPath.setAttribute("d", clippedPathData);
+          const clippedLength = clippedPath.getTotalLength();
+          const p = clippedPath.getPointAtLength(clippedLength);
+          const pPrev = clippedPath.getPointAtLength(Math.max(0, clippedLength - 5)); // Look back 5px for better angle
+          const arrowheadAngle = Math.atan2(p.y - pPrev.y, p.x - pPrev.x) * 180 / Math.PI;
 
           const path = linkGroup.append("path")
             .attr("fill", "none")
@@ -2893,7 +2907,7 @@
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
-      
+
       // Use arrowOptions if available, otherwise use defaults
       const options = typeof arrowOptions !== 'undefined' ? {
         klass: "flow-arrows",
@@ -3253,12 +3267,12 @@
   </script>
   <script id="2413" type="application/vnd.observable.javascript" pinned="">
     viewof arrowOptions = Inputs.form([
-      Inputs.range([0, 2], { value: 0, step: 0.1, label: "Bow" }),
+      Inputs.range([0, 2], { value: 0.3, step: 0.1, label: "Bow" }),
       Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
       Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
       Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
-      Inputs.range([0, 40], { value: 0, step: 1, label: "Pad Start (px)" }),
-      Inputs.range([0, 40], { value: 12, step: 1, label: "Pad End (px)" }),
+      Inputs.range([0, 0.5], { value: 0, step: 0.01, label: "Pad Start (%)" }),
+      Inputs.range([0, 0.5], { value: 0, step: 0.01, label: "Pad End (%)" }),
       Inputs.toggle({ label: "Flip", value: false }),
       Inputs.toggle({ label: "Straights", value: true })
     ], { template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` })
@@ -3739,7 +3753,7 @@
       // Step 2: Try font resizing (reduce font size progressively)
       const originalFontSize = parseFloat(textElement.style("font-size"));
       const minFontSize = Math.max(4, originalFontSize * 0.5); // Don't go below 4px or 50% of original
-      for (let fontSize = originalFontSize * 0.9; fontSize >= minFontSize; fontSize -= 0.5) {
+      for (let fontSize = originalFontSize - 0.1; fontSize >= minFontSize; fontSize -= 0.1) {
         textElement.style("font-size", fontSize + "px");
         textElement.selectAll("tspan").remove();
         textElement.text("");
@@ -4922,7 +4936,7 @@
         },
         "t_plus": {
           "alias": "A4+",
-          "statement": "Uphold ideals",
+          "statement": "Understandi",
           "explanation": "Identified as positive aspect of A."
         },
         "a_plus": {
@@ -4959,7 +4973,7 @@
         },
         "a_plus": {
           "alias": "A2+",
-          "statement": "Ensure survival",
+          "statement": "Betrayal",
           "explanation": "Derived as constructive side of alternative."
         },
         "a": {
