@@ -10,6 +10,8 @@ Built on the [ObservableHQ Dialectical Wheel notebook](https://observablehq.com/
 npm install dialectical-wheel
 ```
 
+
+
 ## Quick Start
 
 ```jsx
@@ -181,6 +183,31 @@ npm run lint
 # Storybook (local docs)
 npm run storybook
 ```
+
+### Notebook Development
+
+The core visualization logic comes from an Observable notebook. To modify it:
+
+1. **Edit the source notebook**: Make your changes to `notebook-src/dialectical-wheel-4.html`
+
+This file can also be opened and edited in [Observable Desktop](https://observablehq.com/notebook-kit/desktop).
+
+2. **Convert to JavaScript**: Run the conversion script to extract and compile the Observable code:
+   ```bash
+   node notebook-src/html2notebook.mjs notebook-src/dialectical-wheel-4.html --out src/notebook/dialectical-wheel.js
+   ```
+
+3. **Rebuild the package**: After converting, rebuild the dist files:
+   ```bash
+   npm run build
+   ```
+
+4. **Test your changes**: Run Storybook to see your changes in action:
+   ```bash
+   npm run storybook
+   ```
+
+The `html2notebook.mjs` script extracts Observable JavaScript and markdown cells from the HTML file and compiles them using the `@hpcc-js/observablehq-compiler`.
 
 ## TypeScript
 

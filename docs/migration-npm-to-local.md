@@ -132,7 +132,7 @@ observable export @dialexity/dialectical-wheel
 
 ### Import Paths
 
-The notebook files use relative imports like:
+The notebook files may use relative imports like:
 ```javascript
 import define1 from "./a33468b95d0b15b0@817.js";
 ```
