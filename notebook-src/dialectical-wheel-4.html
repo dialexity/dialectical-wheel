@@ -552,7 +552,7 @@
     makeArrowsModule = ({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
       const arrowsGroup = contentGroup.append("g")
         .attr("class", "arrows-group")
-        .style("pointer-events", "none");
+        .style("pointer-events", "all"); // Enable pointer events for clickable arrows
       // Ensure yellow circle is beneath arrows
       centerCircle.lower();
       // Ensure arrows are above rings (labels/coordinate can raise after)
@@ -804,6 +804,7 @@
        * @param {number} options.maxPadPercent - Maximum padding as percentage of path length (0-1). Default: 0.25
        * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
        * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
+       * @param {Function} options.onArrowClick - Callback function when arrow is clicked. Receives DOT script line.
        * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
        */
       function drawLabelLinks(connections, options = {}) {
@@ -819,6 +820,7 @@
         const maxPadPercent = options.maxPadPercent !== undefined ? options.maxPadPercent : 0.25; // max 25% of path
         const flip = options.flip !== undefined ? options.flip : false;
         const straights = options.straights !== undefined ? options.straights : true;
+        const onArrowClick = options.onArrowClick || null; // callback for arrow clicks
 
         // Backward compatibility
         const shortenBy = options.shortenBy || 0;
@@ -858,7 +860,7 @@
           return node;
         }
 
-        // Build links with per-connection color
+        // Build links with per-connection color and original connection data
         const links = [];
         connections.forEach(conn => {
           const fromRing = conn.fromRing || 'middle';
@@ -867,7 +869,11 @@
           const t = ensureNode(conn.to, toRing);
           if (!s || !t) return;
           const color = arrowUtilities.calculateArrowColor(fromRing, toRing, conn.from, conn.to);
-          links.push({ source: s, target: t, color });
+          
+          // Generate DOT script line for this arrow
+          const dotLine = `${conn.from}:${fromRing} -> ${conn.to}:${toRing}`;
+          
+          links.push({ source: s, target: t, color, dotLine, connection: conn });
         });
 
         // Generate arrow path from source center to target center (perfect-arrows inspired)
@@ -894,7 +900,7 @@
           // Reference length for bow scaling (typical medium arrow)
           const bowReferenceLength = 100;
           const bowLengthScale = Math.max(0.3, Math.min(1.5, bowReferenceLength / distance));
-          
+
           // Combine stretch and distance scaling effects
           const effectiveBow = bow * (1 + stretchEffect * stretch) * bowLengthScale;
 
@@ -1076,27 +1082,27 @@
 
           // Apply adaptive padding: use minimum of (fixed pixels OR maximum percentage)
           // This protects short arrows from disappearing while giving consistent gaps on long arrows
-          
+
           // Convert pixel padding to percentage of path length
           const padStartPercent = (padStart || 0) / totalLength;
           const padEndPercent = (padEnd || 0) / totalLength;
-          
+
           // Convert shortenBy (px) to percentage for backward compatibility
           const shortenByPercent = (shortenBy || 0) / totalLength;
-          
+
           // Use whichever is smaller: the pixel-based percentage or the maximum allowed percentage
           // This means: "Use Npx gap, but never more than X% of the arrow"
           const actualPadStart = Math.min(padStartPercent, maxPadPercent) + shortenByPercent;
           const actualPadEnd = Math.min(padEndPercent, maxPadPercent) + shortenByPercent;
-          
+
           let finalTStart = tStart;
           let finalTEnd = tEnd;
-          
+
           if (actualPadStart > 0) {
             // Move forward from tStart by actualPadStart (as % of total path length)
             finalTStart = Math.min(1, tStart + actualPadStart);
           }
-          
+
           if (actualPadEnd > 0) {
             // Move backward from tEnd by actualPadEnd (as % of total path length)
             finalTEnd = Math.max(0, tEnd - actualPadEnd);
@@ -1132,7 +1138,7 @@
             // Straight line
             clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
           }
-          
+
           // Calculate arrowhead angle using the clipped path
           // Look at the tangent direction by comparing the end point with a point slightly before it
           const clippedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -1148,14 +1154,43 @@
             .attr("stroke-width", 1.25)
             .attr("opacity", 0.3)
             .attr("stroke-dasharray", "3,3")
-            .attr("d", clippedPathData);
+            .attr("d", clippedPathData)
+            .style("pointer-events", "none"); // Don't intercept events, let the invisible path handle it
 
           const tIntersect = 1; // Always animate to the end of the clipped path
 
           const head = linkGroup.append("polygon")
             .attr("points", "0,-1.5 4.5,0 0,1.5")
             .attr("fill", d.color)
-            .attr("opacity", 0);
+            .attr("opacity", 0)
+            .style("cursor", onArrowClick ? "pointer" : "default")
+            .on("click", function(event) {
+              if (onArrowClick) {
+                event.stopPropagation();
+                onArrowClick(d.dotLine, d.connection);
+              }
+            })
+            .on("mouseover", function() {
+              if (onArrowClick) {
+                d3.select(this)
+                  .style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+                // Also highlight the path
+                path
+                  .attr("stroke-width", 2.5)
+                  .attr("opacity", 1)
+                  .style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+              }
+            })
+            .on("mouseout", function() {
+              if (onArrowClick) {
+                d3.select(this).style("filter", null);
+                // Reset path
+                path
+                  .attr("stroke-width", 1.25)
+                  .attr("opacity", 0.85)
+                  .style("filter", null);
+              }
+            });
 
           head.transition()
             .duration(900)
@@ -1180,11 +1215,65 @@
             .on("end", function() {
               // Replace animated head with static arrowhead at end point
               head.remove();
-              linkGroup.append("polygon")
+              const staticHead = linkGroup.append("polygon")
                 .attr("points", "0,-1.5 4.5,0 0,1.5")
                 .attr("fill", d.color)
                 .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle})`)
-                .attr("opacity", 0.85);
+                .attr("opacity", 0.85)
+                .style("cursor", onArrowClick ? "pointer" : "default")
+                .on("click", function(event) {
+                  if (onArrowClick) {
+                    event.stopPropagation();
+                    onArrowClick(d.dotLine, d.connection);
+                  }
+                })
+                .on("mouseover", function() {
+                  if (onArrowClick) {
+                    d3.select(this)
+                      .style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+                    // Also highlight the path
+                    path
+                      .attr("stroke-width", 2.5)
+                      .attr("opacity", 1)
+                      .style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+                  }
+                })
+                .on("mouseout", function() {
+                  if (onArrowClick) {
+                    d3.select(this).style("filter", null);
+                    // Reset path
+                    path
+                      .attr("stroke-width", 1.25)
+                      .attr("opacity", 0.85)
+                      .style("filter", null);
+                  }
+                });
+
+              // Add invisible wider hit area for better interaction
+              if (onArrowClick) {
+                linkGroup.append("path")
+                  .attr("fill", "none")
+                  .attr("stroke", "transparent")
+                  .attr("stroke-width", 15) // Wide invisible hit area
+                  .attr("d", clippedPathData)
+                  .style("cursor", "pointer")
+                  .on("click", function(event) {
+                    event.stopPropagation();
+                    onArrowClick(d.dotLine, d.connection);
+                  })
+                  .on("mouseover", function() {
+                    path.attr("stroke-width", 2.5)
+                      .attr("opacity", 1)
+                      .style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+                    staticHead.style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+                  })
+                  .on("mouseout", function() {
+                    path.attr("stroke-width", 1.25)
+                      .attr("opacity", 0.85)
+                      .style("filter", null);
+                    staticHead.style("filter", null);
+                  });
+              }
 
               path
                 .attr("stroke-dasharray", "none")
@@ -1196,6 +1285,9 @@
         }
 
         drawNextLink(0);
+        
+        // Ensure arrows stay on top for clickability
+        arrowsGroup.raise();
       }
 
       // Visualize anchor points for all cells
@@ -2895,7 +2987,10 @@
         padEnd: arrowOptions[5],
         maxPadPercent: arrowOptions[6],
         flip: arrowOptions[7],
-        straights: arrowOptions[8]
+        straights: arrowOptions[8],
+        onArrowClick: (dotLine, connection) => {
+          viewof clickedArrowInfo.value = { dotLine, connection };
+        }
       } : {
         bow: 0,
         stretch: 0.5,
@@ -2905,7 +3000,12 @@
         padEnd: 20,
         maxPadPercent: 0.25,
         flip: false,
-        straights: true
+        straights: true,
+        onArrowClick: (dotLine, connection) => {
+          if (typeof viewof clickedArrowInfo !== 'undefined') {
+            viewof clickedArrowInfo.value = { dotLine, connection };
+          }
+        }
       };
 
       arrows.drawLabelLinks(connections, options);
@@ -2925,7 +3025,12 @@
         padEnd: flowArrowOptions[5],
         maxPadPercent: flowArrowOptions[6],
         flip: flowArrowOptions[7],
-        straights: flowArrowOptions[8]
+        straights: flowArrowOptions[8],
+        onArrowClick: (dotLine, connection) => {
+          if (typeof viewof clickedArrowInfo !== 'undefined') {
+            viewof clickedArrowInfo.value = { dotLine, connection };
+          }
+        }
       } : {
         klass: "flow-arrows",
         bow: 0.1,
@@ -2936,7 +3041,12 @@
         padEnd: 30,
         maxPadPercent: 0.35,
         flip: false,
-        straights: true
+        straights: true,
+        onArrowClick: (dotLine, connection) => {
+          if (typeof viewof clickedArrowInfo !== 'undefined') {
+            viewof clickedArrowInfo.value = { dotLine, connection };
+          }
+        }
       };
 
       arrows.drawLabelLinks(connections, options);
@@ -3315,6 +3425,86 @@
       label: "Flow Arrow Options",
       template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` 
     })
+  </script>
+    <script id="2417" type="application/vnd.observable.javascript" pinned="">
+      viewof clickedArrowInfo = {
+        let currentValue = { dotLine: null, connection: null };
+        
+        const container = htl.html`<div style="
+          padding: 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border-left: 4px solid #4a90e2;
+          margin: 10px 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+          <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px; font-weight: 600;">
+            Clicked Arrow Info
+          </h4>
+          <div id="arrow-info" style="font-size: 13px; color: #555;">
+            <em style="color: #999;">Click an arrow to see details...</em>
+          </div>
+        </div>`;
+        
+        const infoDiv = container.querySelector('#arrow-info');
+        
+        Object.defineProperty(container, 'value', {
+          get: () => currentValue,
+          set: (val) => {
+            currentValue = val;
+            const { dotLine, connection } = val;
+            
+            if (dotLine && connection) {
+              // Show all connection properties
+              const allProps = Object.keys(connection).map(key => 
+                `<div style="color: #666; font-size: 11px;"><strong>${key}:</strong> ${JSON.stringify(connection[key])}</div>`
+              ).join('');
+              
+              infoDiv.innerHTML = `
+                <div style="background: white; padding: 12px; border-radius: 6px; margin-top: 8px;">
+                  <div style="margin-bottom: 8px;">
+                    <strong style="color: #4a90e2;">DOT Line:</strong>
+                    <code style="
+                      background: #e8f4f8;
+                      padding: 4px 8px;
+                      border-radius: 4px;
+                      color: #2c3e50;
+                      font-family: 'Monaco', 'Courier New', monospace;
+                      font-size: 12px;
+                      display: inline-block;
+                      margin-left: 8px;
+                    ">${dotLine}</code>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                    <div style="background: #fff3cd; padding: 8px; border-radius: 4px;">
+                      <div style="font-weight: 600; color: #856404; margin-bottom: 4px;">From</div>
+                      <div style="color: #856404;">${connection.from}</div>
+                      <div style="color: #856404; font-size: 11px; margin-top: 2px;">Ring: ${connection.fromRing || 'middle'}</div>
+                    </div>
+                    <div style="background: #d4edda; padding: 8px; border-radius: 4px;">
+                      <div style="font-weight: 600; color: #155724; margin-bottom: 4px;">To</div>
+                      <div style="color: #155724;">${connection.to}</div>
+                      <div style="color: #155724; font-size: 11px; margin-top: 2px;">Ring: ${connection.toRing || 'middle'}</div>
+                    </div>
+                  </div>
+                  <details style="margin-top: 12px;">
+                    <summary style="cursor: pointer; color: #666; font-size: 12px; font-weight: 600;">All Properties</summary>
+                    <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                      ${allProps}
+                    </div>
+                  </details>
+                </div>
+              `;
+            } else {
+              infoDiv.innerHTML = '<em style="color: #999;">Click an arrow to see details...</em>';
+            }
+            
+            container.dispatchEvent(new CustomEvent('input'));
+          }
+        });
+        
+        return container;
+      }
   </script>
   <script id="1117" type="application/vnd.observable.javascript" pinned="">
     chart.focusedPair
@@ -4536,24 +4726,7 @@
   <script id="1402" type="application/vnd.observable.javascript" pinned="">
     viewof rotationAngle = Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
   </script>
-  <script id="2414" type="application/vnd.observable.javascript">
-    // Reactive arrow redraw when arrowOptions change
-    {
-      if (typeof viewof_chart !== 'undefined' && viewof_chart.drawAllArrows) {
-        viewof_chart.drawAllArrows();
-      }
-      return arrowOptions;
-    }
-  </script>
-  <script id="2416" type="application/vnd.observable.javascript">
-    // Reactive flow arrow redraw when flowArrowOptions change
-    {
-      if (typeof viewof_chart !== 'undefined' && viewof_chart.redrawFlowArrows) {
-        viewof_chart.redrawFlowArrows();
-      }
-      return flowArrowOptions;
-    }
-  </script>
+
   <script id="1403" type="application/vnd.observable.javascript">
     {
       // effect: apply rotation without restarting simulation
@@ -4909,6 +5082,9 @@
   <script id="1295" type="application/vnd.observable.javascript">
     // Convenience union used for rendering, but not for forces
     suits = [...flowSuits, ...contraSuits]
+  </script>
+  <script id="1302" type="application/vnd.observable.javascript" pinned="">
+    import {Swatches} from "@d3/color-legend"
   </script>
   <script id="1425" type="application/vnd.observable.javascript">
     function getOppositePrefix(unitId) {
