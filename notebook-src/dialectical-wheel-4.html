@@ -220,6 +220,7 @@
         <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
           <button id="toggle-arrows" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Show Arrows</button>
           <button id="redraw-arrows" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;">Redraw Arrows</button>
+          <button id="toggle-anchors" style="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #fff3cd; cursor: pointer;">Show Anchor Points</button>
         </div>
 
         <!-- Step-by-Step Arrow Drawing -->
@@ -238,6 +239,7 @@
 
       const toggleBtn = container.querySelector('#toggle-arrows');
       const redrawBtn = container.querySelector('#redraw-arrows');
+      const toggleAnchorsBtn = container.querySelector('#toggle-anchors');
 
       // Step-by-step controls
       const startStepsBtn = container.querySelector('#start-arrow-steps');
@@ -457,6 +459,16 @@
           viewof chart.drawAllArrows();
         }
         updateArrowStepUI();
+      });
+
+      // Anchor points visualization toggle
+      let anchorsVisible = false;
+      toggleAnchorsBtn.addEventListener('click', () => {
+        const message = viewof chart.toggleAnchorPoints();
+        anchorsVisible = !anchorsVisible;
+        toggleAnchorsBtn.textContent = anchorsVisible ? 'Hide Anchor Points' : 'Show Anchor Points';
+        toggleAnchorsBtn.style.background = anchorsVisible ? '#ffc107' : '#fff3cd';
+        console.log(message);
       });
 
       // Initialize
@@ -773,11 +785,43 @@
       function clearArrows() {
         arrowsGroup.selectAll("*").remove();
       }
-      // Treat <text> labels as nodes and draw force-graph-style links between them
-      // options.klass: optional CSS class to tag this batch (e.g., 'flow-arrows')
+      /**
+       * Draw arrows between label nodes using perfect-arrows inspired API.
+       * 
+       * Based on https://github.com/steveruizok/perfect-arrows
+       * 
+       * @param {Array} connections - Array of connection objects with from/to/fromRing/toRing
+       * @param {Object} options - Arrow styling options
+       * @param {string} options.klass - Optional CSS class to tag this batch (e.g., 'flow-arrows')
+       * @param {number} options.bow - Natural bow/curvature of the arrow. At 0, all lines will be straight. Default: 0
+       * @param {number} options.stretch - The effect that the arrow's length will have on the bow (0-1). 
+       *                                    At 0, the stretch will have no effect. Default: 0.5
+       * @param {number} options.minStretch - The length of the arrow where the line should be most stretched. 
+       *                                       Shorter distances will have no additional effect. Default: 0
+       * @param {number} options.maxStretch - The length of the arrow at which the stretch should have no effect. Default: 420
+       * @param {number} options.padStart - Padding at arrow start in pixels. Uses adaptive scaling (min of px or max %). Default: 0
+       * @param {number} options.padEnd - Padding at arrow end in pixels. Uses adaptive scaling (min of px or max %). Default: 0
+       * @param {number} options.maxPadPercent - Maximum padding as percentage of path length (0-1). Default: 0.25
+       * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
+       * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
+       * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
+       */
       function drawLabelLinks(connections, options = {}) {
         const klass = options.klass || "";
-        //arrowsGroup.selectAll("*").remove();
+
+        // Arrow style options (perfect-arrows compatible)
+        const bow = options.bow !== undefined ? options.bow : 0;
+        const stretch = options.stretch !== undefined ? options.stretch : 0.5;
+        const minStretch = options.minStretch !== undefined ? options.minStretch : 0;
+        const maxStretch = options.maxStretch !== undefined ? options.maxStretch : 420;
+        const padStart = options.padStart !== undefined ? options.padStart : 0; // in pixels
+        const padEnd = options.padEnd !== undefined ? options.padEnd : 0; // in pixels
+        const maxPadPercent = options.maxPadPercent !== undefined ? options.maxPadPercent : 0.25; // max 25% of path
+        const flip = options.flip !== undefined ? options.flip : false;
+        const straights = options.straights !== undefined ? options.straights : true;
+
+        // Backward compatibility
+        const shortenBy = options.shortenBy || 0;
 
         // Build node map keyed by unitId:ringType
         const nodeByKey = new Map();
@@ -789,11 +833,12 @@
           if (!pos) return null;
           const padding = 2;
           const hasEllipse = !!label;
-          const ellipseRx = hasEllipse ? Math.max(1, label.labelWidth  / 2) : null;
+          // Use inscribed ellipse: fits inside the bounding box
+          const ellipseRx = hasEllipse ? Math.max(1, label.labelWidth / 2) : null;
           const ellipseRy = hasEllipse ? Math.max(1, label.labelHeight / 2) : null;
           const ellipseTheta = hasEllipse ? (label.labelRotationRadians || 0) : 0;
           const radius = hasEllipse
-            ? Math.min(ellipseRx, ellipseRy) + padding
+            ? Math.max(ellipseRx, ellipseRy) + padding
             : Math.max(6, (pos.thickness || 12) * 0.3);
           const node = {
             id: key,
@@ -825,87 +870,133 @@
           links.push({ source: s, target: t, color });
         });
 
-        // Helper: anchor on ellipse boundary given a world-space direction
-        function anchorOnEllipse(cx, cy, rx, ry, theta, towardX, towardY, offset) {
-          const dx = towardX - cx, dy = towardY - cy;
-          const len = Math.hypot(dx, dy) || 1;
-          let ux = dx / len, uy = dy / len;
-          const c = Math.cos(theta), s = Math.sin(theta);
-          // rotate into ellipse local frame (-theta)
-          const uxLocal =  ux * c + uy * s;
-          const uyLocal = -ux * s + uy * c;
-          const denom = Math.sqrt((uxLocal*uxLocal)/(rx*rx) + (uyLocal*uyLocal)/(ry*ry)) || 1;
-          const scale = 1 / denom;
-          const exLocal = uxLocal * (scale + offset);
-          const eyLocal = uyLocal * (scale + offset);
-          // rotate back to world
-          const ex = cx + (exLocal * c - eyLocal * s);
-          const ey = cy + (exLocal * s + eyLocal * c);
-          return { x: ex, y: ey };
-        }
-
-        // Arc path similar to force-graph cell, but compute anchors on ellipse (or circle fallback)
+        // Generate arrow path from source center to target center (perfect-arrows inspired)
         function linkArc(d) {
-          const buffer = 2;
-          const arrowheadLen = 5;
-          // Source anchor toward target
-          let start;
-          if (d.source.hasEllipse) {
-            start = anchorOnEllipse(d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta, d.target.x, d.target.y, buffer);
-          } else {
-            const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            start = { x: d.source.x + (dx/dist) * (d.source.radius + buffer), y: d.source.y + (dy/dist) * (d.source.radius + buffer) };
+          // Start from centroids (before any padding)
+          const startX = d.source.x;
+          const startY = d.source.y;
+          const endX = d.target.x;
+          const endY = d.target.y;
+
+          const dx = endX - startX;
+          const dy = endY - startY;
+          const distance = Math.hypot(dx, dy) || 1;
+
+          // Calculate bow amount based on stretch (perfect-arrows algorithm)
+          let stretchEffect = 0;
+          if (stretch > 0 && distance > minStretch) {
+            const stretchRange = maxStretch - minStretch;
+            const distanceInRange = Math.min(distance - minStretch, stretchRange);
+            stretchEffect = 1 - (distanceInRange / stretchRange);
           }
-          // Target anchor from target back toward source (subtract arrowhead length)
-          let end;
-          if (d.target.hasEllipse) {
-            // move slightly inside by arrowheadLen along reverse direction
-            const anchor = anchorOnEllipse(d.target.x, d.target.y, d.target.ellipseRx, d.target.ellipseRy, d.target.ellipseTheta, d.source.x, d.source.y, arrowheadLen);
-            end = anchor;
-          } else {
-            const dx = d.source.x - d.target.x, dy = d.source.y - d.target.y;
-            const dist = Math.hypot(dx, dy) || 1;
-            end = { x: d.target.x + (dx/dist) * (d.target.radius + arrowheadLen), y: d.target.y + (dy/dist) * (d.target.radius + arrowheadLen) };
+
+          // Apply inverse distance scaling to bow: shorter arrows get more bow, longer arrows get less
+          // Reference length for bow scaling (typical medium arrow)
+          const bowReferenceLength = 100;
+          const bowLengthScale = Math.max(0.3, Math.min(1.5, bowReferenceLength / distance));
+          
+          // Combine stretch and distance scaling effects
+          const effectiveBow = bow * (1 + stretchEffect * stretch) * bowLengthScale;
+
+          // Check for straight lines at 45° angles if straights enabled
+          if (straights && effectiveBow === 0) {
+            const angle = Math.abs(Math.atan2(dy, dx) * (180 / Math.PI));
+            const angleMod = angle % 90;
+            if (Math.abs(angleMod - 45) < 2 || Math.abs(angleMod) < 2 || Math.abs(angleMod - 90) < 2) {
+              return `M${startX},${startY} L${endX},${endY}`;
+            }
           }
-          const dxA = end.x - start.x, dyA = end.y - start.y;
-          const distance = Math.hypot(dxA, dyA) || 1;
-          // If very close, choose a better emission point and take a longer route
-          if (distance < 30) {
-            // Re-anchor source on the outward side of the ellipse to avoid cramped starts
-            if (d.source.hasEllipse) {
-              const rlen = Math.hypot(d.source.x, d.source.y) || 1;
-              const outx = d.source.x / rlen, outy = d.source.y / rlen;
-              const towardX = d.source.x + outx * (d.source.ellipseRx + d.source.ellipseRy);
-              const towardY = d.source.y + outy * (d.source.ellipseRx + d.source.ellipseRy);
-              start = anchorOnEllipse(d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta, towardX, towardY, buffer);
-            }
-            // Re-anchor target outward as the entry point, then back off by arrowheadLen along the link direction
-            if (d.target.hasEllipse) {
-              const rlenT = Math.hypot(d.target.x, d.target.y) || 1;
-              const outxT = d.target.x / rlenT, outyT = d.target.y / rlenT;
-              const towardXT = d.target.x + outxT * (d.target.ellipseRx + d.target.ellipseRy);
-              const towardYT = d.target.y + outyT * (d.target.ellipseRx + d.target.ellipseRy);
-              const outPt = anchorOnEllipse(d.target.x, d.target.y, d.target.ellipseRx, d.target.ellipseRy, d.target.ellipseTheta, towardXT, towardYT, 0);
-              const vdx = outPt.x - start.x, vdy = outPt.y - start.y;
-              const vlen = Math.hypot(vdx, vdy) || 1;
-              end = { x: outPt.x - (vdx / vlen) * arrowheadLen, y: outPt.y - (vdy / vlen) * arrowheadLen };
-            }
-            // Quadratic curve with boosted curvature, bending outward from the wheel center
-            const midX = (start.x + end.x) / 2;
-            const midY = (start.y + end.y) / 2;
-            let perpX = -dyA / (distance || 1);
-            let perpY =  dxA / (distance || 1);
-            // Ensure bend is outward (same direction as radial from center at midpoint)
+
+          // No bow - straight line
+          if (effectiveBow === 0) {
+            return `M${startX},${startY} L${endX},${endY}`;
+          }
+
+          // Calculate control point for curved arrow
+          const midX = (startX + endX) / 2;
+          const midY = (startY + endY) / 2;
+
+          // Perpendicular direction
+          let perpX = -dy / distance;
+          let perpY = dx / distance;
+
+          // Flip if requested
+          if (flip) {
+            perpX = -perpX;
+            perpY = -perpY;
+          } else {
+            // Default: ensure bend is outward (away from origin)
             const dotOut = perpX * midX + perpY * midY;
             if (dotOut < 0) { perpX = -perpX; perpY = -perpY; }
-            const curve = Math.max(40, distance * 0.6);
-            const cx = midX + perpX * curve;
-            const cy = midY + perpY * curve;
-            return `M${start.x},${start.y} Q ${cx},${cy} ${end.x},${end.y}`;
           }
-          const dr = distance * 1;
-          return `M${start.x},${start.y}A${dr},${dr} 0 0,1 ${end.x},${end.y}`;
+
+          // Apply bow
+          const curveAmount = effectiveBow * distance;
+          const cx = midX + perpX * curveAmount;
+          const cy = midY + perpY * curveAmount;
+
+          return `M${startX},${startY} Q ${cx},${cy} ${endX},${endY}`;
+        }
+
+        // Helper: Check if a point is inside an ellipse
+        function isPointInEllipse(px, py, cx, cy, rx, ry, theta) {
+          // Rotate point into ellipse local frame
+          const dx = px - cx;
+          const dy = py - cy;
+          const c = Math.cos(-theta);
+          const s = Math.sin(-theta);
+          const localX = dx * c - dy * s;
+          const localY = dx * s + dy * c;
+          // Check if point is inside ellipse
+          return (localX * localX) / (rx * rx) + (localY * localY) / (ry * ry) <= 1;
+        }
+
+        // Helper: Find where path enters target ellipse using binary search
+        function findEllipseIntersection(pathData, cx, cy, rx, ry, theta) {
+          // Create a temporary path element to sample the FULL path (before masking)
+          const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          tempPath.setAttribute("d", pathData);
+
+          const L = tempPath.getTotalLength();
+
+          // Binary search to find intersection point
+          let tMin = 0;
+          let tMax = 1;
+          const epsilon = 0.0001; // precision threshold
+
+          // First check if end point is outside (no intersection)
+          const endPoint = tempPath.getPointAtLength(L);
+          if (!isPointInEllipse(endPoint.x, endPoint.y, cx, cy, rx, ry, theta)) {
+            // Path doesn't intersect ellipse, use end point
+            const p2 = tempPath.getPointAtLength(Math.max(0, L - 1));
+            const angle = Math.atan2(endPoint.y - p2.y, endPoint.x - p2.x) * 180 / Math.PI;
+            return { x: endPoint.x, y: endPoint.y, angle, t: 1 };
+          }
+
+          // Binary search for the intersection point
+          while (tMax - tMin > epsilon) {
+            const tMid = (tMin + tMax) / 2;
+            const p = tempPath.getPointAtLength(tMid * L);
+
+            if (isPointInEllipse(p.x, p.y, cx, cy, rx, ry, theta)) {
+              // Point is inside, intersection is earlier
+              tMax = tMid;
+            } else {
+              // Point is outside, intersection is later
+              tMin = tMid;
+            }
+          }
+
+          // Get intersection point and angle
+          const tIntersect = (tMin + tMax) / 2;
+          const intersectionPoint = tempPath.getPointAtLength(tIntersect * L);
+
+          // Calculate tangent angle at intersection
+          const delta = 0.01;
+          const p2 = tempPath.getPointAtLength(Math.max(0, (tIntersect - delta) * L));
+          const angle = Math.atan2(intersectionPoint.y - p2.y, intersectionPoint.x - p2.x) * 180 / Math.PI;
+
+          return { x: intersectionPoint.x, y: intersectionPoint.y, angle, t: tIntersect };
         }
 
         const linkGroup = arrowsGroup.append("g").attr("class", `label-link-group${klass ? ` ${klass}` : ""}`);
@@ -914,7 +1005,142 @@
         function drawNextLink(index) {
           if (index >= links.length) return;
           const d = links[index];
-          const pathData = linkArc(d);
+
+          // Generate full path from source to target center
+          const fullPathData = linkArc(d);
+
+          // Create temp path to sample and find intersection points
+          const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          tempPath.setAttribute("d", fullPathData);
+          const totalLength = tempPath.getTotalLength();
+
+          // Find where path exits source ellipse/circle
+          let tStart = 0;
+          if (d.source.hasEllipse) {
+            // Binary search from start to find where we exit source ellipse
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              if (isPointInEllipse(p.x, p.y, d.source.x, d.source.y, d.source.ellipseRx, d.source.ellipseRy, d.source.ellipseTheta)) {
+                tMin = tMid; // Still inside, need to go further
+              } else {
+                tMax = tMid; // Outside, go back
+              }
+            }
+            tStart = (tMin + tMax) / 2;
+          } else {
+            // For circles, find exit point
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              const dist = Math.hypot(p.x - d.source.x, p.y - d.source.y);
+              if (dist < d.source.radius) {
+                tMin = tMid;
+              } else {
+                tMax = tMid;
+              }
+            }
+            tStart = (tMin + tMax) / 2;
+          }
+
+          // Find where path enters target ellipse/circle (from the end, going backwards)
+          let tEnd = 1;
+          if (d.target.hasEllipse) {
+            const result = findEllipseIntersection(
+              fullPathData,
+              d.target.x, d.target.y,
+              d.target.ellipseRx, d.target.ellipseRy,
+              d.target.ellipseTheta
+            );
+            tEnd = result.t;
+          } else {
+            // For circles
+            let tMin = 0, tMax = 1;
+            const epsilon = 0.0001;
+            while (tMax - tMin > epsilon) {
+              const tMid = (tMin + tMax) / 2;
+              const p = tempPath.getPointAtLength(tMid * totalLength);
+              const dist = Math.hypot(p.x - d.target.x, p.y - d.target.y);
+              if (dist > d.target.radius) {
+                tMin = tMid; // Still outside, move forward
+              } else {
+                tMax = tMid; // Inside, move back
+              }
+            }
+            tEnd = (tMin + tMax) / 2;
+          }
+
+          // Apply adaptive padding: use minimum of (fixed pixels OR maximum percentage)
+          // This protects short arrows from disappearing while giving consistent gaps on long arrows
+          
+          // Convert pixel padding to percentage of path length
+          const padStartPercent = (padStart || 0) / totalLength;
+          const padEndPercent = (padEnd || 0) / totalLength;
+          
+          // Convert shortenBy (px) to percentage for backward compatibility
+          const shortenByPercent = (shortenBy || 0) / totalLength;
+          
+          // Use whichever is smaller: the pixel-based percentage or the maximum allowed percentage
+          // This means: "Use Npx gap, but never more than X% of the arrow"
+          const actualPadStart = Math.min(padStartPercent, maxPadPercent) + shortenByPercent;
+          const actualPadEnd = Math.min(padEndPercent, maxPadPercent) + shortenByPercent;
+          
+          let finalTStart = tStart;
+          let finalTEnd = tEnd;
+          
+          if (actualPadStart > 0) {
+            // Move forward from tStart by actualPadStart (as % of total path length)
+            finalTStart = Math.min(1, tStart + actualPadStart);
+          }
+          
+          if (actualPadEnd > 0) {
+            // Move backward from tEnd by actualPadEnd (as % of total path length)
+            finalTEnd = Math.max(0, tEnd - actualPadEnd);
+          }
+
+          // Get the actual start and end points after padding
+          const startPoint = tempPath.getPointAtLength(finalTStart * totalLength);
+          const endPoint = tempPath.getPointAtLength(finalTEnd * totalLength);
+
+          // Now create the clipped path using the same curve type but with new endpoints
+          let clippedPathData;
+          if (fullPathData.includes('Q')) {
+            // Quadratic bezier - extract control point and create new path
+            const match = fullPathData.match(/M([^ ]+),([^ ]+) Q ([^ ]+),([^ ]+) ([^ ]+),([^ ]+)/);
+            if (match) {
+              const cx = parseFloat(match[3]);
+              const cy = parseFloat(match[4]);
+              clippedPathData = `M${startPoint.x},${startPoint.y} Q ${cx},${cy} ${endPoint.x},${endPoint.y}`;
+            } else {
+              clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
+            }
+          } else if (fullPathData.includes('A')) {
+            // Arc - use same radius
+            const match = fullPathData.match(/A([^ ]+),([^ ]+)/);
+            if (match) {
+              const rx = parseFloat(match[1]);
+              const ry = parseFloat(match[2]);
+              clippedPathData = `M${startPoint.x},${startPoint.y} A${rx},${ry} 0 0,1 ${endPoint.x},${endPoint.y}`;
+            } else {
+              clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
+            }
+          } else {
+            // Straight line
+            clippedPathData = `M${startPoint.x},${startPoint.y} L${endPoint.x},${endPoint.y}`;
+          }
+          
+          // Calculate arrowhead angle using the clipped path
+          // Look at the tangent direction by comparing the end point with a point slightly before it
+          const clippedPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          clippedPath.setAttribute("d", clippedPathData);
+          const clippedLength = clippedPath.getTotalLength();
+          const p = clippedPath.getPointAtLength(clippedLength);
+          const pPrev = clippedPath.getPointAtLength(Math.max(0, clippedLength - 5)); // Look back 5px for better angle
+          const arrowheadAngle = Math.atan2(p.y - pPrev.y, p.x - pPrev.x) * 180 / Math.PI;
 
           const path = linkGroup.append("path")
             .attr("fill", "none")
@@ -922,7 +1148,9 @@
             .attr("stroke-width", 1.25)
             .attr("opacity", 0.3)
             .attr("stroke-dasharray", "3,3")
-            .attr("d", pathData);
+            .attr("d", clippedPathData);
+
+          const tIntersect = 1; // Always animate to the end of the clipped path
 
           const head = linkGroup.append("polygon")
             .attr("points", "0,-1.5 4.5,0 0,1.5")
@@ -933,11 +1161,14 @@
             .duration(900)
             .ease(d3.easeQuadInOut)
             .attrTween("transform", function() {
-              const node = path.node();
-              const L = node.getTotalLength();
+              // Create temp path for animation using the clipped path
+              const animPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+              animPath.setAttribute("d", clippedPathData);
+              const L = animPath.getTotalLength();
+
               return function(t) {
-                const p = node.getPointAtLength(t * L);
-                const p2 = node.getPointAtLength(Math.min(L, t * L + 1));
+                const p = animPath.getPointAtLength(t * L);
+                const p2 = animPath.getPointAtLength(Math.min(L, t * L + 1));
                 const ang = Math.atan2(p2.y - p.y, p2.x - p.x) * 180 / Math.PI;
                 return `translate(${p.x}, ${p.y}) rotate(${ang})`;
               };
@@ -947,9 +1178,15 @@
               path.transition().duration(200).attr("opacity", 0.7);
             })
             .on("end", function() {
+              // Replace animated head with static arrowhead at end point
               head.remove();
+              linkGroup.append("polygon")
+                .attr("points", "0,-1.5 4.5,0 0,1.5")
+                .attr("fill", d.color)
+                .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle})`)
+                .attr("opacity", 0.85);
+
               path
-                .attr("marker-end", () => `url(${new URL(`#${arrowUtilities.getArrowheadId(d.color)}`, location)})`)
                 .attr("stroke-dasharray", "none")
                 .transition()
                 .duration(250)
@@ -961,7 +1198,114 @@
         drawNextLink(0);
       }
 
-      return { arrowsGroup, getCellCentroid, drawArrow, drawLabelLinks, clearArrows };
+      // Visualize anchor points for all cells
+      function visualizeAnchorPoints() {
+        const anchorGroup = arrowsGroup.append("g")
+          .attr("class", "anchor-points-visualization");
+
+        // For each ring type
+        const ringTypes = ['invisible', 'outer', 'middle', 'inner'];
+        const ringColors = {
+          invisible: '#999',
+          outer: '#dc2626',
+          middle: '#666',
+          inner: '#16a34a'
+        };
+
+        // Get all unit IDs from nested data
+        const unitIds = nestedData.middle.map(d => d.unitId);
+
+        unitIds.forEach(unitId => {
+          ringTypes.forEach(ringType => {
+            const cellInfo = getCellCentroid(unitId, ringType);
+            if (!cellInfo) return;
+
+            const color = ringColors[ringType];
+
+            // Draw centroid as a circle
+            anchorGroup.append("circle")
+              .attr("cx", cellInfo.x)
+              .attr("cy", cellInfo.y)
+              .attr("r", 3)
+              .attr("fill", color)
+              .attr("stroke", "white")
+              .attr("stroke-width", 1)
+              .attr("opacity", 0.8);
+
+            // Draw label with unitId and ring type
+            anchorGroup.append("text")
+              .attr("x", cellInfo.x)
+              .attr("y", cellInfo.y - 8)
+              .attr("text-anchor", "middle")
+              .attr("font-size", "8px")
+              .attr("fill", color)
+              .attr("stroke", "white")
+              .attr("stroke-width", 0.3)
+              .attr("paint-order", "stroke")
+              .text(`${unitId}:${ringType.charAt(0)}`);
+
+            // If there's label info (ellipse), draw the bounding box
+            const labelInfo = getLabelInfo(unitId, ringType);
+            if (labelInfo && labelInfo.labelWidth && labelInfo.labelHeight) {
+              const w2 = labelInfo.labelWidth / 2;
+              const h2 = labelInfo.labelHeight / 2;
+              const theta = labelInfo.labelRotationRadians || 0;
+
+              // Calculate rotated rectangle corners
+              const corners = [
+                { x: -w2, y: -h2 },
+                { x: w2, y: -h2 },
+                { x: w2, y: h2 },
+                { x: -w2, y: h2 }
+              ];
+
+              const rotatedCorners = corners.map(c => {
+                const cosT = Math.cos(theta);
+                const sinT = Math.sin(theta);
+                return {
+                  x: labelInfo.x + (cosT * c.x - sinT * c.y),
+                  y: labelInfo.y + (sinT * c.x + cosT * c.y)
+                };
+              });
+
+              // Draw rectangle
+              const pathData = `M${rotatedCorners[0].x},${rotatedCorners[0].y} ` +
+                `L${rotatedCorners[1].x},${rotatedCorners[1].y} ` +
+                `L${rotatedCorners[2].x},${rotatedCorners[2].y} ` +
+                `L${rotatedCorners[3].x},${rotatedCorners[3].y} Z`;
+
+              anchorGroup.append("path")
+                .attr("d", pathData)
+                .attr("fill", "none")
+                .attr("stroke", color)
+                .attr("stroke-width", 1)
+                .attr("stroke-dasharray", "2,2")
+                .attr("opacity", 0.5);
+
+              // Draw inscribed ellipse: fits inside the bounding box
+              const rx = w2;
+              const ry = h2;
+
+              anchorGroup.append("ellipse")
+                .attr("cx", labelInfo.x)
+                .attr("cy", labelInfo.y)
+                .attr("rx", rx)
+                .attr("ry", ry)
+                .attr("transform", `rotate(${(theta * 180 / Math.PI)}, ${labelInfo.x}, ${labelInfo.y})`)
+                .attr("fill", "none")
+                .attr("stroke", color)
+                .attr("stroke-width", 1.5)
+                .attr("opacity", 0.6);
+            }
+          });
+        });
+      }
+
+      function clearAnchorPoints() {
+        arrowsGroup.selectAll(".anchor-points-visualization").remove();
+      }
+
+      return { arrowsGroup, getCellCentroid, drawArrow, drawLabelLinks, clearArrows, visualizeAnchorPoints, clearAnchorPoints };
     }
   </script>
   <script id="2400" type="application/vnd.observable.javascript">
@@ -2540,19 +2884,81 @@
     function drawAllArrows() {
       clearArrows();
       const connections = parseArrowConnections(arrowConnections, dialecticalData);
-      arrows.drawLabelLinks(connections);
+
+      // Use arrowOptions if available, otherwise use defaults
+      const options = typeof arrowOptions !== 'undefined' ? {
+        bow: arrowOptions[0],
+        stretch: arrowOptions[1],
+        minStretch: arrowOptions[2],
+        maxStretch: arrowOptions[3],
+        padStart: arrowOptions[4],
+        padEnd: arrowOptions[5],
+        maxPadPercent: arrowOptions[6],
+        flip: arrowOptions[7],
+        straights: arrowOptions[8]
+      } : {
+        bow: 0,
+        stretch: 0.5,
+        minStretch: 0,
+        maxStretch: 420,
+        padStart: 0,
+        padEnd: 20,
+        maxPadPercent: 0.25,
+        flip: false,
+        straights: true
+      };
+
+      arrows.drawLabelLinks(connections, options);
     }
     function drawFlow() {
       //clearArrows();
       const connections = parseArrowConnections(flowConnections, dialecticalData);
       
-      arrows.drawLabelLinks(connections, { klass: "flow-arrows" });
+      // Use flowArrowOptions if available, otherwise use defaults
+      const options = typeof flowArrowOptions !== 'undefined' ? {
+        klass: "flow-arrows",
+        bow: flowArrowOptions[0],
+        stretch: flowArrowOptions[1],
+        minStretch: flowArrowOptions[2],
+        maxStretch: flowArrowOptions[3],
+        padStart: flowArrowOptions[4],
+        padEnd: flowArrowOptions[5],
+        maxPadPercent: flowArrowOptions[6],
+        flip: flowArrowOptions[7],
+        straights: flowArrowOptions[8]
+      } : {
+        klass: "flow-arrows",
+        bow: 0.1,
+        stretch: 0.5,
+        minStretch: 0,
+        maxStretch: 420,
+        padStart: 30,
+        padEnd: 30,
+        maxPadPercent: 0.35,
+        flip: false,
+        straights: true
+      };
+
+      arrows.drawLabelLinks(connections, options);
     }
     function toggleFlowArrows(show) {
       if (show) {
         drawFlow();
       } else {
         d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+      }
+    }
+
+    let anchorPointsVisible = false;
+    function toggleAnchorPoints() {
+      if (anchorPointsVisible) {
+        arrows.clearAnchorPoints();
+        anchorPointsVisible = false;
+        return "Anchor points hidden";
+      } else {
+        arrows.visualizeAnchorPoints();
+        anchorPointsVisible = true;
+        return "Anchor points visible";
       }
     }
 
@@ -2696,14 +3102,19 @@
       updateAxisPositions(cells[0]);
     }
 
-    // Initialize with loading animation
-    initializeWithLoadingAnimation();
-
-    // Draw initial arrows
-    drawAllArrows();
-
+    // Initialize with loading animation and wait for it to complete
+    initializeWithLoadingAnimation().then(() => {
+      // Ensure labels/layout are computed before drawing arrows to avoid centroid fallback
+      // Make chart reactive first so text layout/wrapping runs
+      // Then schedule arrow drawing on subsequent frames
     // --- MAKE CHART REACTIVE INITIALLY ---
     updateChartValue();
+
+      // Draw initial arrows after layout settles - use timeout to ensure text wrapping completes
+      setTimeout(() => {
+        drawAllArrows();
+      }, 100);
+    });
 
 
 
@@ -2729,9 +3140,43 @@
       drawFlow,
       clearArrows,
       drawArrow,
-      drawLabelLinks: (connections) => arrows.drawLabelLinks(connections),
+      drawLabelLinks: (connections, options = {}) => {
+        // Merge current arrowOptions with provided options (provided options take precedence)
+        const currentOptions = typeof arrowOptions !== 'undefined' ? {
+          bow: arrowOptions[0],
+          stretch: arrowOptions[1],
+          minStretch: arrowOptions[2],
+          maxStretch: arrowOptions[3],
+          padStart: arrowOptions[4],
+          padEnd: arrowOptions[5],
+          maxPadPercent: arrowOptions[6],
+          flip: arrowOptions[7],
+          straights: arrowOptions[8]
+        } : {
+          bow: 0,
+          stretch: 0.5,
+          minStretch: 0,
+          maxStretch: 420,
+          padStart: 0,
+          padEnd: 20,
+          maxPadPercent: 0.25,
+          flip: false,
+          straights: true
+        };
+        return arrows.drawLabelLinks(connections, { ...currentOptions, ...options });
+      },
       getCellCentroid,
       toggleFlowArrows,
+      redrawFlowArrows: () => {
+        // Check if flow arrows are currently visible
+        const flowVisible = d3.select(svg.node()).selectAll('g.flow-arrows').size() > 0;
+        if (flowVisible) {
+          // Clear and redraw flow arrows with current options
+          d3.select(svg.node()).selectAll('g.flow-arrows').remove();
+          drawFlow();
+        }
+      },
+      toggleAnchorPoints,
       // Invisible ring utilities (for debugging)
       toggleInvisibleRingBorders: () => {
         // Toggle the visibility of invisible ring borders (not text)
@@ -2838,6 +3283,38 @@
       //console.log(`focusedSlice at ntbk level: ${chart.clickedSlice}`); 
 
       return chart.clickedSlice; }
+  </script>
+  <script id="2413" type="application/vnd.observable.javascript" pinned="">
+    viewof arrowOptions = Inputs.form([
+      Inputs.range([0, 2], { value: 0.3, step: 0.1, label: "Bow" }),
+      Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
+      Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
+      Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
+      Inputs.range([0, 100], { value: 5, step: 1, label: "Pad Start (px)" }),
+      Inputs.range([0, 100], { value: 5, step: 1, label: "Pad End (px)" }),
+      Inputs.range([0, 0.5], { value: 0.25, step: 0.05, label: "Max Pad (%)" }),
+      Inputs.toggle({ label: "Flip", value: false }),
+      Inputs.toggle({ label: "Straights", value: true })
+    ], { 
+      label: "Main Arrow Options",
+      template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` 
+    })
+  </script>
+  <script id="2415" type="application/vnd.observable.javascript" pinned="">
+    viewof flowArrowOptions = Inputs.form([
+      Inputs.range([0, 2], { value: 0.1, step: 0.1, label: "Bow" }),
+      Inputs.range([0, 1], { value: 0.5, step: 0.05, label: "Stretch" }),
+      Inputs.range([0, 200], { value: 0, step: 10, label: "Min Stretch" }),
+      Inputs.range([100, 800], { value: 420, step: 20, label: "Max Stretch" }),
+      Inputs.range([0, 100], { value: 60, step: 1, label: "Pad Start (px)" }),
+      Inputs.range([0, 100], { value: 60, step: 1, label: "Pad End (px)" }),
+      Inputs.range([0, 0.5], { value: 0.35, step: 0.05, label: "Max Pad (%)" }),
+      Inputs.toggle({ label: "Flip", value: false }),
+      Inputs.toggle({ label: "Straights", value: true })
+    ], { 
+      label: "Flow Arrow Options",
+      template: (inputs) => htl.html`<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px;">${inputs}</div>` 
+    })
   </script>
   <script id="1117" type="application/vnd.observable.javascript" pinned="">
     chart.focusedPair
@@ -3315,7 +3792,7 @@
       // Step 2: Try font resizing (reduce font size progressively)
       const originalFontSize = parseFloat(textElement.style("font-size"));
       const minFontSize = Math.max(4, originalFontSize * 0.5); // Don't go below 4px or 50% of original
-      for (let fontSize = originalFontSize * 0.9; fontSize >= minFontSize; fontSize -= 0.5) {
+      for (let fontSize = originalFontSize - 0.1; fontSize >= minFontSize; fontSize -= 0.1) {
         textElement.style("font-size", fontSize + "px");
         textElement.selectAll("tspan").remove();
         textElement.text("");
@@ -4059,6 +4536,24 @@
   <script id="1402" type="application/vnd.observable.javascript" pinned="">
     viewof rotationAngle = Inputs.range([-180,180],{value:0,step:1,label:"Rotation"})
   </script>
+  <script id="2414" type="application/vnd.observable.javascript">
+    // Reactive arrow redraw when arrowOptions change
+    {
+      if (typeof viewof_chart !== 'undefined' && viewof_chart.drawAllArrows) {
+        viewof_chart.drawAllArrows();
+      }
+      return arrowOptions;
+    }
+  </script>
+  <script id="2416" type="application/vnd.observable.javascript">
+    // Reactive flow arrow redraw when flowArrowOptions change
+    {
+      if (typeof viewof_chart !== 'undefined' && viewof_chart.redrawFlowArrows) {
+        viewof_chart.redrawFlowArrows();
+      }
+      return flowArrowOptions;
+    }
+  </script>
   <script id="1403" type="application/vnd.observable.javascript">
     {
       // effect: apply rotation without restarting simulation
@@ -4415,9 +4910,6 @@
     // Convenience union used for rendering, but not for forces
     suits = [...flowSuits, ...contraSuits]
   </script>
-  <script id="1302" type="application/vnd.observable.javascript" pinned="">
-    import {Swatches} from "@d3/color-legend"
-  </script>
   <script id="1425" type="application/vnd.observable.javascript">
     function getOppositePrefix(unitId) {
       const unit = dialecticalData && dialecticalData[unitId];
@@ -4489,7 +4981,7 @@
         },
         "t_plus": {
           "alias": "A4+",
-          "statement": "Uphold ideals",
+          "statement": "Understandi",
           "explanation": "Identified as positive aspect of A."
         },
         "a_plus": {
@@ -4526,7 +5018,7 @@
         },
         "a_plus": {
           "alias": "A2+",
-          "statement": "Ensure survival",
+          "statement": "Betrayal",
           "explanation": "Derived as constructive side of alternative."
         },
         "a": {

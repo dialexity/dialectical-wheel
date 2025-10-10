@@ -1,8 +1,8 @@
 import {Runtime, Inspector} from '@observablehq/runtime';
 import {useEffect, useRef, useState} from 'react';
 import {toggle} from '@observablehq/inputs';
-// @ts-ignore - Import the fixed version from package.json
-import notebook from '@dialexity/dialectical-wheel';
+// @ts-ignore - Import from local notebook file
+import notebook from '../../notebook/dialectical-wheel.js';
 //import './DialecticalWheel.css';
 import './DialecticalWheel-fonts.css';
 import type { DialecticalWheelProps } from '../../types';
@@ -205,7 +205,7 @@ export default function DialecticalWheel({
           color: '#666'
         }}>
           Debug: {wisdomUnits.length} entries passed: {componentOrder.join(', ')}<br/>
-          Using local npm package: @dialexity/dialectical-wheel
+          Using local notebook: src/notebook/dialectical-wheel.js
         </div>
       )}
     </div>
