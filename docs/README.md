@@ -4,39 +4,33 @@
 
 ### 🔴 Critical Issue: Polarity Refactoring
 
-**Problem**: The `isWhiteOutside` toggle is broken - it only swaps colors, not the actual wheel structure or arrow logic!
+**Problem**: The `isWhiteOutside` toggle is broken - arrows don't follow the swapped ring positions because the codebase conflates physical positions with semantic meanings!
 
-#### Start Here:
-1. **[POLARITY_REFACTOR_SUMMARY.md](./POLARITY_REFACTOR_SUMMARY.md)** ⭐ **START HERE**
-   - Quick overview of the bug
-   - Visual examples
-   - Implementation checklist
-   - Success criteria
+---
 
-#### Deep Dives:
-2. **[wheel-structure-polarity-problem.md](./wheel-structure-polarity-problem.md)**
-   - Visual diagrams showing the bug
-   - Root cause in `transformToNestedPieData`
-   - Before/after comparisons
-   - Educational impact
+## 🚀 **READY TO IMPLEMENT? START HERE:**
 
-3. **[polarity-architecture-diagram.md](./polarity-architecture-diagram.md)**
-   - Architecture diagrams
-   - Data flow visualizations
-   - State transitions
-   - Testing scenarios
+### **[📁 refactor-semantic-rings/](./refactor-semantic-rings/)** ⭐⭐⭐ **ALL-IN-ONE IMPLEMENTATION GUIDE**
 
-4. **[refactoring-ring-polarity-separation.md](./refactoring-ring-polarity-separation.md)**
-   - Complete technical refactoring plan
-   - Phase-by-phase implementation
-   - Code examples
-   - Migration checklist
+This directory contains everything you need in one organized place:
 
-5. **[polarity-refactor-quickstart.md](./polarity-refactor-quickstart.md)**
-   - Step-by-step implementation guide
-   - Exact code changes with line numbers
-   - Testing procedures
-   - Troubleshooting
+1. **[README.md](./refactor-semantic-rings/README.md)** - Start here! Implementation guide with checklist
+2. **[00-COMPLETE-AUDIT.md](./refactor-semantic-rings/00-COMPLETE-AUDIT.md)** - All 50+ instances to change
+3. **[01-VISUAL-GUIDE.md](./refactor-semantic-rings/01-VISUAL-GUIDE.md)** - Architecture diagrams & data flow
+4. **[02-IMPLEMENTATION-TEMPLATE.md](./refactor-semantic-rings/02-IMPLEMENTATION-TEMPLATE.md)** - Copy-paste code templates
+
+**Total time**: ~21 hours | **Files to modify**: 1 main file | **Test coverage**: Full checklist included
+
+---
+
+#### Additional Context (Background Reading):
+
+1. **[polarity-conflation-audit.md](./polarity-conflation-audit.md)** - Earlier audit focused on arrows
+2. **[POLARITY_REFACTOR_SUMMARY.md](./POLARITY_REFACTOR_SUMMARY.md)** - Executive summary of the bug
+3. **[wheel-structure-polarity-problem.md](./wheel-structure-polarity-problem.md)** - Visual diagrams
+4. **[polarity-architecture-diagram.md](./polarity-architecture-diagram.md)** - Architecture diagrams
+5. **[refactoring-ring-polarity-separation.md](./refactoring-ring-polarity-separation.md)** - Earlier refactor plan
+6. **[polarity-refactor-quickstart.md](./polarity-refactor-quickstart.md)** - Quick guide
 
 ---
 
@@ -77,17 +71,20 @@
 ### If You Want to Fix the Polarity Bug:
 
 ```bash
-# 1. Read the summary
-open docs/POLARITY_REFACTOR_SUMMARY.md
+# Everything you need is in one directory:
+cd docs/refactor-semantic-rings
 
-# 2. Understand the problem visually
-open docs/wheel-structure-polarity-problem.md
+# 1. Start with the README
+open README.md
 
-# 3. Follow the implementation guide
-open docs/polarity-refactor-quickstart.md
+# 2. Read the complete audit (30 min)
+open 00-COMPLETE-AUDIT.md
 
-# 4. Reference the full technical plan
-open docs/refactoring-ring-polarity-separation.md
+# 3. Understand visually (20 min)
+open 01-VISUAL-GUIDE.md
+
+# 4. Use code templates during implementation
+open 02-IMPLEMENTATION-TEMPLATE.md
 ```
 
 ### If You Want to Understand Arrows:
@@ -165,12 +162,17 @@ The codebase conflates two separate concepts:
 
 ### Estimated Effort
 
-- **Infrastructure**: 1 hour
-- **Wheel Structure**: 2 hours ⚠️ Critical
-- **Arrow Updates**: 2 hours
-- **Integration**: 2 hours
-- **Testing**: 3 hours
-- **Total**: ~10 hours
+- **Phase 1** (Helpers): 3 hours
+- **Phase 2** (Data structure): 3 hours ⚠️ Critical
+- **Phase 3** (Arrows): 2 hours
+- **Phase 4** (Styling): 2 hours
+- **Phase 5** (Colors): 1 hour
+- **Phase 6** (Step Mode): 5 hours ⚠️ Most complex
+- **Phase 7** (Cleanup): 1 hour
+- **Testing**: 4 hours
+- **Total**: ~21 hours
+
+See [semantic-rings-refactor.md](./semantic-rings-refactor.md) for complete breakdown.
 
 ---
 
@@ -202,12 +204,19 @@ The codebase conflates two separate concepts:
 docs/
 ├── README.md (this file)
 │
-├── Polarity Refactoring (Critical Issue)
-│   ├── POLARITY_REFACTOR_SUMMARY.md        ⭐ Start here
-│   ├── wheel-structure-polarity-problem.md  (Visual explanation)
-│   ├── polarity-architecture-diagram.md     (Architecture)
-│   ├── refactoring-ring-polarity-separation.md (Full plan)
-│   └── polarity-refactor-quickstart.md      (Implementation guide)
+├── 📁 refactor-semantic-rings/          ⭐⭐⭐ START HERE FOR IMPLEMENTATION
+│   ├── README.md                         Implementation guide + checklist
+│   ├── 00-COMPLETE-AUDIT.md              All 50+ instances to change
+│   ├── 01-VISUAL-GUIDE.md                Architecture diagrams
+│   └── 02-IMPLEMENTATION-TEMPLATE.md     Copy-paste code templates
+│
+├── Polarity Refactoring (Background Context)
+│   ├── polarity-conflation-audit.md
+│   ├── POLARITY_REFACTOR_SUMMARY.md
+│   ├── wheel-structure-polarity-problem.md
+│   ├── polarity-architecture-diagram.md
+│   ├── refactoring-ring-polarity-separation.md
+│   └── polarity-refactor-quickstart.md
 │
 ├── Arrow System
 │   ├── arrow-parameters.md
@@ -278,11 +287,14 @@ For questions about:
 
 If you're new to this codebase:
 
-1. **Understand the bug** → `POLARITY_REFACTOR_SUMMARY.md`
-2. **See it visually** → `wheel-structure-polarity-problem.md`
-3. **Learn the architecture** → `polarity-architecture-diagram.md`
-4. **Study the fix** → `refactoring-ring-polarity-separation.md`
-5. **Implement it** → `polarity-refactor-quickstart.md`
+1. **Go to refactor directory** → `cd docs/refactor-semantic-rings/` ⭐⭐⭐
+2. **Read the README** → `README.md` - Start here!
+3. **Complete Audit** → `00-COMPLETE-AUDIT.md` - All instances to change
+4. **Visual Guide** → `01-VISUAL-GUIDE.md` - See the architecture
+5. **Code Templates** → `02-IMPLEMENTATION-TEMPLATE.md` - Copy-paste helpers
+6. **Background context** → Other docs in parent directory (optional)
 
-This will give you a complete understanding of both the problem and the solution! 🚀
+This gives you everything you need in one place! 🚀
+
+**TLDR**: The codebase uses `outer/middle/inner` (position) everywhere, but should use `positive/negative/neutral` (semantics) to properly support the `isWhiteOutside` toggle. Go to `docs/refactor-semantic-rings/` for the complete implementation guide.
 

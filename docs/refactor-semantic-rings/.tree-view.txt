@@ -1,0 +1,88 @@
+📁 refactor-semantic-rings/
+│
+├── 📖 QUICKSTART.md                      ⚡ 5-minute overview
+│   └── Quick problem summary, file list, implementation order
+│
+├── 📖 README.md                          ⭐ START HERE - Full implementation guide
+│   ├── Read these in order
+│   ├── Step-by-step instructions
+│   ├── Implementation checklist (copy-paste friendly)
+│   ├── Expected outcomes
+│   ├── Success criteria
+│   └── Troubleshooting
+│
+├── 📄 00-COMPLETE-AUDIT.md              📋 Complete inventory (50+ instances)
+│   ├── Executive summary
+│   ├── Category A: Data Structure Lookups (3) ⚠️ CRITICAL
+│   ├── Category B: Radii Calculations (2)
+│   ├── Category C: Visual Styling (3)
+│   ├── Category D: transformToNestedPieData (1) ⚠️ ROOT CAUSE
+│   ├── Category E: Arrow Parsing (1) ⚠️ THE BUG
+│   ├── Category F: SVG Group Creation (1)
+│   ├── Category G: Color Scales (1)
+│   ├── Category H: Step Mode (9) ⚠️ MOST COMPLEX
+│   ├── Category I: cellVisibility (Pervasive)
+│   ├── Helper function implementations
+│   ├── Migration strategy (7 phases)
+│   ├── Testing checklist
+│   └── Effort estimate (~21 hours)
+│
+├── 📄 01-VISUAL-GUIDE.md                🎨 Architecture diagrams & data flow
+│   ├── Current vs. Proposed architecture
+│   ├── Before/after data flow comparison
+│   ├── Visual ring mapping (both toggle states)
+│   ├── Color-to-semantic mapping (immutable)
+│   ├── Migration path diagram
+│   ├── Testing scenarios
+│   ├── Risk assessment
+│   └── Success criteria
+│
+└── 📄 02-IMPLEMENTATION-TEMPLATE.md     💻 Copy-paste code templates
+    ├── Phase 1: Helper function templates
+    ├── Phase 2: Data structure templates
+    ├── Phase 3: Arrow parsing templates
+    ├── Phase 4: Styling templates
+    ├── Phase 5: Color scale templates
+    ├── Phase 6: Step mode templates
+    ├── Testing templates
+    ├── Quick reference tables
+    ├── Search & replace patterns
+    ├── Common mistakes to avoid
+    └── Debug checklist
+
+═══════════════════════════════════════════════════════════════
+
+📌 READING ORDER:
+
+For Quick Start:
+  1. QUICKSTART.md (5 min)
+  2. README.md (15 min)
+  3. Start implementing with 02-IMPLEMENTATION-TEMPLATE.md open
+
+For Deep Understanding:
+  1. README.md (15 min)
+  2. 00-COMPLETE-AUDIT.md (30 min)
+  3. 01-VISUAL-GUIDE.md (20 min)
+  4. Implement using 02-IMPLEMENTATION-TEMPLATE.md
+
+═══════════════════════════════════════════════════════════════
+
+📊 STATS:
+
+Total Documentation: 5 files, ~75KB
+Total Instances to Change: 50+
+Categories: 9
+Estimated Effort: ~21 hours
+Files to Modify: 1 main file
+Breaking Changes: Yes (data structure keys)
+
+═══════════════════════════════════════════════════════════════
+
+🎯 THE GOAL:
+
+Replace: outer/middle/inner (position-based) ❌
+With:    positive/negative/neutral (semantic-based) ✅
+
+Result: isWhiteOutside toggle works correctly for both content AND arrows!
+
+═══════════════════════════════════════════════════════════════

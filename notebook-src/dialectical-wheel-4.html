@@ -17,12 +17,13 @@
       helpers,
       getDataToUse,
       getCellVisibility,
-      bindCellEvents
+      bindCellEvents,
+      getIsWhiteOutside
     }) => {
       const { invisibleGroup, outerGroup, middleGroup, innerGroup } = groups;
       const { invisibleLabelsGroup, outerLabelsGroup, middleLabelsGroup, innerLabelsGroup } = labels;
       const { invisibleArc, outerArc, middleArc, innerArc } = arcs;
-      const { invisibleColor, outerColor, middleColor, innerColor } = colorScales;
+      const { invisibleColor, negativeColor, neutralColor, positiveColor } = colorScales;  // ✅ Semantic colors
 
       function changeData(ringType, newData, arcGenerator) {
         const group = ringType === "outer" ? outerGroup : ringType === "middle" ? middleGroup : innerGroup;
@@ -34,7 +35,8 @@
           .attrTween("d", arcTween(arcGenerator))
           .style("opacity", d => {
             if (!getCellVisibility(d.data.unitId, ringType)) return 0;
-            const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            const opacityMap = { negative: 1, neutral: 0.9, positive: 0.8 };
+            const baseOpacity = opacityMap[ringType] || 1;
             return d.data.opacity * baseOpacity;
           });
         const labelsSel = labelsGroup.selectAll("text").data(pieData, d => d.data.name);
@@ -56,28 +58,39 @@
           .style("font-family", styles.fonts.family)
           .style("font-size", d => {
             const b = styles.fonts.labels.baseSize;
-            return `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`;
+            // ✅ Semantic font size mapping
+            const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
+            return `${fontSizeMap[ringType] || b.middle}px`;
           })
           .style("font-weight", styles.fonts.labels.weight)
           .style("fill", d => {
             const t = styles.colors.text;
-            if (ringType === "invisible") return 'black';
-            if (ringType === "inner") return t.inner;
-            if (ringType === "outer") return t.outer;
-            return t.middle;
+            // ✅ Semantic text color mapping
+            const textColorMap = { 
+              invisible: 'black', 
+              positive: t.inner,  // Green text
+              negative: t.outer,  // Red text
+              neutral: t.middle   // White text
+            };
+            return textColorMap[ringType] || t.middle;
           })
           .style("pointer-events", "none")
           .each(function(d) {
             const textElement = d3.select(this);
             const b = styles.fonts.labels.baseSize;
-            textElement.style("font-size", `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`);
+            // ✅ Semantic font size mapping
+            const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
+            textElement.style("font-size", `${fontSizeMap[ringType] || b.middle}px`);
             const text = d.data.fullText || d.data.name;
             const dataToUse = getDataToUse();
             let pieDataLocal, arcGen;
+            // ✅ Use semantic keys (polarity metadata in data helps identify which data this is)
+            const semanticType = d.data.polarity || ringType;
             if (ringType === "invisible") { pieDataLocal = pie(dataToUse.invisible); arcGen = d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible); }
-            else if (ringType === "outer") { pieDataLocal = pie(dataToUse.outer); arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
-            else if (ringType === "middle") { pieDataLocal = pie(dataToUse.middle); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
-            else { pieDataLocal = pie(dataToUse.inner); arcGen = d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+            else if (ringType === "positive") { pieDataLocal = pie(dataToUse.positive); arcGen = d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+            else if (ringType === "negative") { pieDataLocal = pie(dataToUse.negative); arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
+            else if (ringType === "neutral") { pieDataLocal = pie(dataToUse.neutral); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
+            else { pieDataLocal = pie(dataToUse.neutral); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
             const arcDatum = pieDataLocal.find(p => p.data.unitId === d.data.unitId);
             const constraints = helpers.getTextConstraints(ringType, arcDatum);
             helpers.wrapText(textElement, text, constraints);
@@ -91,14 +104,18 @@
             if (d && d.data) {
               const textElement = d3.select(this);
               const b = styles.fonts.labels.baseSize;
-              textElement.style("font-size", `${ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner}px`);
+              // ✅ Semantic font size mapping
+              const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
+              textElement.style("font-size", `${fontSizeMap[ringType] || b.middle}px`);
               const text = d.data.fullText || d.data.name;
               const dataToUse = getDataToUse();
               let pieDataLocal, arcGen;
+              // ✅ Use semantic keys
               if (ringType === "invisible") { pieDataLocal = pie(dataToUse.invisible); arcGen = d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible); }
-              else if (ringType === "outer") { pieDataLocal = pie(dataToUse.outer); arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
-              else if (ringType === "middle") { pieDataLocal = pie(dataToUse.middle); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
-              else { pieDataLocal = pie(dataToUse.inner); arcGen = d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+              else if (ringType === "positive") { pieDataLocal = pie(dataToUse.positive); arcGen = d3.arc().innerRadius(30).outerRadius(radii.centerRadius); }
+              else if (ringType === "negative") { pieDataLocal = pie(dataToUse.negative); arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius); }
+              else if (ringType === "neutral") { pieDataLocal = pie(dataToUse.neutral); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
+              else { pieDataLocal = pie(dataToUse.neutral); arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius); }
               const arcDatum = pieDataLocal.find(p => p.data.unitId === d.data.unitId);
               const constraints = helpers.getTextConstraints(ringType, arcDatum);
               helpers.wrapText(textElement, text, constraints);
@@ -114,14 +131,16 @@
           .append("path")
           .attr("class", "cell")
           .attr("fill", d => colorScale(d.data.unitId))
-          .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
-          .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+          .attr("stroke", ringType === "neutral" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
+          .attr("stroke-width", ringType === "neutral" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
           .attr("stroke-dasharray", "1,3")
           .attr("stroke-linecap", "round")
           .attr("stroke-opacity", 0.3)
           .style("opacity", d => {
             if (!getCellVisibility(d.data.unitId, ringType)) return 0;
-            const baseOpacity = ringType === "outer" || ringType === "invisible" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            // ✅ Semantic opacity mapping
+            const opacityMap = { invisible: 1, negative: 1, neutral: 0.9, positive: 0.8 };
+            const baseOpacity = opacityMap[ringType] || 1;
             return d.data.opacity * baseOpacity;
           })
           .attr("d", arcGenerator)
@@ -136,7 +155,9 @@
           .style("opacity", d => {
             if (!getCellVisibility(d.data.unitId, ringType)) return 0;
             if (ringType === "invisible") return 0;
-            const baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+            // ✅ Semantic opacity mapping
+            const opacityMap = { negative: 1, neutral: 0.9, positive: 0.8 };
+            const baseOpacity = opacityMap[ringType] || 1;
             return d.data.opacity * baseOpacity;
           });
         paths.exit().transition().duration(styles.durations.normal).style("opacity", 0).remove();
@@ -145,10 +166,26 @@
 
       function updateAllRings() {
         const dataToUse = getDataToUse();
+        const isWhiteOutside = getIsWhiteOutside();
+        
+        // ✅ SEMANTIC MAPPING: Map semantic data to physical groups based on toggle
+        // Invisible always stays in invisible ring
         updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
-        updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
-        updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
-        updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
+        
+        // Positive (green) always in inner ring - color matches semantic type
+        updateRing(innerGroup, innerLabelsGroup, dataToUse.positive, innerArc, "positive", positiveColor);
+        
+        // Negative (red) and Neutral (white) swap between outer and middle based on isWhiteOutside
+        // NOTE: Colors match semantic type (negativeColor for negative data, neutralColor for neutral data)
+        if (isWhiteOutside) {
+          // When white is outside: negative in middle, neutral in outer
+          updateRing(middleGroup, middleLabelsGroup, dataToUse.negative, middleArc, "negative", negativeColor);
+          updateRing(outerGroup, outerLabelsGroup, dataToUse.neutral, outerArc, "neutral", neutralColor);
+        } else {
+          // Default: negative in outer, neutral in middle
+          updateRing(outerGroup, outerLabelsGroup, dataToUse.negative, outerArc, "negative", negativeColor);
+          updateRing(middleGroup, middleLabelsGroup, dataToUse.neutral, middleArc, "neutral", neutralColor);
+        }
       }
 
       return { updateAllRings, updateRing, changeData };
@@ -548,8 +585,46 @@
   <script id="1274" type="application/vnd.observable.javascript">
     DOM.download(() => serialize(viewof chart), undefined, "Save as SVG")
   </script>
+  <script id="9999" type="application/vnd.observable.javascript">
+    // ===== SEMANTIC RINGS HELPER FUNCTIONS =====
+    // These must be defined early so they're available to all modules
+    
+    getRingRadii = (ringType, whiteOutside, radiiObj, stylesObj) => {
+      // Map semantic names to physical positions
+      const positionMap = {
+        invisible: 'invisible',
+        positive: 'inner',  // Green always in inner
+        negative: whiteOutside ? 'middle' : 'outer',  // Red moves
+        neutral: whiteOutside ? 'outer' : 'middle'    // White moves
+      };
+      
+      const position = positionMap[ringType];
+      
+      // Return radii for that physical position
+      const radiiConfig = {
+        invisible: {
+          inner: radiiObj.outerRadius,
+          outer: stylesObj.radii.invisible
+        },
+        outer: {
+          inner: radiiObj.innerRadius,
+          outer: radiiObj.outerRadius
+        },
+        middle: {
+          inner: radiiObj.innerInnerRadius,
+          outer: radiiObj.middleRadius
+        },
+        inner: {
+          inner: 30,  // hub radius
+          outer: radiiObj.centerRadius
+        }
+      };
+      
+      return radiiConfig[position];
+    }
+  </script>
   <script id="1562" type="application/vnd.observable.javascript">
-    makeArrowsModule = ({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
+    makeArrowsModule = ({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities, isWhiteOutside }) => {
       const arrowsGroup = contentGroup.append("g")
         .attr("class", "arrows-group")
         .style("pointer-events", "all"); // Enable pointer events for clickable arrows
@@ -633,52 +708,24 @@
         }
         return { x: gx, y: gy };
       }
-      function getCellCentroid(unitId, ringType = "middle") {
+      function getCellCentroid(unitId, ringType = "neutral") {  // ✅ Default to neutral
         const dataToUse = nestedData;
-        let pieData, arcGenerator;
         const { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius } = radii;
-        switch (ringType) {
-          case "invisible":
-            pieData = pie(dataToUse.invisible);
-            arcGenerator = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-            break;
-          case "outer":
-            pieData = pie(dataToUse.outer);
-            arcGenerator = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-            break;
-          case "middle":
-            pieData = pie(dataToUse.middle);
-            arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-            break;
-          case "inner":
-            pieData = pie(dataToUse.inner);
-            arcGenerator = d3.arc().innerRadius(30).outerRadius(centerRadius);
-            break;
-          default:
-            pieData = pie(dataToUse.middle);
-            arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-        }
+        
+        // ✅ SEMANTIC: Use helper to get radii and data key
+        const ringRadii = getRingRadii(ringType, isWhiteOutside, radii, styles);
+        
+        // Get pie data using semantic key
+        const pieData = pie(dataToUse[ringType]);
+        const arcGenerator = d3.arc().innerRadius(ringRadii.inner).outerRadius(ringRadii.outer);
+        
         const cellData = pieData.find(d => d.data.unitId === unitId);
         if (!cellData) return null;
         const centroid = arcGenerator.centroid(cellData);
-        // Derive the exact radii used for this ring so we can compute an effective boundary offset
-        let ringInner, ringOuter;
-        if (ringType === "invisible") {
-          ringInner = outerRadius;
-          ringOuter = styles.radii.invisible;
-        } else if (ringType === "outer") {
-          ringInner = innerRadius;
-          ringOuter = outerRadius;
-        } else if (ringType === "middle") {
-          ringInner = innerInnerRadius;
-          ringOuter = middleRadius;
-        } else if (ringType === "inner") {
-          ringInner = 30; // hub radius used in the arc generator above
-          ringOuter = centerRadius;
-        } else {
-          ringInner = innerInnerRadius;
-          ringOuter = middleRadius;
-        }
+        
+        // Use radii from helper
+        const ringInner = ringRadii.inner;
+        const ringOuter = ringRadii.outer;
         const angleSpan = cellData.endAngle - cellData.startAngle;
         const rCentroid = (ringInner + ringOuter) / 2;
         const thickness = ringOuter - ringInner;
@@ -1425,13 +1472,13 @@
       invisibleColor: d3.scaleOrdinal()
         .domain(Object.keys(dialecticalData))
         .range(Object.keys(dialecticalData).map(() => "transparent")),
-      outerColor: d3.scaleOrdinal()
+      negativeColor: d3.scaleOrdinal()  // ✅ Red (was outerColor)
         .domain(Object.keys(dialecticalData))
         .range(Object.keys(dialecticalData).map(() => styles.colors.rings.outer)),
-      middleColor: d3.scaleOrdinal()
+      neutralColor: d3.scaleOrdinal()  // ✅ White (was middleColor)
         .domain(Object.keys(dialecticalData))
         .range(Object.keys(dialecticalData).map(() => styles.colors.rings.middle)),
-      innerColor: d3.scaleOrdinal()
+      positiveColor: d3.scaleOrdinal()  // ✅ Green (was innerColor)
         .domain(Object.keys(dialecticalData))
         .range(Object.keys(dialecticalData).map(() => styles.colors.rings.inner))
     })
@@ -1488,7 +1535,8 @@
         coordinateGroup.selectAll(".coordinate-circle").remove();
         coordinateGroup.selectAll(".coordinate-symbol").remove();
         const dataToUse = getDataToUse();
-        const pieData = pie(dataToUse.middle);
+        // ✅ Use semantic key (neutral for middle ring)
+        const pieData = pie(dataToUse.neutral);
         const focusedSlice = pieData.find(d => d.data.unitId === focusedUnitId);
         let axisAngle;
         if (focusedSlice) {
@@ -1505,7 +1553,8 @@
 
         // Check if opposite unit exists in current data
         const oppositeUnitId = getOppositePrefix(focusedUnitId);
-        const oppositeExists = dataToUse.middle.some(d => d.unitId === oppositeUnitId);
+        // ✅ Use semantic key (neutral)
+        const oppositeExists = dataToUse.neutral.some(d => d.unitId === oppositeUnitId);
 
         axisAngles.forEach((angle, sideIndex) => {
           // Skip the opposite side if it doesn't exist in the current data
@@ -1524,9 +1573,10 @@
             (function deriveClipLabel(){
               const dataToUse = getDataToUse();
               let pieData;
-              if (ringIndex === 0) pieData = pie(dataToUse.inner);
-              else if (ringIndex === 1) pieData = pie(dataToUse.middle);
-              else pieData = pie(dataToUse.outer);
+              // ✅ Map physical ring index to semantic data key
+              if (ringIndex === 0) pieData = pie(dataToUse.positive);  // Inner ring always has positive
+              else if (ringIndex === 1) pieData = pie(isWhiteOutside ? dataToUse.negative : dataToUse.neutral);  // Middle ring
+              else pieData = pie(isWhiteOutside ? dataToUse.neutral : dataToUse.negative);  // Outer ring
               const cell = pieData.find(d => d.data.unitId === clipUnitId);
               if (cell && cell.data && cell.data.name) clipLabel = cell.data.name;
             })();
@@ -1535,14 +1585,15 @@
             clipPath.append("path").attr("d", function() {
               const dataToUse = getDataToUse();
               let pieData, arcGen;
+              // ✅ Map physical ring index to semantic data key
               if (ringIndex === 0) { // inner ring
-                pieData = pie(dataToUse.inner);
+                pieData = pie(dataToUse.positive);  // Inner ring always has positive
                 arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius);
               } else if (ringIndex === 1) { // middle ring
-                pieData = pie(dataToUse.middle);
+                pieData = pie(isWhiteOutside ? dataToUse.negative : dataToUse.neutral);
                 arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
               } else { // outer ring
-                pieData = pie(dataToUse.outer);
+                pieData = pie(isWhiteOutside ? dataToUse.neutral : dataToUse.negative);
                 arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
               }
               const cellData = pieData.find(d => d.data.unitId === clipUnitId);
@@ -1600,7 +1651,8 @@
       let currentStep = 0;
       function initializeAnimationData() {
         animationData = transformToNestedPieData(dialecticalData);
-        ["invisible", "outer", "middle", "inner"].forEach(ringType => {
+        // ✅ SEMANTIC KEYS
+        ["invisible", "negative", "neutral", "positive"].forEach(ringType => {
           animationData[ringType].forEach(item => { item.value = 0; });
         });
       }
@@ -1610,7 +1662,8 @@
       }
       function resetBuildState(cellVisibility, updateAllRings) {
         Object.keys(dialecticalData).forEach(cell => {
-          cellVisibility[cell] = { invisible: true, outer: false, middle: true, inner: false };
+          // ✅ SEMANTIC KEYS in cellVisibility
+          cellVisibility[cell] = { invisible: true, negative: false, neutral: true, positive: false };
         });
         initializeAnimationData();
         updateAllRings();
@@ -1625,21 +1678,22 @@
             const pairCellFirstStep = buildSteps.findIndex(s => s.unitId === pairId && s.type === 'showWhite');
             const isFirstOfPair = currentCellFirstStep < pairCellFirstStep;
             function setupFirstOfPair() {
-              ["outer","middle","inner"].forEach(ringType => {
+              // ✅ SEMANTIC KEYS
+              ["negative","neutral","positive"].forEach(ringType => {
                 const dataArray = animationData[ringType];
                 const currentData = dataArray.find(d => d.unitId === step.unitId);
                 const pairData = dataArray.find(d => d.unitId === pairId);
                 if (currentData) currentData.value = 1;
                 if (pairData) pairData.value = 1;
               });
-              ctx.cellVisibility[step.unitId].outer = true;
-              ctx.cellVisibility[step.unitId].inner = true;
-              ctx.cellVisibility[step.unitId].middle = true;
-              ctx.cellVisibility[pairId].outer = true;
-              ctx.cellVisibility[pairId].inner = true;
-              ctx.cellVisibility[pairId].middle = true;
+              ctx.cellVisibility[step.unitId].negative = true;
+              ctx.cellVisibility[step.unitId].positive = true;
+              ctx.cellVisibility[step.unitId].neutral = true;
+              ctx.cellVisibility[pairId].negative = true;
+              ctx.cellVisibility[pairId].positive = true;
+              ctx.cellVisibility[pairId].neutral = true;
               setTimeout(() => {
-                ["outer","middle","inner"].forEach(ringType => {
+                ["negative","neutral","positive"].forEach(ringType => {
                   const dataArray = animationData[ringType];
                   const pairData = dataArray.find(d => d.unitId === pairId);
                   if (pairData) pairData.opacity = 0;
@@ -1648,7 +1702,8 @@
               }, 100);
             }
             function setupSecondOfPair() {
-              ["outer","middle","inner"].forEach(ringType => {
+              // ✅ SEMANTIC KEYS
+              ["negative","neutral","positive"].forEach(ringType => {
                 const dataArray = animationData[ringType];
                 const currentData = dataArray.find(d => d.unitId === step.unitId);
                 if (currentData) currentData.opacity = 1;
@@ -1657,7 +1712,8 @@
             if (isFirstOfPair) setupFirstOfPair(); else setupSecondOfPair();
             ctx.focusPair(step.unitId, styles.durations.stepRotation);
             ctx.updateAllRings();
-            const latestPieData = pie(animationData.middle);
+            // ✅ Use semantic key (neutral for middle/white content)
+            const latestPieData = pie(animationData.neutral);
             const latestArcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
             const currentRotation = ctx.getCurrentRotationFromDOM();
             groups.middleLabelsGroup.selectAll("text")
@@ -1670,12 +1726,13 @@
                 textElement.selectAll("tspan").remove();
                 const text = d.data.fullText || d.data.name;
                 const arcDatum = latestPieData.find(p => p.data.unitId === d.data.unitId);
-                const constraints = helpers.getTextConstraints("middle", arcDatum);
+                const constraints = helpers.getTextConstraints("neutral", arcDatum);
                 helpers.wrapText(textElement, text, constraints);
               });
             setTimeout(() => {
-              ctx.hideCell(step.unitId, "outer");
-              ctx.hideCell(step.unitId, "inner");
+              // ✅ SEMANTIC KEYS
+              ctx.hideCell(step.unitId, "negative");
+              ctx.hideCell(step.unitId, "positive");
               setTimeout(() => {
                 groups.outerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
                 groups.innerGroup.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
@@ -1684,10 +1741,12 @@
             break;
           }
           case 'showGreen':
-            ctx.showCell(step.unitId, "inner");
+            // ✅ SEMANTIC: Green is positive
+            ctx.showCell(step.unitId, "positive");
             break;
           case 'showRed':
-            ctx.showCell(step.unitId, "outer");
+            // ✅ SEMANTIC: Red is negative
+            ctx.showCell(step.unitId, "negative");
             break;
         }
       }
@@ -1717,12 +1776,14 @@
         currentStep = 0;
         animationData = {};
         Object.keys(ctx.cellVisibility).forEach(cell => {
-          ctx.cellVisibility[cell] = { invisible: true, outer: true, middle: true, inner: true };
+          // ✅ SEMANTIC KEYS
+          ctx.cellVisibility[cell] = { invisible: true, negative: true, neutral: true, positive: true };
         });
         ctx.clearFocus();
         ctx.resetZoom();
         ctx.setRotationDirectly(0);
-        ["invisible","outer","middle","inner"].forEach(ringType => {
+        // ✅ SEMANTIC KEYS
+        ["invisible","negative","neutral","positive"].forEach(ringType => {
           ctx.nestedData[ringType].forEach(item => {
             const originalItem = ctx.originalNestedData[ringType].find(orig => orig.unitId === item.unitId);
             item.opacity = originalItem ? originalItem.opacity : 1;
@@ -1917,7 +1978,8 @@
       const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       // Calculate rotation needed to center the slice at the top
-      const pieData = pie(dataToUse.middle);
+      // ✅ Use semantic key (neutral for center ring)
+      const pieData = pie(dataToUse.neutral);
       const targetSlice = pieData.find(d => d.data.unitId === unitId);
 
       if (!targetSlice) return;
@@ -2044,7 +2106,7 @@
     axis.updateAxisPositions();
 
     // Color scales (from separate cell)
-    const { invisibleColor, outerColor, middleColor, innerColor } = colorScales;
+    const { invisibleColor, negativeColor, neutralColor, positiveColor } = colorScales;  // ✅ Semantic colors
 
     // Initialize data
     //const nestedData = transformToNestedPieData(dialecticalData);
@@ -2057,29 +2119,37 @@
 
       cellVisibility[unitId][ringType] = false;
 
-      let group, labelsGroup, targetRadius;
-      switch(ringType) {
-        case "invisible":
-          group = invisibleGroup;
-          labelsGroup = invisibleLabelsGroup;
-          targetRadius = outerRadius;
-          break;
-        case "outer":
-          group = outerGroup;
-          labelsGroup = outerLabelsGroup;
-          targetRadius = innerRadius;
-          break;
-        case "middle":
+      // ✅ SEMANTIC: Use helper to map semantic ringType to physical group
+      const ringRadii = getRingRadii(ringType, isWhiteOutside);
+      
+      let group, labelsGroup;
+      // Map semantic type to physical groups based on isWhiteOutside
+      if (ringType === "invisible") {
+        group = invisibleGroup;
+        labelsGroup = invisibleLabelsGroup;
+      } else if (ringType === "positive") {
+        group = innerGroup;  // Always inner
+        labelsGroup = innerLabelsGroup;
+      } else if (ringType === "negative") {
+        if (isWhiteOutside) {
           group = middleGroup;
           labelsGroup = middleLabelsGroup;
-          targetRadius = innerInnerRadius;
-          break;
-        case "inner":
-          group = innerGroup;
-          labelsGroup = innerLabelsGroup;
-          targetRadius = 0;
-          break;
+        } else {
+          group = outerGroup;
+          labelsGroup = outerLabelsGroup;
+        }
+      } else if (ringType === "neutral") {
+        if (isWhiteOutside) {
+          group = outerGroup;
+          labelsGroup = outerLabelsGroup;
+        } else {
+          group = middleGroup;
+          labelsGroup = middleLabelsGroup;
+        }
       }
+      
+      // Target is the inner radius of this ring (collapse inward)
+      const targetRadius = ringRadii.inner;
 
       // Hide cell with radius animation
       group.selectAll("path")
@@ -2092,24 +2162,10 @@
           const currentData = d;
 
           return function(t) {
-            let arcGen;
-            if (ringType === "invisible") {
-              const newInnerRadius = d3.interpolate(outerRadius, targetRadius)(t);
-              const newOuterRadius = d3.interpolate(styles.radii.invisible, targetRadius)(t);
-              arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-            } else if (ringType === "outer") {
-              const newInnerRadius = d3.interpolate(innerRadius, targetRadius)(t);
-              const newOuterRadius = d3.interpolate(outerRadius, targetRadius)(t);
-              arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-            } else if (ringType === "middle") {
-              const newInnerRadius = d3.interpolate(innerInnerRadius, targetRadius)(t);
-              const newOuterRadius = d3.interpolate(middleRadius, targetRadius)(t);
-              arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-            } else {
-              const newInnerRadius = d3.interpolate(0, targetRadius)(t);
-              const newOuterRadius = d3.interpolate(centerRadius, targetRadius)(t);
-              arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-            }
+            // ✅ Use pre-calculated ringRadii from helper
+            const newInnerRadius = d3.interpolate(ringRadii.inner, targetRadius)(t);
+            const newOuterRadius = d3.interpolate(ringRadii.outer, targetRadius)(t);
+            const arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
             return arcGen(currentData);
           };
         })
@@ -2133,37 +2189,38 @@
 
       cellVisibility[unitId][ringType] = true;
 
-      let group, labelsGroup, startRadius, endInnerRadius, endOuterRadius;
-      switch(ringType) {
-        case "invisible":
-          group = invisibleGroup;
-          labelsGroup = invisibleLabelsGroup;
-          startRadius = outerRadius;
-          endInnerRadius = outerRadius;
-          endOuterRadius = styles.radii.invisible;
-          break;
-        case "outer":
-          group = outerGroup;
-          labelsGroup = outerLabelsGroup;
-          startRadius = innerRadius;
-          endInnerRadius = innerRadius;
-          endOuterRadius = outerRadius;
-          break;
-        case "middle":
+      // ✅ SEMANTIC: Use helper to map semantic ringType to physical group
+      const ringRadii = getRingRadii(ringType, isWhiteOutside, { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius }, styles);
+      
+      let group, labelsGroup;
+      // Map semantic type to physical groups based on isWhiteOutside
+      if (ringType === "invisible") {
+        group = invisibleGroup;
+        labelsGroup = invisibleLabelsGroup;
+      } else if (ringType === "positive") {
+        group = innerGroup;  // Always inner
+        labelsGroup = innerLabelsGroup;
+      } else if (ringType === "negative") {
+        if (isWhiteOutside) {
           group = middleGroup;
           labelsGroup = middleLabelsGroup;
-          startRadius = innerInnerRadius;
-          endInnerRadius = innerInnerRadius;
-          endOuterRadius = middleRadius;
-          break;
-        case "inner":
-          group = innerGroup;
-          labelsGroup = innerLabelsGroup;
-          startRadius = centerRadius;
-          endInnerRadius = styles.radii.hub;
-          endOuterRadius = centerRadius;
-          break;
+        } else {
+          group = outerGroup;
+          labelsGroup = outerLabelsGroup;
+        }
+      } else if (ringType === "neutral") {
+        if (isWhiteOutside) {
+          group = outerGroup;
+          labelsGroup = outerLabelsGroup;
+        } else {
+          group = middleGroup;
+          labelsGroup = middleLabelsGroup;
+        }
       }
+      
+      const startRadius = (ringRadii.inner + ringRadii.outer) / 2;
+      const endInnerRadius = ringRadii.inner;
+      const endOuterRadius = ringRadii.outer;
 
       // Show cell with radius animation
       group.selectAll("path")
@@ -2191,31 +2248,40 @@
         .style("font-size", function() {
           // Set font size immediately when text becomes visible
           const baseSizes = styles.fonts.labels.baseSize;
-          return `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+          // ✅ Semantic font size mapping
+          const fontSizeMap = { invisible: baseSizes.outer, negative: baseSizes.outer, neutral: baseSizes.middle, positive: baseSizes.inner };
+          return `${fontSizeMap[ringType] || baseSizes.middle}px`;
         })
         .each(function(d) {
           // Do text wrapping immediately with current data
           const textElement = d3.select(this);
           const baseSizes = styles.fonts.labels.baseSize;
-          textElement.style("font-size", `${ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+          // ✅ Semantic font size mapping
+          const fontSizeMap = { invisible: baseSizes.outer, negative: baseSizes.outer, neutral: baseSizes.middle, positive: baseSizes.inner };
+          textElement.style("font-size", `${fontSizeMap[ringType] || baseSizes.middle}px`);
           textElement.selectAll("tspan").remove();
           const text = d.data.fullText || d.data.name;
 
           // Use the current data (either animationData if in step mode, or nestedData otherwise)
           const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
           let pieData, arcGen;
+          // ✅ SEMANTIC NAMES support
           if (ringType === "invisible") {
             pieData = pie(dataToUse.invisible);
             arcGen = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-          } else if (ringType === "outer") {
-            pieData = pie(dataToUse.outer);
+          } else if (ringType === "positive") {
+            pieData = pie(dataToUse.positive);
+            arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+          } else if (ringType === "negative") {
+            pieData = pie(dataToUse.negative);
             arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-          } else if (ringType === "middle") {
-            pieData = pie(dataToUse.middle);
+          } else if (ringType === "neutral") {
+            pieData = pie(dataToUse.neutral);
             arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
           } else {
-            pieData = pie(dataToUse.inner);
-            arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+            // Fallback for any legacy code
+            pieData = pie(dataToUse.neutral);
+            arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
           }
           const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
           const constraints = getTextConstraints(ringType, arcDatum);
@@ -2741,15 +2807,21 @@
         .style("font-family", styles.fonts.family)
         .style("font-size", function(d) {
           const baseSizes = styles.fonts.labels.baseSize;
-          return `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`;
+          // ✅ Semantic font size mapping
+          const fontSizeMap = { invisible: baseSizes.outer, negative: baseSizes.outer, neutral: baseSizes.middle, positive: baseSizes.inner };
+          return `${fontSizeMap[ringType] || baseSizes.middle}px`;
         })
         .style("font-weight", styles.fonts.labels.weight)
         .style("fill", function(d) {
           const textColors = styles.colors.text;
-          if (ringType === "invisible") return 'black';
-          if (ringType === "inner") return textColors.inner;
-          if (ringType === "outer") return textColors.outer;
-          return textColors.middle;
+          // ✅ Semantic text color mapping
+          const textColorMap = { 
+            invisible: 'black', 
+            positive: textColors.inner, 
+            negative: textColors.outer, 
+            neutral: textColors.middle 
+          };
+          return textColorMap[ringType] || textColors.middle;
         })
         .style("pointer-events", "none")
         .each(function(d) {
@@ -2757,24 +2829,30 @@
           const textElement = d3.select(this);
           // Ensure font size is set before wrapping
           const baseSizes = styles.fonts.labels.baseSize;
-          textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+          // ✅ Semantic font size mapping
+          const fontSizeMap = { invisible: baseSizes.outer, negative: baseSizes.outer, neutral: baseSizes.middle, positive: baseSizes.inner };
+          textElement.style("font-size", `${fontSizeMap[ringType] || baseSizes.middle}px`);
 
           const text = d.data.fullText || d.data.name;
           // Get latest arc data for this cell
           let pieData, arcGen;
           const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
+          // ✅ SEMANTIC NAMES support
           if (ringType === "invisible") {
             pieData = pie(dataToUse.invisible);
             arcGen = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-          } else if (ringType === "outer") {
-            pieData = pie(dataToUse.outer);
+          } else if (ringType === "positive") {
+            pieData = pie(dataToUse.positive);
+            arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+          } else if (ringType === "negative") {
+            pieData = pie(dataToUse.negative);
             arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-          } else if (ringType === "middle") {
-            pieData = pie(dataToUse.middle);
+          } else if (ringType === "neutral") {
+            pieData = pie(dataToUse.neutral);
             arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
           } else {
-            pieData = pie(dataToUse.inner);
-            arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+            pieData = pie(dataToUse.neutral);
+            arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
           }
           const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
           const constraints = getTextConstraints(ringType, arcDatum);
@@ -2800,23 +2878,30 @@
             const textElement = d3.select(this);
             // Ensure font size is set before wrapping
             const baseSizes = styles.fonts.labels.baseSize;
-            textElement.style("font-size", `${ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner}px`);
+            // ✅ Semantic font size mapping
+            const fontSizeMap = { invisible: baseSizes.outer, negative: baseSizes.outer, neutral: baseSizes.middle, positive: baseSizes.inner };
+            textElement.style("font-size", `${fontSizeMap[ringType] || baseSizes.middle}px`);
 
             const text = d.data.fullText || d.data.name;
             let pieData, arcGen;
             const dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
+            // ✅ SEMANTIC NAMES support
             if (ringType === "invisible") {
               pieData = pie(dataToUse.invisible);
               arcGen = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-            } else if (ringType === "outer") {
-              pieData = pie(dataToUse.outer);
+            } else if (ringType === "positive") {
+              pieData = pie(dataToUse.positive);
+              arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+            } else if (ringType === "negative") {
+              pieData = pie(dataToUse.negative);
               arcGen = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-            } else if (ringType === "middle") {
-              pieData = pie(dataToUse.middle);
+            } else if (ringType === "neutral") {
+              pieData = pie(dataToUse.neutral);
               arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
             } else {
-              pieData = pie(dataToUse.inner);
-              arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+              // Fallback
+              pieData = pie(dataToUse.neutral);
+              arcGen = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
             }
             const arcDatum = pieData.find(p => p.data.unitId === d.data.unitId);
             const constraints = getTextConstraints(ringType, arcDatum);
@@ -2936,14 +3021,15 @@
       groups: { invisibleGroup, outerGroup, middleGroup, innerGroup },
       labels: { invisibleLabelsGroup, outerLabelsGroup, middleLabelsGroup, innerLabelsGroup },
       arcs: { invisibleArc, outerArc, middleArc, innerArc },
-      colorScales: { invisibleColor, outerColor, middleColor, innerColor },
+      colorScales: { invisibleColor, negativeColor, neutralColor, positiveColor },  // ✅ Semantic colors
       styles,
       pie,
       radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
       helpers: { calculateTextTransform, wrapText, getTextConstraints },
       getDataToUse: () => (isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData),
       getCellVisibility: (unitId, ringType) => (cellVisibility[unitId] && cellVisibility[unitId][ringType]),
-      bindCellEvents
+      bindCellEvents,
+      getIsWhiteOutside: () => isWhiteOutside
     });
     const updateAllRings = rings.updateAllRings;
 
@@ -2956,7 +3042,8 @@
       pie,
       radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
       styles,
-      arrowUtilities
+      arrowUtilities,
+      isWhiteOutside
     });
     // Keep label/coordinate groups above arrows
     invisibleLabelsGroup.raise();
@@ -3673,18 +3760,19 @@
           const [, from, to] = match;
 
           // Extract unit ID and ring type
+          // ✅ SEMANTIC NAMES - Return polarity, not physical position
           const parseUnit = (unit) => {
             if (unit.endsWith('+')) {
               const unitId = unit.slice(0, -1);
-              return dialecticalData[unitId] ? { unitId, ringType: 'inner' } : null;
+              return dialecticalData[unitId] ? { unitId, ringType: 'positive' } : null;  // ✅ Green/positive
             } else if (unit.endsWith('-')) {
               const unitId = unit.slice(0, -1);
-              return dialecticalData[unitId] ? { unitId, ringType: 'outer' } : null;
+              return dialecticalData[unitId] ? { unitId, ringType: 'negative' } : null;  // ✅ Red/negative
             } else if (unit.endsWith('i')) {
               const unitId = unit.slice(0, -1);
               return dialecticalData[unitId] ? { unitId, ringType: 'invisible' } : null;
             } else {
-              return dialecticalData[unit] ? { unitId: unit, ringType: 'middle' } : null;
+              return dialecticalData[unit] ? { unitId: unit, ringType: 'neutral' } : null;  // ✅ White/neutral
             }
           };
 
@@ -3907,7 +3995,7 @@
   <script id="168" type="application/vnd.observable.javascript">
     transformToNestedPieData = (dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly) => {
           const units = Object.keys(dialecticalData);
-          const [outerKey, middleKey] = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'];
+          // ✅ SEMANTIC KEYS - No more position-based hack!
 
           return {
             invisible: units.map((unit,index)=> ({
@@ -3916,33 +4004,37 @@
               value: 1,
               opacity: 1,
               fullText: `${unit}`,
+              polarity: 'invisible',
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [outerKey]: units.map(unit => ({
+            negative: units.map(unit => ({
               name: `${unit}-`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
               opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].negative,
+              polarity: 'negative',
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            [middleKey]: units.map(unit => ({
+            neutral: units.map(unit => ({
               name: unit,
               unitId: unit,
               value: 1,
               opacity: 1,
               fullText: dialecticalData[unit].statement,
+              polarity: 'neutral',
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             })),
-            inner: units.map(unit => ({
+            positive: units.map(unit => ({
               name: `${unit}+`,
               unitId: unit,
               value: whiteOnly ? 0: 1,
               opacity: whiteOnly ? 0: 1,
               fullText: dialecticalData[unit].positive,
+              polarity: 'positive',
               pairWith: dialecticalData[unit].pairWith,
               pairId: dialecticalData[unit].pairId
             }))
@@ -3955,14 +4047,30 @@
       const { midWidth, maxHeight, ringType, arcData } = constraints;
       // New: also get angle, innerRadius, outerRadius
       const angle = arcData.endAngle - arcData.startAngle;
+      
+      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii
+      let physicalPosition = ringType;
+      if (ringType === "positive") {
+        physicalPosition = "inner";
+      } else if (ringType === "negative") {
+        physicalPosition = isWhiteOutside ? "middle" : "outer";
+      } else if (ringType === "neutral") {
+        physicalPosition = isWhiteOutside ? "outer" : "middle";
+      } else if (ringType === "invisible") {
+        physicalPosition = "invisible";
+      }
+      
       let innerRadius, outerRadius;
-      if (ringType === "outer") {
+      if (physicalPosition === "outer") {
         innerRadius = styles.radii.middleOuter;
         outerRadius = styles.radii.outer;
-      } else if (ringType === "middle") {
+      } else if (physicalPosition === "middle") {
         innerRadius = styles.radii.middleInner;
         outerRadius = styles.radii.middleOuter;
-      } else {
+      } else if (physicalPosition === "invisible") {
+        innerRadius = styles.radii.outer;
+        outerRadius = styles.radii.invisible;
+      } else {  // inner
         innerRadius = styles.radii.hub;
         outerRadius = styles.radii.middleInner;
       }
@@ -4183,18 +4291,29 @@
     }
   </script>
   <script id="174" type="application/vnd.observable.javascript">
-    getTextConstraints = (ringType, arcData) => {
+    getTextConstraints = (ringType, arcData, whiteOutside = isWhiteOutside) => {
       const angle = arcData.endAngle - arcData.startAngle;
 
-      // Calculate actual ring dimensions
+      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii
+      // Determine physical position from semantic ringType
+      let physicalPosition = ringType;
+      if (ringType === "positive") {
+        physicalPosition = "inner";  // Always inner
+      } else if (ringType === "negative") {
+        physicalPosition = whiteOutside ? "middle" : "outer";
+      } else if (ringType === "neutral") {
+        physicalPosition = whiteOutside ? "outer" : "middle";
+      }
+
+      // Calculate actual ring dimensions based on physical position
       let innerRadius, outerRadius;
-      if (ringType === "invisible") {
+      if (physicalPosition === "invisible") {
         innerRadius = styles.radii.outer; 
         outerRadius = styles.radii.invisible;
-      } else if (ringType === "outer") {
+      } else if (physicalPosition === "outer") {
         innerRadius = styles.radii.middleOuter; // innerRadius
         outerRadius = styles.radii.outer; // outerRadius
-      } else if (ringType === "middle") {
+      } else if (physicalPosition === "middle") {
         innerRadius = styles.radii.middleInner; // innerInnerRadius  
         outerRadius = styles.radii.middleOuter; // middleRadius
       } else { // inner

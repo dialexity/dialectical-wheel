@@ -162,7 +162,45 @@ color = "#dc2626"; // Red for opposite polarity (+ to - or - to +)
 
 ---
 
-## Category 5: Wheel Data Structure (Has Bandaid Hack)
+## Category 5: Wheel Construction - THE CORE ARCHITECTURE ISSUE
+
+### 5.0 `updateAllRings` - Line 145-151 (makeRings function)
+**File**: `notebook-src/dialectical-wheel-4.html` / `notebook-src/dialectical-wheel-4.js`
+
+```javascript
+function updateAllRings() {
+  const dataToUse = getDataToUse();
+  updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
+  updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);  // ❌ HARDCODED!
+  updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);  // ❌ HARDCODED!
+  updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);  // ❌ HARDCODED!
+}
+```
+
+**THE FUNDAMENTAL PROBLEM**:
+- Physical SVG group `outerGroup` **always** receives data from key `dataToUse.outer`
+- Physical SVG group `middleGroup` **always** receives data from key `dataToUse.middle`
+- Physical SVG group `innerGroup` **always** receives data from key `dataToUse.inner`
+
+This is a **hardcoded 1:1 mapping** between:
+1. **Data keys** (`outer`, `middle`, `inner` in nestedData object)
+2. **Physical SVG groups** (`outerGroup`, `middleGroup`, `innerGroup`)
+
+**Why the bandaid hack "works"**:
+The `[outerKey, middleKey]` hack in `transformToNestedPieData` swaps what content goes into the `outer` and `middle` data keys. When `updateAllRings()` runs, it passes the swapped data to the physical groups, so the wheel displays correctly.
+
+**Why this is still wrong**:
+1. The data keys and SVG groups have the same names, creating the illusion they should always match
+2. Nothing in the architecture allows for semantic meaning (positive/negative/neutral) to be independent of physical position
+3. Every other part of the code (arrows, text positioning, etc.) has to either:
+   - Use the bandaid hack (only `transformToNestedPieData` does this)
+   - Make hardcoded assumptions about data keys = physical positions (everything else does this)
+
+**This is the architectural flaw**: Data structure keys are conflated with physical SVG group identities!
+
+---
+
+## Category 6: Wheel Data Structure (Has Bandaid Hack)
 
 ### 5.1 `transformToNestedPieData` - Line 3909
 **File**: `notebook-src/dialectical-wheel-4.html`
