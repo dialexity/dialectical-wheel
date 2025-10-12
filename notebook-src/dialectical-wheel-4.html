@@ -4170,11 +4170,6 @@
       // Calculate margin proportional to inner/outer radius
       const margin = 0.8;
 
-      // Convert text to word queue
-      const wordQueue = text.split(/([ -])/);
-      const lines = [];
-      let lineIdx = 0;
-
       // Helper function to get chord length for a given line index
       const getChordLength = (lineIndex) => {
         let radius = outerRadius - (lineIndex + 0.5) * lineHeight;
@@ -4183,47 +4178,122 @@
         return 2 * radius * Math.sin(Math.min(bestAngle, angle/2)) * margin;
       };
 
-      // Helper function to measure a line
-      const measureLine = (words) => {
-        tempTspan.text(words.join(""));
+      // Helper function to measure text
+      const measureText = (txt) => {
+        tempTspan.text(txt);
         return tempTspan.node().getComputedTextLength();
       };
 
+      // Simple hyphenation - only break long words that don't fit
+      const hyphenate = (word) => {
+        if (word.length < 6) return null; // Don't hyphenate short words
+        
+        const syllables = [];
+        let current = '';
+        const vowels = 'aeiouyAEIOUY';
+        let lastWasVowel = false;
+        
+        for (let i = 0; i < word.length; i++) {
+          const char = word[i];
+          const isVowel = vowels.includes(char);
+          
+          current += char;
+          
+          // Break after vowel-consonant transitions
+          if (i > 1 && i < word.length - 2 && lastWasVowel && !isVowel) {
+            syllables.push(current);
+            current = '';
+          }
+          
+          lastWasVowel = isVowel;
+        }
+        
+        if (current) syllables.push(current);
+        return syllables.length > 1 ? syllables : null;
+      };
+
+      // ======= GREEDY LINE BREAKING WITH FALLBACK HYPHENATION =======
+      
+      const words = text.split(/\s+/);
+      const lines = [];
+      let lineIdx = 0;
       let i = 0;
-      while (i < wordQueue.length && lines.length < maxLines) {
-        let lo = 1;
-        let hi = wordQueue.length - i;
-        let bestFit = 0;
-        // Binary search for the max number of words that fit on this line
-        while (lo <= hi) {
-          let mid = Math.floor((lo + hi) / 2);
-          const candidate = wordQueue.slice(i, i + mid);
-          const width = measureLine(candidate);
-          if (width <= getChordLength(lineIdx)) {
-            bestFit = mid;
-            lo = mid + 1;
+
+      while (i < words.length && lines.length < maxLines) {
+        const maxWidth = getChordLength(lineIdx);
+        let currentLine = [];
+        let currentWidth = 0;
+        
+        // Greedily pack words on this line
+        while (i < words.length) {
+          const word = words[i];
+          const spaceWidth = currentLine.length > 0 ? measureText(' ') : 0;
+          const wordWidth = measureText(word);
+          const testWidth = currentWidth + spaceWidth + wordWidth;
+          
+          if (testWidth <= maxWidth) {
+            // Word fits, add it
+            if (currentLine.length > 0) currentWidth += spaceWidth;
+            currentLine.push(word);
+            currentWidth += wordWidth;
+            i++;
+          } else if (currentLine.length === 0) {
+            // First word on line doesn't fit - try hyphenating it
+            const syllables = hyphenate(word);
+            
+            if (!syllables) {
+              // Can't hyphenate or word is too short, fail
+              tempTspan.remove();
+              return { success: false };
+            }
+            
+            // Find how many syllables fit with hyphen
+            let hyphenWidth = measureText('-');
+            let accumulated = '';
+            let fitted = 0;
+            
+            for (let si = 0; si < syllables.length - 1; si++) {
+              const testPart = accumulated + syllables[si];
+              const testWidth = measureText(testPart) + hyphenWidth;
+              
+              if (testWidth <= maxWidth) {
+                accumulated = testPart;
+                fitted = si + 1;
+              } else {
+                break;
+              }
+            }
+            
+            if (fitted === 0) {
+              // Even one syllable doesn't fit
+              tempTspan.remove();
+              return { success: false };
+            }
+            
+            // Use the fitted syllables with hyphen
+            currentLine.push(accumulated + '-');
+            currentWidth = measureText(accumulated) + hyphenWidth;
+            
+            // Put remaining syllables back for next line
+            const remaining = syllables.slice(fitted).join('');
+            words[i] = remaining;
+            break; // Line is done
           } else {
-            hi = mid - 1;
+            // We have words on the line, move to next line
+            break;
           }
         }
-        if (bestFit === 0) {
-          // Single word doesn't fit on the line
-          tempTspan.remove();
-          return { success: false };
+        
+        if (currentLine.length > 0) {
+          lines.push(currentLine.join(' '));
+          lineIdx++;
+        } else {
+          break;
         }
-        lines.push(wordQueue.slice(i, i + bestFit).join(""));
-        i += bestFit;
-        lineIdx++;
       }
 
-      // Add the last line if there are remaining words (shouldn't happen with this logic, but for safety)
-      if (i < wordQueue.length && lines.length < maxLines) {
-        lines.push(wordQueue.slice(i).join(""));
-        i = wordQueue.length;
-      }
-
-      // If we still have words left, fail
-      if (i < wordQueue.length) {
+      // Check if all words were placed
+      if (i < words.length) {
         tempTspan.remove();
         return { success: false };
       }
@@ -4232,18 +4302,14 @@
 
       // Calculate total text height for centering
       const totalHeight = lines.length * lineHeight;
-      const offsetY = -(totalHeight - lineHeight) / 2; // Center the text block
+      const offsetY = -(totalHeight - lineHeight) / 2;
 
-      // Create the actual tspans with proper centering and per-line width
+      // Create the actual tspans
       lines.forEach((line, index) => {
-        let radius = outerRadius - (index + 0.5) * lineHeight;
-        if (radius < innerRadius) radius = innerRadius;
-        const chordLen = getChordLength(index);
-        const tspan = textElement.append("tspan")
+        textElement.append("tspan")
           .attr("x", 0)
           .attr("dy", index === 0 ? offsetY : lineHeight)
           .text(line);
-        // Optionally, set a data attribute for debugging: tspan.attr("data-chordwidth", chordLen);
       });
 
       return { success: true, lines: lines.length, fontSize: fontSize, totalHeight: totalHeight };
@@ -5321,7 +5387,7 @@
         },
         "t_plus": {
           "alias": "A4+",
-          "statement": "Understandi",
+          "statement": "Understanding",
           "explanation": "Identified as positive aspect of A."
         },
         "a_plus": {
