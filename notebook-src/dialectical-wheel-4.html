@@ -1793,13 +1793,8 @@
               ctx.hideCell(step.unitId, "negative");
               ctx.hideCell(step.unitId, "positive");
               setTimeout(() => {
-                // Restore opacity after hide animation so showCell can animate them back
-                // Use helper to get correct groups
-                const isWhiteOutside = ctx.getIsWhiteOutside ? ctx.getIsWhiteOutside() : false;
-                const positiveMapping = getPhysicalGroupsForSemantics("positive", isWhiteOutside, groups, radii, styles);
-                const negativeMapping = getPhysicalGroupsForSemantics("negative", isWhiteOutside, groups, radii, styles);
-                positiveMapping.group.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
-                negativeMapping.group.selectAll("path").filter(d => d.data.unitId === step.unitId).style("opacity", 1);
+                // Let updateAllRings handle the opacity restoration
+                ctx.updateAllRings();
               }, styles.durations.stepRotation + 50);
             }, 100);
             break;
