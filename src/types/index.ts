@@ -53,14 +53,14 @@ export interface Preferences {
 
 export interface Colors {
   userRingColors: {
-    outer: string;
-    middle: string;
-    inner: string;
+    negative: string;  // Red ring (semantic)
+    neutral: string;   // White ring (semantic)
+    positive: string;  // Green ring (semantic)
   };
   userTextColors: {
-    outer: string;
-    middle: string;
-    inner: string;
+    negative: string;  // Red ring text (semantic)
+    neutral: string;   // White ring text (semantic)
+    positive: string;  // Green ring text (semantic)
     coordinates: string;
   };
   userHubColor: string;

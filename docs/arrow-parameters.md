@@ -291,6 +291,7 @@ Main function for drawing arrows between labels.
 **Parameters**:
 - `connections` (Array): Array of connection objects with `from`, `to`, `fromRing`, `toRing`
 - `options` (Object): Arrow styling options (see Parameter Reference above)
+  - `onArrowClick` (Function): Optional callback when arrow is clicked. Receives `(dotLine, connection)`.
 
 **Returns**: void
 
@@ -307,6 +308,20 @@ arrows.drawLabelLinks(connections, {
   maxPadPercent: 0.25
 });
 ```
+
+**With Click Handler**:
+```javascript
+arrows.drawLabelLinks(connections, {
+  bow: 0.3,
+  padEnd: 20,
+  onArrowClick: (dotLine, connection) => {
+    console.log('Clicked arrow:', dotLine);
+    // Example: "A:middle -> B:outer"
+  }
+});
+```
+
+See [Arrow Click Handlers](./arrow-click-handlers.md) for detailed click handling documentation.
 
 ---
 

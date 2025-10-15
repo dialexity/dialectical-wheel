@@ -4,6 +4,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var jsxRuntime = require('react/jsx-runtime');
 var react = require('react');
+var define1 = require('https://api.observablehq.com/@d3/color-legend.js?v=3');
 
 function _arrayLikeToArray(r, a) {
   (null == a || a > r.length) && (a = r.length);
@@ -5496,11 +5497,48 @@ function toggle({label, value, values, disabled} = {}) {
   return form;
 }
 
-var _templateObject, _templateObject2, _templateObject3, _templateObject4, _templateObject5, _templateObject6, _templateObject7, _templateObject8, _templateObject9, _templateObject0;
+var _templateObject, _templateObject2, _templateObject3, _templateObject4, _templateObject5, _templateObject6, _templateObject7, _templateObject8, _templateObject9, _templateObject0, _templateObject1;
 function _1(md) {
   return md(_templateObject || (_templateObject = _taggedTemplateLiteral(["# Dialectical Wheel with Arrows"])));
 }
-function _makeRings(arcTween, d3) {
+function _getRingOrder(isWhiteOutside) {
+  return function () {
+    var neutralOutside = isWhiteOutside; // legacy toggle name maps to neutral outside
+    var byPhysical = ['positive', neutralOutside ? 'negative' : 'neutral', neutralOutside ? 'neutral' : 'negative'];
+    var bySemantic = {
+      positive: 'inner',
+      negative: byPhysical[1] === 'negative' ? 'middle' : 'outer',
+      neutral: byPhysical[1] === 'neutral' ? 'middle' : 'outer'
+    };
+    return {
+      byPhysical: byPhysical,
+      bySemantic: bySemantic
+    };
+  };
+}
+function _getRadiiForSemantic(getRingOrder) {
+  return function (semantic, radii, styles) {
+    var order = getRingOrder();
+    var physical = semantic === 'positive' ? 'inner' : semantic === 'invisible' ? 'invisible' : order.bySemantic[semantic];
+    if (physical === 'outer') return {
+      inner: radii.innerRadius,
+      outer: radii.outerRadius
+    };
+    if (physical === 'middle') return {
+      inner: radii.innerInnerRadius,
+      outer: radii.middleRadius
+    };
+    if (physical === 'invisible') return {
+      inner: radii.outerRadius,
+      outer: styles.radii.invisible
+    };
+    return {
+      inner: 30,
+      outer: radii.centerRadius
+    };
+  };
+}
+function _makeRings(arcTween, getRingOrder, userTextColors, d3, getRadiiForSemantic) {
   return function (_ref) {
     var groups = _ref.groups,
       labels = _ref.labels,
@@ -5512,7 +5550,8 @@ function _makeRings(arcTween, d3) {
       helpers = _ref.helpers,
       getDataToUse = _ref.getDataToUse,
       getCellVisibility = _ref.getCellVisibility,
-      bindCellEvents = _ref.bindCellEvents;
+      bindCellEvents = _ref.bindCellEvents,
+      getIsWhiteOutside = _ref.getIsWhiteOutside;
     var invisibleGroup = groups.invisibleGroup,
       outerGroup = groups.outerGroup,
       middleGroup = groups.middleGroup,
@@ -5526,9 +5565,10 @@ function _makeRings(arcTween, d3) {
       middleArc = arcs.middleArc,
       innerArc = arcs.innerArc;
     var invisibleColor = colorScales.invisibleColor,
-      outerColor = colorScales.outerColor,
-      middleColor = colorScales.middleColor,
-      innerColor = colorScales.innerColor;
+      negativeColor = colorScales.negativeColor,
+      neutralColor = colorScales.neutralColor,
+      positiveColor = colorScales.positiveColor; // ✅ Semantic colors
+
     function changeData(ringType, newData, arcGenerator) {
       var group = ringType === "outer" ? outerGroup : ringType === "middle" ? middleGroup : innerGroup;
       var labelsGroup = ringType === "outer" ? outerLabelsGroup : ringType === "middle" ? middleLabelsGroup : innerLabelsGroup;
@@ -5538,7 +5578,12 @@ function _makeRings(arcTween, d3) {
       });
       paths.transition().duration(styles.durations.normal).attrTween("d", arcTween(arcGenerator)).style("opacity", function (d) {
         if (!getCellVisibility(d.data.unitId, ringType)) return 0;
-        var baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+        var opacityMap = {
+          negative: 1,
+          neutral: 0.9,
+          positive: 0.8
+        };
+        var baseOpacity = opacityMap[ringType] || 1;
         return d.data.opacity * baseOpacity;
       });
       var labelsSel = labelsGroup.selectAll("text").data(pieData, function (d) {
@@ -5560,32 +5605,66 @@ function _makeRings(arcTween, d3) {
         return helpers.calculateTextTransform(d, arcGenerator);
       }).style("text-anchor", "middle").style("dominant-baseline", "central").style("font-family", styles.fonts.family).style("font-size", function (d) {
         var b = styles.fonts.labels.baseSize;
-        return "".concat(ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner, "px");
+        // ✅ Semantic font size mapping
+        var order = getRingOrder();
+        var physical = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
+        var fontSizeMap = {
+          invisible: b.outer,
+          outer: b.outer,
+          middle: b.middle,
+          inner: b.inner
+        };
+        var fontSize = fontSizeMap[physical] || b.middle;
+        return "".concat(fontSize, "px");
       }).style("font-weight", styles.fonts.labels.weight).style("fill", function (d) {
-        var t = styles.colors.text;
-        if (ringType === "invisible") return 'black';
-        if (ringType === "inner") return t.inner;
-        if (ringType === "outer") return t.outer;
-        return t.middle;
+        // ✅ Semantic text color mapping - use USER colors directly (not position-based)
+        var textColorMap = {
+          invisible: 'black',
+          positive: userTextColors.positive,
+          negative: userTextColors.negative,
+          neutral: userTextColors.neutral
+        };
+        return textColorMap[ringType] || userTextColors.neutral;
       }).style("pointer-events", "none").each(function (d) {
         var textElement = d3.select(this);
         var b = styles.fonts.labels.baseSize;
-        textElement.style("font-size", "".concat(ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner, "px"));
+        // ✅ Semantic font size mapping
+        var fontSizeMap = {
+          invisible: b.outer,
+          negative: b.outer,
+          neutral: b.middle,
+          positive: b.inner
+        };
+        textElement.style("font-size", "".concat(fontSizeMap[ringType] || b.middle, "px"));
         var text = d.data.fullText || d.data.name;
         var dataToUse = getDataToUse();
         var pieDataLocal;
+        // ✅ Use semantic keys (polarity metadata in data helps identify which data this is)
+        getIsWhiteOutside();
         if (ringType === "invisible") {
           pieDataLocal = pie(dataToUse.invisible);
           d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible);
-        } else if (ringType === "outer") {
-          pieDataLocal = pie(dataToUse.outer);
-          d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
-        } else if (ringType === "middle") {
-          pieDataLocal = pie(dataToUse.middle);
-          d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
-        } else {
-          pieDataLocal = pie(dataToUse.inner);
+        } else if (ringType === "positive") {
+          pieDataLocal = pie(dataToUse.positive);
           d3.arc().innerRadius(30).outerRadius(radii.centerRadius);
+        } else if (ringType === "negative") {
+          pieDataLocal = pie(dataToUse.negative);
+          var rr = getRadiiForSemantic('negative', radii, styles);
+          var innerR = rr.inner;
+          var outerR = rr.outer;
+          d3.arc().innerRadius(innerR).outerRadius(outerR);
+        } else if (ringType === "neutral") {
+          pieDataLocal = pie(dataToUse.neutral);
+          var _rr = getRadiiForSemantic('neutral', radii, styles);
+          var _innerR = _rr.inner;
+          var _outerR = _rr.outer;
+          d3.arc().innerRadius(_innerR).outerRadius(_outerR);
+        } else {
+          pieDataLocal = pie(dataToUse.neutral);
+          var _rr2 = getRadiiForSemantic('neutral', radii, styles);
+          var _innerR2 = _rr2.inner;
+          var _outerR2 = _rr2.outer;
+          d3.arc().innerRadius(_innerR2).outerRadius(_outerR2);
         }
         var arcDatum = pieDataLocal.find(function (p) {
           return p.data.unitId === d.data.unitId;
@@ -5601,22 +5680,46 @@ function _makeRings(arcTween, d3) {
         if (d && d.data) {
           var textElement = d3.select(this);
           var b = styles.fonts.labels.baseSize;
-          textElement.style("font-size", "".concat(ringType === "invisible" ? b.outer : ringType === "outer" ? b.outer : ringType === "middle" ? b.middle : b.inner, "px"));
+          // ✅ Semantic font size mapping
+          var order = getRingOrder();
+          var physical = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
+          var fontSizeMap = {
+            invisible: b.outer,
+            outer: b.outer,
+            middle: b.middle,
+            inner: b.inner
+          };
+          var fontSize = fontSizeMap[physical] || b.middle;
+          textElement.style("font-size", "".concat(fontSize, "px"));
           var text = d.data.fullText || d.data.name;
           var dataToUse = getDataToUse();
           var pieDataLocal;
+          // ✅ Use semantic keys
+          getIsWhiteOutside();
           if (ringType === "invisible") {
             pieDataLocal = pie(dataToUse.invisible);
             d3.arc().innerRadius(radii.outerRadius).outerRadius(styles.radii.invisible);
-          } else if (ringType === "outer") {
-            pieDataLocal = pie(dataToUse.outer);
-            d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
-          } else if (ringType === "middle") {
-            pieDataLocal = pie(dataToUse.middle);
-            d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
-          } else {
-            pieDataLocal = pie(dataToUse.inner);
+          } else if (ringType === "positive") {
+            pieDataLocal = pie(dataToUse.positive);
             d3.arc().innerRadius(30).outerRadius(radii.centerRadius);
+          } else if (ringType === "negative") {
+            pieDataLocal = pie(dataToUse.negative);
+            var rr = getRadiiForSemantic('negative', radii, styles);
+            var innerR = rr.inner;
+            var outerR = rr.outer;
+            d3.arc().innerRadius(innerR).outerRadius(outerR);
+          } else if (ringType === "neutral") {
+            pieDataLocal = pie(dataToUse.neutral);
+            var _rr3 = getRadiiForSemantic('neutral', radii, styles);
+            var _innerR3 = _rr3.inner;
+            var _outerR3 = _rr3.outer;
+            d3.arc().innerRadius(_innerR3).outerRadius(_outerR3);
+          } else {
+            pieDataLocal = pie(dataToUse.neutral);
+            var _rr4 = getRadiiForSemantic('neutral', radii, styles);
+            var _innerR4 = _rr4.inner;
+            var _outerR4 = _rr4.outer;
+            d3.arc().innerRadius(_innerR4).outerRadius(_outerR4);
           }
           var arcDatum = pieDataLocal.find(function (p) {
             return p.data.unitId === d.data.unitId;
@@ -5634,9 +5737,16 @@ function _makeRings(arcTween, d3) {
       });
       var pathsEnter = paths.enter().append("path").attr("class", "cell").attr("fill", function (d) {
         return colorScale(d.data.unitId);
-      }).attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes["default"]).attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth).attr("stroke-dasharray", "1,3").attr("stroke-linecap", "round").attr("stroke-opacity", 0.3).style("opacity", function (d) {
+      }).attr("stroke", ringType === "neutral" ? styles.colors.strokes.middleRing : styles.colors.strokes["default"]).attr("stroke-width", ringType === "neutral" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth).attr("stroke-dasharray", "1,3").attr("stroke-linecap", "round").attr("stroke-opacity", 0.3).style("opacity", function (d) {
         if (!getCellVisibility(d.data.unitId, ringType)) return 0;
-        var baseOpacity = ringType === "outer" || ringType === "invisible" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+        // ✅ Semantic opacity mapping
+        var opacityMap = {
+          invisible: 1,
+          negative: 1,
+          neutral: 0.9,
+          positive: 0.8
+        };
+        var baseOpacity = opacityMap[ringType] || 1;
         return d.data.opacity * baseOpacity;
       }).attr("d", arcGenerator).each(function (d) {
         this._current = d;
@@ -5647,7 +5757,13 @@ function _makeRings(arcTween, d3) {
       paths.merge(pathsEnter).transition().duration(styles.durations.normal).attrTween("d", arcTween(arcGenerator)).style("opacity", function (d) {
         if (!getCellVisibility(d.data.unitId, ringType)) return 0;
         if (ringType === "invisible") return 0;
-        var baseOpacity = ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8;
+        // ✅ Semantic opacity mapping
+        var opacityMap = {
+          negative: 1,
+          neutral: 0.9,
+          positive: 0.8
+        };
+        var baseOpacity = opacityMap[ringType] || 1;
         return d.data.opacity * baseOpacity;
       });
       paths.exit().transition().duration(styles.durations.normal).style("opacity", 0).remove();
@@ -5655,10 +5771,22 @@ function _makeRings(arcTween, d3) {
     }
     function updateAllRings() {
       var dataToUse = getDataToUse();
+      var order = getRingOrder();
+
+      // ✅ SEMANTIC MAPPING: Map semantic data to physical groups based on central order
+      // Invisible always stays in invisible ring
       updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
-      updateRing(outerGroup, outerLabelsGroup, dataToUse.outer, outerArc, "outer", outerColor);
-      updateRing(middleGroup, middleLabelsGroup, dataToUse.middle, middleArc, "middle", middleColor);
-      updateRing(innerGroup, innerLabelsGroup, dataToUse.inner, innerArc, "inner", innerColor);
+
+      // Positive (green) always in inner ring - color matches semantic type
+      updateRing(innerGroup, innerLabelsGroup, dataToUse.positive, innerArc, "positive", positiveColor);
+
+      // Middle and outer rings determined by central order
+      var middleSemantic = order.byPhysical[1];
+      var outerSemantic = order.byPhysical[2];
+      var middleColor = middleSemantic === "negative" ? negativeColor : neutralColor;
+      var outerColor = outerSemantic === "negative" ? negativeColor : neutralColor;
+      updateRing(middleGroup, middleLabelsGroup, dataToUse[middleSemantic], middleArc, middleSemantic, middleColor);
+      updateRing(outerGroup, outerLabelsGroup, dataToUse[outerSemantic], outerArc, outerSemantic, outerColor);
     }
     return {
       updateAllRings: updateAllRings,
@@ -5747,7 +5875,7 @@ function _styles(userHubColor, ringColors, textColors) {
 }
 function _arrowControls(html, parseArrowConnections, arrowConnections, dialecticalData, viewof_chart, isThesisType, arrowUtilities, d3) {
   return function () {
-    var container = html(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n          <div style=\"margin-bottom: 10px; font-weight: bold;\">Arrow Connections</div>\n  \n          <!-- Basic Arrow Controls -->\n          <div style=\"display: flex; gap: 10px; margin-bottom: 15px; align-items: center;\">\n            <button id=\"toggle-arrows\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show Arrows</button>\n            <button id=\"redraw-arrows\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Redraw Arrows</button>\n            <button id=\"toggle-anchors\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #fff3cd; cursor: pointer;\">Show Anchor Points</button>\n          </div>\n  \n          <!-- Step-by-Step Arrow Drawing -->\n          <div style=\"border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f9f9f9;\">\n            <div style=\"font-weight: bold; margin-bottom: 10px;\">Step-by-Step Arrow Drawing</div>\n            <div style=\"display: flex; gap: 10px; margin-bottom: 10px; align-items: center;\">\n              <button id=\"start-arrow-steps\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #e7f3ff; cursor: pointer;\">Start Step Mode</button>\n              <button id=\"prev-arrow\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Previous</button>\n              <span id=\"arrow-counter\" style=\"margin: 0 10px; font-weight: bold; min-width: 120px;\">Ready to start</span>\n              <button id=\"next-arrow\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Next Arrow</button>\n              <button id=\"show-all-arrows\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show All</button>\n            </div>\n            <div id=\"current-arrow-info\" style=\"font-size: 12px; color: #666; min-height: 20px; font-style: italic;\"></div>\n          </div>\n        </div>"])));
+    var container = html(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n        <div style=\"margin-bottom: 10px; font-weight: bold;\">Arrow Connections</div>\n\n        <!-- Basic Arrow Controls -->\n        <div style=\"display: flex; gap: 10px; margin-bottom: 15px; align-items: center;\">\n          <button id=\"toggle-arrows\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show Arrows</button>\n          <button id=\"redraw-arrows\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Redraw Arrows</button>\n          <button id=\"toggle-anchors\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #fff3cd; cursor: pointer;\">Show Anchor Points</button>\n        </div>\n\n        <!-- Step-by-Step Arrow Drawing -->\n        <div style=\"border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f9f9f9;\">\n          <div style=\"font-weight: bold; margin-bottom: 10px;\">Step-by-Step Arrow Drawing</div>\n          <div style=\"display: flex; gap: 10px; margin-bottom: 10px; align-items: center;\">\n            <button id=\"start-arrow-steps\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #e7f3ff; cursor: pointer;\">Start Step Mode</button>\n            <button id=\"prev-arrow\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Previous</button>\n            <span id=\"arrow-counter\" style=\"margin: 0 10px; font-weight: bold; min-width: 120px;\">Ready to start</span>\n            <button id=\"next-arrow\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Next Arrow</button>\n            <button id=\"show-all-arrows\" style=\"padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show All</button>\n          </div>\n          <div id=\"current-arrow-info\" style=\"font-size: 12px; color: #666; min-height: 20px; font-style: italic;\"></div>\n        </div>\n      </div>"])));
     var toggleBtn = container.querySelector('#toggle-arrows');
     var redrawBtn = container.querySelector('#redraw-arrows');
     var toggleAnchorsBtn = container.querySelector('#toggle-anchors');
@@ -6002,53 +6130,48 @@ function _showFlowSubscription(Generators, viewof_showFlow, viewof_chart, invali
 }
 function _isWhiteOutside(Inputs) {
   return Inputs.toggle({
-    label: "Swap red and white layer"
+    label: "Neutral outside"
   });
 }
 function _userRingColors() {
   return {
-    outer: "#F9C6CC",
-    // Outer ring background color
-    middle: "#ffffff",
-    // Middle ring background color  
-    inner: "#C6E5B3" // Inner ring background color
+    negative: "#F9C6CC",
+    // Red ring background color (semantic)
+    neutral: "#ffffff",
+    // White ring background color (semantic)
+    positive: "#C6E5B3" // Green ring background color (semantic)
   };
 }
 function _userTextColors() {
   return {
-    outer: "#8b1538",
-    // Outer ring text color
-    middle: "#333",
-    // Middle ring text color
-    inner: "#2d5a2d",
-    // Inner ring text color
+    negative: "#8b1538",
+    // Red ring text color (semantic)
+    neutral: "#333",
+    // White ring text color (semantic)
+    positive: "#2d5a2d",
+    // Green ring text color (semantic)
     coordinates: "#333" // Coordinate text color
   };
 }
 function _userHubColor() {
   return "#ffff7a";
 }
-function _ringColors(isWhiteOutside, userRingColors) {
-  return isWhiteOutside ? {
-    outer: userRingColors.middle,
-    middle: userRingColors.outer,
-    inner: userRingColors.inner
-  } : {
-    outer: userRingColors.outer,
-    middle: userRingColors.middle,
-    inner: userRingColors.inner
-  };
+function _ringColors(getRingOrder, userRingColors) {
+  return function () {
+    var order = getRingOrder();
+    var physicalToSemantic = order.byPhysical;
+    return {
+      outer: physicalToSemantic[2] === 'neutral' ? userRingColors.neutral : userRingColors.negative,
+      middle: physicalToSemantic[1] === 'neutral' ? userRingColors.neutral : userRingColors.negative,
+      inner: userRingColors.positive
+    };
+  }();
 }
-function _textColors(isWhiteOutside, userTextColors) {
-  return isWhiteOutside ? {
-    outer: userTextColors.middle,
-    middle: userTextColors.outer,
-    inner: userTextColors.inner,
-    coordinates: userTextColors.coordinates
-  } : {
-    outer: userTextColors.outer,
-    middle: userTextColors.middle,
-    inner: userTextColors.inner,
+function _textColors(userTextColors) {
+  return {
+    negative: userTextColors.negative,
+    neutral: userTextColors.neutral,
+    positive: userTextColors.positive,
     coordinates: userTextColors.coordinates
   };
 }
@@ -6072,7 +6195,55 @@ function _3(DOM, serialize, viewof_chart) {
     return serialize(viewof_chart);
   }, undefined, "Save as SVG");
 }
-function _makeArrowsModule(d3, location) {
+function _getRingRadii() {
+  return function (ringType, whiteOutside, radiiObj, stylesObj) {
+    // Map semantic names to physical positions
+    var positionMap = {
+      invisible: 'invisible',
+      positive: 'inner',
+      // Green always in inner
+      negative: whiteOutside ? 'middle' : 'outer',
+      // Red moves
+      neutral: whiteOutside ? 'outer' : 'middle' // White moves
+    };
+    var position = positionMap[ringType];
+
+    // Return radii for that physical position
+    var radiiConfig = {
+      invisible: {
+        inner: radiiObj.outerRadius,
+        outer: stylesObj.radii.invisible
+      },
+      outer: {
+        inner: radiiObj.innerRadius,
+        outer: radiiObj.outerRadius
+      },
+      middle: {
+        inner: radiiObj.innerInnerRadius,
+        outer: radiiObj.middleRadius
+      },
+      inner: {
+        inner: 30,
+        // hub radius
+        outer: radiiObj.centerRadius
+      }
+    };
+    return radiiConfig[position];
+  };
+}
+function _getPhysicalGroupsForSemantics(getRingOrder) {
+  return function (ringType, groups) {
+    var order = getRingOrder();
+    var physical = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
+    var group = physical === "outer" ? groups.outerGroup : physical === "middle" ? groups.middleGroup : physical === "inner" ? groups.innerGroup : groups.invisibleGroup;
+    var labelsGroup = physical === "outer" ? groups.outerLabelsGroup : physical === "middle" ? groups.middleLabelsGroup : physical === "inner" ? groups.innerLabelsGroup : groups.invisibleLabelsGroup;
+    return {
+      group: group,
+      labelsGroup: labelsGroup
+    };
+  };
+}
+function _makeArrowsModule(getRadiiForSemantic, d3, getRingOrder, location) {
   return function (_ref2) {
     var defs = _ref2.defs,
       contentGroup = _ref2.contentGroup,
@@ -6082,7 +6253,7 @@ function _makeArrowsModule(d3, location) {
       radii = _ref2.radii,
       styles = _ref2.styles,
       arrowUtilities = _ref2.arrowUtilities;
-    var arrowsGroup = contentGroup.append("g").attr("class", "arrows-group").style("pointer-events", "none");
+    var arrowsGroup = contentGroup.append("g").attr("class", "arrows-group").style("pointer-events", "all"); // Enable pointer events for clickable arrows
     // Ensure yellow circle is beneath arrows
     centerCircle.lower();
     // Ensure arrows are above rings (labels/coordinate can raise after)
@@ -6102,58 +6273,32 @@ function _makeArrowsModule(d3, location) {
       inner: contentGroup.select('.inner-labels')
     };
     function getCellCentroid(unitId) {
-      var ringType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "middle";
+      var ringType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "neutral";
+      // ✅ Default to neutral
       var dataToUse = nestedData;
-      var pieData, arcGenerator;
-      var outerRadius = radii.outerRadius,
-        innerRadius = radii.innerRadius,
-        innerInnerRadius = radii.innerInnerRadius,
-        middleRadius = radii.middleRadius,
-        centerRadius = radii.centerRadius;
-      switch (ringType) {
-        case "invisible":
-          pieData = pie(dataToUse.invisible);
-          arcGenerator = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-          break;
-        case "outer":
-          pieData = pie(dataToUse.outer);
-          arcGenerator = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-          break;
-        case "middle":
-          pieData = pie(dataToUse.middle);
-          arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-          break;
-        case "inner":
-          pieData = pie(dataToUse.inner);
-          arcGenerator = d3.arc().innerRadius(30).outerRadius(centerRadius);
-          break;
-        default:
-          pieData = pie(dataToUse.middle);
-          arcGenerator = d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-      }
+      radii.outerRadius;
+        radii.innerRadius;
+        radii.innerInnerRadius;
+        radii.middleRadius;
+        radii.centerRadius;
+
+      // ✅ SEMANTIC: Use helper to get radii and data key
+      var ringRadii = getRadiiForSemantic(ringType, radii, styles);
+
+      // Get pie data using semantic key
+      var ringData = dataToUse[ringType];
+      if (!ringData) return null;
+      var pieData = pie(ringData);
+      var arcGenerator = d3.arc().innerRadius(ringRadii.inner).outerRadius(ringRadii.outer);
       var cellData = pieData.find(function (d) {
         return d.data.unitId === unitId;
       });
       if (!cellData) return null;
       var centroid = arcGenerator.centroid(cellData);
-      // Derive the exact radii used for this ring so we can compute an effective boundary offset
-      var ringInner, ringOuter;
-      if (ringType === "invisible") {
-        ringInner = outerRadius;
-        ringOuter = styles.radii.invisible;
-      } else if (ringType === "outer") {
-        ringInner = innerRadius;
-        ringOuter = outerRadius;
-      } else if (ringType === "middle") {
-        ringInner = innerInnerRadius;
-        ringOuter = middleRadius;
-      } else if (ringType === "inner") {
-        ringInner = 30; // hub radius used in the arc generator above
-        ringOuter = centerRadius;
-      } else {
-        ringInner = innerInnerRadius;
-        ringOuter = middleRadius;
-      }
+
+      // Use radii from helper
+      var ringInner = ringRadii.inner;
+      var ringOuter = ringRadii.outer;
       var angleSpan = cellData.endAngle - cellData.startAngle;
       var rCentroid = (ringInner + ringOuter) / 2;
       var thickness = ringOuter - ringInner;
@@ -6171,7 +6316,9 @@ function _makeArrowsModule(d3, location) {
     }
     // Compute label info (center in contentGroup coords and bounding radius from text bbox)
     function getLabelInfo(unitId, ringType) {
-      var group = labelGroups[ringType];
+      var order = getRingOrder();
+      var physical = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
+      var group = labelGroups[physical];
       if (!group || group.empty()) return null;
       var sel = group.selectAll('text.cell-label').filter(function (d) {
         return d && d.data && d.data.unitId === unitId;
@@ -6248,7 +6395,12 @@ function _makeArrowsModule(d3, location) {
       });
     }
     function clearArrows() {
-      arrowsGroup.selectAll("*").remove();
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var _options$includeFlow = options.includeFlow,
+        includeFlow = _options$includeFlow === void 0 ? true : _options$includeFlow;
+      // Only remove label-link groups. Optionally preserve flow arrows (klass: 'flow-arrows').
+      var selector = includeFlow ? ".label-link-group" : ".label-link-group:not(.flow-arrows)";
+      arrowsGroup.selectAll(selector).remove();
     }
     /**
      * Draw arrows between label nodes using perfect-arrows inspired API.
@@ -6269,6 +6421,7 @@ function _makeArrowsModule(d3, location) {
      * @param {number} options.maxPadPercent - Maximum padding as percentage of path length (0-1). Default: 0.25
      * @param {boolean} options.flip - Whether to reflect the arrow's bow angle. Default: false
      * @param {boolean} options.straights - Whether to use straight lines at 45 degree angles. Default: true
+     * @param {Function} options.onArrowClick - Callback function when arrow is clicked. Receives DOT script line.
      * @param {number} options.shortenBy - DEPRECATED - Use padStart/padEnd instead
      */
     function drawLabelLinks(connections) {
@@ -6285,6 +6438,7 @@ function _makeArrowsModule(d3, location) {
       var maxPadPercent = options.maxPadPercent !== undefined ? options.maxPadPercent : 0.25; // max 25% of path
       var flip = options.flip !== undefined ? options.flip : false;
       var straights = options.straights !== undefined ? options.straights : true;
+      var onArrowClick = options.onArrowClick || null; // callback for arrow clicks
 
       // Backward compatibility
       var shortenBy = options.shortenBy || 0;
@@ -6322,7 +6476,7 @@ function _makeArrowsModule(d3, location) {
         return node;
       }
 
-      // Build links with per-connection color
+      // Build links with per-connection color and original connection data
       var links = [];
       connections.forEach(function (conn) {
         var fromRing = conn.fromRing || 'middle';
@@ -6331,10 +6485,15 @@ function _makeArrowsModule(d3, location) {
         var t = ensureNode(conn.to, toRing);
         if (!s || !t) return;
         var color = arrowUtilities.calculateArrowColor(fromRing, toRing, conn.from, conn.to);
+
+        // Generate DOT script line for this arrow
+        var dotLine = "".concat(conn.from, ":").concat(fromRing, " -> ").concat(conn.to, ":").concat(toRing);
         links.push({
           source: s,
           target: t,
-          color: color
+          color: color,
+          dotLine: dotLine,
+          connection: conn
         });
       });
 
@@ -6611,9 +6770,26 @@ function _makeArrowsModule(d3, location) {
         var p = clippedPath.getPointAtLength(clippedLength);
         var pPrev = clippedPath.getPointAtLength(Math.max(0, clippedLength - 5)); // Look back 5px for better angle
         var arrowheadAngle = Math.atan2(p.y - pPrev.y, p.x - pPrev.x) * 180 / Math.PI;
-        var path = linkGroup.append("path").attr("fill", "none").attr("stroke", d.color).attr("stroke-width", 1.25).attr("opacity", 0.3).attr("stroke-dasharray", "3,3").attr("d", clippedPathData);
+        var path = linkGroup.append("path").attr("fill", "none").attr("stroke", d.color).attr("stroke-width", 1.25).attr("opacity", 0.3).attr("stroke-dasharray", "3,3").attr("d", clippedPathData).style("pointer-events", "none"); // Don't intercept events, let the invisible path handle it
 
-        var head = linkGroup.append("polygon").attr("points", "0,-1.5 4.5,0 0,1.5").attr("fill", d.color).attr("opacity", 0);
+        var head = linkGroup.append("polygon").attr("points", "0,-1.5 4.5,0 0,1.5").attr("fill", d.color).attr("opacity", 0).style("cursor", onArrowClick ? "pointer" : "default").on("click", function (event) {
+          if (onArrowClick) {
+            event.stopPropagation();
+            onArrowClick(d.dotLine, d.connection);
+          }
+        }).on("mouseover", function () {
+          if (onArrowClick) {
+            d3.select(this).style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+            // Also highlight the path
+            path.attr("stroke-width", 2.5).attr("opacity", 1).style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+          }
+        }).on("mouseout", function () {
+          if (onArrowClick) {
+            d3.select(this).style("filter", null);
+            // Reset path
+            path.attr("stroke-width", 1.25).attr("opacity", 0.85).style("filter", null);
+          }
+        });
         head.transition().duration(900).ease(d3.easeQuadInOut).attrTween("transform", function () {
           // Create temp path for animation using the clipped path
           var animPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -6630,33 +6806,74 @@ function _makeArrowsModule(d3, location) {
         }).on("end", function () {
           // Replace animated head with static arrowhead at end point
           head.remove();
-          linkGroup.append("polygon").attr("points", "0,-1.5 4.5,0 0,1.5").attr("fill", d.color).attr("transform", "translate(".concat(endPoint.x, ", ").concat(endPoint.y, ") rotate(").concat(arrowheadAngle, ")")).attr("opacity", 0.85);
+          var staticHead = linkGroup.append("polygon").attr("points", "0,-1.5 4.5,0 0,1.5").attr("fill", d.color).attr("transform", "translate(".concat(endPoint.x, ", ").concat(endPoint.y, ") rotate(").concat(arrowheadAngle, ")")).attr("opacity", 0.85).style("cursor", onArrowClick ? "pointer" : "default").on("click", function (event) {
+            if (onArrowClick) {
+              event.stopPropagation();
+              onArrowClick(d.dotLine, d.connection);
+            }
+          }).on("mouseover", function () {
+            if (onArrowClick) {
+              d3.select(this).style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+              // Also highlight the path
+              path.attr("stroke-width", 2.5).attr("opacity", 1).style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+            }
+          }).on("mouseout", function () {
+            if (onArrowClick) {
+              d3.select(this).style("filter", null);
+              // Reset path
+              path.attr("stroke-width", 1.25).attr("opacity", 0.85).style("filter", null);
+            }
+          });
+
+          // Add invisible wider hit area for better interaction
+          if (onArrowClick) {
+            linkGroup.append("path").attr("fill", "none").attr("stroke", "transparent").attr("stroke-width", 15) // Wide invisible hit area
+            .attr("d", clippedPathData).style("cursor", "pointer").on("click", function (event) {
+              event.stopPropagation();
+              onArrowClick(d.dotLine, d.connection);
+            }).on("mouseover", function () {
+              path.attr("stroke-width", 2.5).attr("opacity", 1).style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
+              staticHead.style("filter", "drop-shadow(0 0 2px rgba(0,0,0,0.5))").attr("transform", "translate(".concat(endPoint.x, ", ").concat(endPoint.y, ") rotate(").concat(arrowheadAngle, ") scale(2)"));
+            }).on("mouseout", function () {
+              path.attr("stroke-width", 1.25).attr("opacity", 0.85).style("filter", null);
+              staticHead.style("filter", null).attr("transform", "translate(".concat(endPoint.x, ", ").concat(endPoint.y, ") rotate(").concat(arrowheadAngle, ") scale(1)"));
+            });
+          }
           path.attr("stroke-dasharray", "none").transition().duration(250).attr("opacity", 0.85);
           drawNextLink(index + 1);
         });
       }
       drawNextLink(0);
+
+      // Ensure arrows stay on top for clickability
+      arrowsGroup.raise();
     }
 
     // Visualize anchor points for all cells
     function visualizeAnchorPoints() {
       var anchorGroup = arrowsGroup.append("g").attr("class", "anchor-points-visualization");
 
-      // For each ring type
-      var ringTypes = ['invisible', 'outer', 'middle', 'inner'];
+      // For each semantic ring type
+      var ringTypes = ['invisible', 'positive', 'negative', 'neutral'];
       var ringColors = {
         invisible: '#999',
-        outer: '#dc2626',
-        middle: '#666',
-        inner: '#16a34a'
+        positive: '#16a34a',
+        negative: '#dc2626',
+        neutral: '#666'
       };
 
       // Get all unit IDs from nested data
-      var unitIds = nestedData.middle.map(function (d) {
+      // ✅ Use semantic key (neutral for center ring)
+      var unitIds = nestedData.neutral.map(function (d) {
         return d.unitId;
       });
       unitIds.forEach(function (unitId) {
         ringTypes.forEach(function (ringType) {
+          // Check if this unit has data in this ring type
+          var hasData = nestedData[ringType] && nestedData[ringType].some(function (d) {
+            return d.unitId === unitId;
+          });
+          if (!hasData) return;
           var cellInfo = getCellCentroid(unitId, ringType);
           if (!cellInfo) return;
           var color = ringColors[ringType];
@@ -6745,19 +6962,22 @@ function _arcs(d3, radii, styles) {
     innerArc: d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius)
   };
 }
-function _colorScales(d3, dialecticalData, styles) {
+function _colorScales(d3, dialecticalData, userRingColors) {
   return {
     invisibleColor: d3.scaleOrdinal().domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
       return "transparent";
     })),
-    outerColor: d3.scaleOrdinal().domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
-      return styles.colors.rings.outer;
+    negativeColor: d3.scaleOrdinal() // ✅ Red - semantic
+    .domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
+      return userRingColors.negative;
     })),
-    middleColor: d3.scaleOrdinal().domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
-      return styles.colors.rings.middle;
+    neutralColor: d3.scaleOrdinal() // ✅ White - semantic
+    .domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
+      return userRingColors.neutral;
     })),
-    innerColor: d3.scaleOrdinal().domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
-      return styles.colors.rings.inner;
+    positiveColor: d3.scaleOrdinal() // ✅ Green - semantic
+    .domain(Object.keys(dialecticalData)).range(Object.keys(dialecticalData).map(function () {
+      return userRingColors.positive;
     }))
   };
 }
@@ -6789,7 +7009,7 @@ function _makeTextTransform() {
     };
   };
 }
-function _makeAxisModule(d3) {
+function _makeAxisModule(getRingOrder, d3) {
   return function (_ref3) {
     var coordinateGroup = _ref3.coordinateGroup,
       defs = _ref3.defs,
@@ -6801,7 +7021,9 @@ function _makeAxisModule(d3) {
       dialecticalData = _ref3.dialecticalData;
     function updateCoordinateNumbersOpacities() {
       var units = Object.keys(dialecticalData);
-      var middleData = getDataToUse().middle;
+      var order = getRingOrder();
+      var middleSemantic = order.byPhysical[1];
+      var middleData = getDataToUse()[middleSemantic];
       coordinateGroup.selectAll("text.coordinate-number").each(function () {
         var sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
         var unitId = units[sliceIndex];
@@ -6823,7 +7045,8 @@ function _makeAxisModule(d3) {
       coordinateGroup.selectAll(".coordinate-circle").remove();
       coordinateGroup.selectAll(".coordinate-symbol").remove();
       var dataToUse = getDataToUse();
-      var pieData = pie(dataToUse.middle);
+      // ✅ Use semantic key (neutral for middle ring)
+      var pieData = pie(dataToUse.neutral);
       var focusedSlice = pieData.find(function (d) {
         return d.data.unitId === focusedUnitId;
       });
@@ -6838,11 +7061,13 @@ function _makeAxisModule(d3) {
       }
       var axisAngles = [axisAngle, axisAngle + Math.PI];
       var ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
-      var axisColors = [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+      var order = getRingOrder();
+      var axisColors = [styles.colors.text.positive, styles.colors.text[order.byPhysical[1]], styles.colors.text[order.byPhysical[2]]];
 
       // Check if opposite unit exists in current data
       var oppositeUnitId = getOppositePrefix(focusedUnitId);
-      var oppositeExists = dataToUse.middle.some(function (d) {
+      // ✅ Use semantic key (neutral)
+      var oppositeExists = dataToUse.neutral.some(function (d) {
         return d.unitId === oppositeUnitId;
       });
       axisAngles.forEach(function (angle, sideIndex) {
@@ -6861,7 +7086,15 @@ function _makeAxisModule(d3) {
           (function deriveClipLabel() {
             var dataToUse = getDataToUse();
             var pieData;
-            if (ringIndex === 0) pieData = pie(dataToUse.inner);else if (ringIndex === 1) pieData = pie(dataToUse.middle);else pieData = pie(dataToUse.outer);
+            // ✅ Map physical ring index to semantic data key
+            if (ringIndex === 0) pieData = pie(dataToUse.positive); // Inner ring always has positive
+            else if (ringIndex === 1) {
+              var semantic = getRingOrder().byPhysical[1];
+              pieData = pie(dataToUse[semantic]);
+            } else {
+              var _semantic = getRingOrder().byPhysical[2];
+              pieData = pie(dataToUse[_semantic]);
+            }
             var cell = pieData.find(function (d) {
               return d.data.unitId === clipUnitId;
             });
@@ -6872,17 +7105,20 @@ function _makeAxisModule(d3) {
           clipPath.append("path").attr("d", function () {
             var dataToUse = getDataToUse();
             var pieData, arcGen;
+            // ✅ Map physical ring index to semantic data key
             if (ringIndex === 0) {
               // inner ring
-              pieData = pie(dataToUse.inner);
+              pieData = pie(dataToUse.positive); // Inner ring always has positive
               arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius);
             } else if (ringIndex === 1) {
               // middle ring
-              pieData = pie(dataToUse.middle);
+              var semantic = getRingOrder().byPhysical[1];
+              pieData = pie(dataToUse[semantic]);
               arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
             } else {
               // outer ring
-              pieData = pie(dataToUse.outer);
+              var _semantic2 = getRingOrder().byPhysical[2];
+              pieData = pie(dataToUse[_semantic2]);
               arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
             }
             var cellData = pieData.find(function (d) {
@@ -6904,27 +7140,35 @@ function _makeAxisModule(d3) {
     };
   };
 }
-function _makeStepMode(d3) {
+function _makeStepMode() {
   return function (_ref4) {
     var dialecticalData = _ref4.dialecticalData,
       transformToNestedPieData = _ref4.transformToNestedPieData,
       initializeBuildSteps = _ref4.initializeBuildSteps;
       _ref4.isThesisType;
-      var getOppositePrefix = _ref4.getOppositePrefix,
-      pie = _ref4.pie,
-      radii = _ref4.radii,
-      styles = _ref4.styles,
-      groups = _ref4.groups,
-      helpers = _ref4.helpers;
+      var getOppositePrefix = _ref4.getOppositePrefix;
+      _ref4.pie;
+      _ref4.radii;
+      var styles = _ref4.styles;
+      _ref4.groups;
+      _ref4.helpers;
     var animationData = {};
     var buildSteps = [];
     var currentStep = 0;
     function initializeAnimationData() {
       animationData = transformToNestedPieData(dialecticalData);
-      ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
-        animationData[ringType].forEach(function (item) {
-          item.value = 0;
-        });
+      // ✅ SEMANTIC KEYS - Initialize all to 0 except neutral (which starts visible)
+      animationData.invisible.forEach(function (item) {
+        item.value = 0;
+      });
+      animationData.negative.forEach(function (item) {
+        item.value = 0;
+      });
+      animationData.neutral.forEach(function (item) {
+        item.value = 0;
+      }); // Start at 0, will be shown by showWhite
+      animationData.positive.forEach(function (item) {
+        item.value = 0;
       });
     }
     function initializeBuildStepsLocal() {
@@ -6933,11 +7177,12 @@ function _makeStepMode(d3) {
     }
     function resetBuildState(cellVisibility, updateAllRings) {
       Object.keys(dialecticalData).forEach(function (cell) {
+        // ✅ SEMANTIC KEYS in cellVisibility
         cellVisibility[cell] = {
           invisible: true,
-          outer: false,
-          middle: true,
-          inner: false
+          negative: false,
+          neutral: true,
+          positive: false
         };
       });
       initializeAnimationData();
@@ -6950,7 +7195,8 @@ function _makeStepMode(d3) {
         case 'showWhite':
           {
             var setupFirstOfPair = function setupFirstOfPair() {
-              ["outer", "middle", "inner"].forEach(function (ringType) {
+              // ✅ SEMANTIC KEYS - Set value=1 for ALL segments so they exist in DOM
+              ["negative", "neutral", "positive"].forEach(function (ringType) {
                 var dataArray = animationData[ringType];
                 var currentData = dataArray.find(function (d) {
                   return d.unitId === step.unitId;
@@ -6961,14 +7207,16 @@ function _makeStepMode(d3) {
                 if (currentData) currentData.value = 1;
                 if (pairData) pairData.value = 1;
               });
-              ctx.cellVisibility[step.unitId].outer = true;
-              ctx.cellVisibility[step.unitId].inner = true;
-              ctx.cellVisibility[step.unitId].middle = true;
-              ctx.cellVisibility[pairId].outer = true;
-              ctx.cellVisibility[pairId].inner = true;
-              ctx.cellVisibility[pairId].middle = true;
+              // Make all segments visible in cellVisibility
+              ctx.cellVisibility[step.unitId].negative = true;
+              ctx.cellVisibility[step.unitId].positive = true;
+              ctx.cellVisibility[step.unitId].neutral = true;
+              ctx.cellVisibility[pairId].negative = true;
+              ctx.cellVisibility[pairId].positive = true;
+              ctx.cellVisibility[pairId].neutral = true;
               setTimeout(function () {
-                ["outer", "middle", "inner"].forEach(function (ringType) {
+                // Hide the pair's segments (but keep them in DOM)
+                ["negative", "neutral", "positive"].forEach(function (ringType) {
                   var dataArray = animationData[ringType];
                   var pairData = dataArray.find(function (d) {
                     return d.unitId === pairId;
@@ -6979,7 +7227,8 @@ function _makeStepMode(d3) {
               }, 100);
             };
             var setupSecondOfPair = function setupSecondOfPair() {
-              ["outer", "middle", "inner"].forEach(function (ringType) {
+              // ✅ SEMANTIC KEYS - Restore opacity for all segments of second pair
+              ["negative", "neutral", "positive"].forEach(function (ringType) {
                 var dataArray = animationData[ringType];
                 var currentData = dataArray.find(function (d) {
                   return d.unitId === step.unitId;
@@ -6998,44 +7247,25 @@ function _makeStepMode(d3) {
             if (isFirstOfPair) setupFirstOfPair();else setupSecondOfPair();
             ctx.focusPair(step.unitId, styles.durations.stepRotation);
             ctx.updateAllRings();
-            var latestPieData = pie(animationData.middle);
-            var latestArcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
-            var currentRotation = ctx.getCurrentRotationFromDOM();
-            groups.middleLabelsGroup.selectAll("text").data(latestPieData, function (d) {
-              return d.data.unitId;
-            }).attr("transform", function (d) {
-              return helpers.calculateTextTransform(d, latestArcGen, currentRotation);
-            }).each(function (d) {
-              var textElement = d3.select(this);
-              var baseSizes = styles.fonts.labels.baseSize;
-              textElement.style("font-size", "".concat(baseSizes.middle, "px"));
-              textElement.selectAll("tspan").remove();
-              var text = d.data.fullText || d.data.name;
-              var arcDatum = latestPieData.find(function (p) {
-                return p.data.unitId === d.data.unitId;
-              });
-              var constraints = helpers.getTextConstraints("middle", arcDatum);
-              helpers.wrapText(textElement, text, constraints);
-            });
+            // Now hide negative and positive segments (they're in DOM but hidden)
             setTimeout(function () {
-              ctx.hideCell(step.unitId, "outer");
-              ctx.hideCell(step.unitId, "inner");
+              // ✅ SEMANTIC KEYS
+              ctx.hideCell(step.unitId, "negative");
+              ctx.hideCell(step.unitId, "positive");
               setTimeout(function () {
-                groups.outerGroup.selectAll("path").filter(function (d) {
-                  return d.data.unitId === step.unitId;
-                }).style("opacity", 1);
-                groups.innerGroup.selectAll("path").filter(function (d) {
-                  return d.data.unitId === step.unitId;
-                }).style("opacity", 1);
+                // Let updateAllRings handle the opacity restoration
+                ctx.updateAllRings();
               }, styles.durations.stepRotation + 50);
             }, 100);
             break;
           }
         case 'showGreen':
-          ctx.showCell(step.unitId, "inner");
+          // ✅ SEMANTIC: Green is positive (already in DOM, just hidden)
+          ctx.showCell(step.unitId, "positive");
           break;
         case 'showRed':
-          ctx.showCell(step.unitId, "outer");
+          // ✅ SEMANTIC: Red is negative (already in DOM, just hidden)
+          ctx.showCell(step.unitId, "negative");
           break;
       }
     }
@@ -7065,17 +7295,19 @@ function _makeStepMode(d3) {
       currentStep = 0;
       animationData = {};
       Object.keys(ctx.cellVisibility).forEach(function (cell) {
+        // ✅ SEMANTIC KEYS
         ctx.cellVisibility[cell] = {
           invisible: true,
-          outer: true,
-          middle: true,
-          inner: true
+          negative: true,
+          neutral: true,
+          positive: true
         };
       });
       ctx.clearFocus();
       ctx.resetZoom();
       ctx.setRotationDirectly(0);
-      ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
+      // ✅ SEMANTIC KEYS
+      ["invisible", "negative", "neutral", "positive"].forEach(function (ringType) {
         ctx.nestedData[ringType].forEach(function (item) {
           var originalItem = ctx.originalNestedData[ringType].find(function (orig) {
             return orig.unitId === item.unitId;
@@ -7131,7 +7363,7 @@ function _makeStepMode(d3) {
     };
   };
 }
-function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeTextTransform, pie, transformToNestedPieData, makeAxisModule, getOppositePrefix, colorScales, getTextConstraints, wrapText, isThesisType, arcTween, makeRings, makeArrowsModule, arrowUtilities, parseArrowConnections, arrowConnections, arrowOptions, flowConnections, flowArrowOptions, makeStepMode, initializeBuildSteps) {
+function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeTextTransform, pie, transformToNestedPieData, getRingOrder, makeAxisModule, getOppositePrefix, colorScales, getPhysicalGroupsForSemantics, getRadiiForSemantic, getTextConstraints, wrapText, userTextColors, isThesisType, arcTween, makeRings, isWhiteOutside, makeArrowsModule, arrowUtilities, parseArrowConnections, arrowConnections, arrowOptions, viewof_clickedArrowInfo, flowConnections, flowArrowOptions, makeStepMode, initializeBuildSteps) {
   return function () {
     var isTouchDragging = false;
     var touchDragStart = null;
@@ -7196,9 +7428,10 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       cellVisibility[cell] = {
         invisible: true,
         // Start visible for normal mode
-        outer: true,
-        middle: true,
-        inner: true
+        negative: true,
+        // ✅ SEMANTIC KEYS
+        neutral: true,
+        positive: true
       };
     });
 
@@ -7261,7 +7494,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       var dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       // Calculate rotation needed to center the slice at the top
-      var pieData = pie(dataToUse.middle);
+      // ✅ Use semantic key (neutral for center ring)
+      var pieData = pie(dataToUse.neutral);
       var targetSlice = pieData.find(function (d) {
         return d.data.unitId === unitId;
       });
@@ -7346,7 +7580,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
     Object.keys(dialecticalData).length;
 
     //const symbols = ["T+", "T", "T-"]; // Positive, neutral, negative
-    [styles.colors.text.inner, styles.colors.text.middle, styles.colors.text.outer];
+    var order = getRingOrder();
+    [styles.colors.text.positive, styles.colors.text[order.byPhysical[1]], styles.colors.text[order.byPhysical[2]]];
 
     // Coordinate number opacity updates now handled inside axis module
 
@@ -7376,9 +7611,9 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
 
     // Color scales (from separate cell)
     var invisibleColor = colorScales.invisibleColor,
-      outerColor = colorScales.outerColor,
-      middleColor = colorScales.middleColor,
-      innerColor = colorScales.innerColor;
+      negativeColor = colorScales.negativeColor,
+      neutralColor = colorScales.neutralColor,
+      positiveColor = colorScales.positiveColor; // ✅ Semantic colors
 
     // Initialize data
     //const nestedData = transformToNestedPieData(dialecticalData);
@@ -7389,29 +7624,24 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
     function hideCell(unitId, ringType) {
       if (!cellVisibility[unitId] || !cellVisibility[unitId][ringType]) return;
       cellVisibility[unitId][ringType] = false;
-      var group, labelsGroup, targetRadius;
-      switch (ringType) {
-        case "invisible":
-          group = invisibleGroup;
-          labelsGroup = invisibleLabelsGroup;
-          targetRadius = outerRadius;
-          break;
-        case "outer":
-          group = outerGroup;
-          labelsGroup = outerLabelsGroup;
-          targetRadius = innerRadius;
-          break;
-        case "middle":
-          group = middleGroup;
-          labelsGroup = middleLabelsGroup;
-          targetRadius = innerInnerRadius;
-          break;
-        case "inner":
-          group = innerGroup;
-          labelsGroup = innerLabelsGroup;
-          targetRadius = 0;
-          break;
-      }
+
+      // ✅ SEMANTIC: Use helper to map semantic ringType to physical group
+      var mapping = getPhysicalGroupsForSemantics(ringType, {
+        invisibleGroup: invisibleGroup,
+        innerGroup: innerGroup,
+        middleGroup: middleGroup,
+        outerGroup: outerGroup,
+        invisibleLabelsGroup: invisibleLabelsGroup,
+        innerLabelsGroup: innerLabelsGroup,
+        middleLabelsGroup: middleLabelsGroup,
+        outerLabelsGroup: outerLabelsGroup
+      });
+      var group = mapping.group,
+        labelsGroup = mapping.labelsGroup,
+        ringRadii = mapping.ringRadii;
+
+      // Target is the inner radius of this ring (collapse inward)
+      var targetRadius = ringRadii.inner;
 
       // Hide cell with radius animation
       group.selectAll("path").filter(function (d) {
@@ -7420,24 +7650,10 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       .ease(d3.easeExpIn).attrTween("d", function (d) {
         var currentData = d;
         return function (t) {
-          var arcGen;
-          if (ringType === "invisible") {
-            var newInnerRadius = d3.interpolate(outerRadius, targetRadius)(t);
-            var newOuterRadius = d3.interpolate(styles.radii.invisible, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-          } else if (ringType === "outer") {
-            var _newInnerRadius = d3.interpolate(innerRadius, targetRadius)(t);
-            var _newOuterRadius = d3.interpolate(outerRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(_newInnerRadius).outerRadius(_newOuterRadius);
-          } else if (ringType === "middle") {
-            var _newInnerRadius2 = d3.interpolate(innerInnerRadius, targetRadius)(t);
-            var _newOuterRadius2 = d3.interpolate(middleRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(_newInnerRadius2).outerRadius(_newOuterRadius2);
-          } else {
-            var _newInnerRadius3 = d3.interpolate(0, targetRadius)(t);
-            var _newOuterRadius3 = d3.interpolate(centerRadius, targetRadius)(t);
-            arcGen = d3.arc().innerRadius(_newInnerRadius3).outerRadius(_newOuterRadius3);
-          }
+          // ✅ Use pre-calculated ringRadii from helper
+          var newInnerRadius = d3.interpolate(ringRadii.inner, targetRadius)(t);
+          var newOuterRadius = d3.interpolate(ringRadii.outer, targetRadius)(t);
+          var arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
           return arcGen(currentData);
         };
       }).style("opacity", d3.interpolate(1, 0)).on("end", function (d) {
@@ -7455,98 +7671,242 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
     function showCell(unitId, ringType) {
       if (!cellVisibility[unitId] || cellVisibility[unitId][ringType]) return;
       cellVisibility[unitId][ringType] = true;
-      var group, labelsGroup, startRadius, endInnerRadius, endOuterRadius;
-      switch (ringType) {
-        case "invisible":
-          group = invisibleGroup;
-          labelsGroup = invisibleLabelsGroup;
-          startRadius = outerRadius;
-          endInnerRadius = outerRadius;
-          endOuterRadius = styles.radii.invisible;
-          break;
-        case "outer":
-          group = outerGroup;
-          labelsGroup = outerLabelsGroup;
-          startRadius = innerRadius;
-          endInnerRadius = innerRadius;
-          endOuterRadius = outerRadius;
-          break;
-        case "middle":
-          group = middleGroup;
-          labelsGroup = middleLabelsGroup;
-          startRadius = innerInnerRadius;
-          endInnerRadius = innerInnerRadius;
-          endOuterRadius = middleRadius;
-          break;
-        case "inner":
-          group = innerGroup;
-          labelsGroup = innerLabelsGroup;
-          startRadius = centerRadius;
-          endInnerRadius = styles.radii.hub;
-          endOuterRadius = centerRadius;
-          break;
+
+      // ✅ SEMANTIC: Use helper to map semantic ringType to physical group
+      var mapping = getPhysicalGroupsForSemantics(ringType, {
+        invisibleGroup: invisibleGroup,
+        innerGroup: innerGroup,
+        middleGroup: middleGroup,
+        outerGroup: outerGroup,
+        invisibleLabelsGroup: invisibleLabelsGroup,
+        innerLabelsGroup: innerLabelsGroup,
+        middleLabelsGroup: middleLabelsGroup,
+        outerLabelsGroup: outerLabelsGroup
+      });
+      var group = mapping.group,
+        labelsGroup = mapping.labelsGroup,
+        ringRadii = mapping.ringRadii;
+
+      // ✅ Different animation directions for positive vs negative
+      // Positive (green/inner): emanates from outer radius, radiates DOWN (inward)
+      // Negative (red/outer): emanates from inner radius, radiates UP (outward)
+      var startInnerRadius, startOuterRadius;
+      if (ringType === "positive") {
+        // Start from outer radius, collapse inward
+        startInnerRadius = ringRadii.outer;
+        startOuterRadius = ringRadii.outer;
+      } else if (ringType === "negative") {
+        // Start from inner radius, expand outward
+        startInnerRadius = ringRadii.inner;
+        startOuterRadius = ringRadii.inner;
+      } else {
+        // Neutral: use middle point (existing behavior)
+        var midRadius = (ringRadii.inner + ringRadii.outer) / 2;
+        startInnerRadius = midRadius;
+        startOuterRadius = midRadius;
       }
+      var endInnerRadius = ringRadii.inner;
+      var endOuterRadius = ringRadii.outer;
 
       // Show cell with radius animation
-      group.selectAll("path").filter(function (d) {
-        return d.data.unitId === unitId;
-      }).classed("hidden", false).transition().duration(styles.durations.stepRotation).ease(d3.easeExpOut).attrTween("d", function (d) {
+      var pathSelection = group.selectAll("path").filter(function (d) {
+        return d && d.data && d.data.unitId === unitId;
+      });
+
+      // If the path doesn't exist yet (e.g., due to stale DOM), regenerate rings once
+      var ensuredSelection = pathSelection;
+      if (ensuredSelection.empty() && typeof updateAllRings === 'function') {
+        updateAllRings();
+        ensuredSelection = group.selectAll("path").filter(function (d) {
+          return d && d.data && d.data.unitId === unitId;
+        });
+      }
+      if (ensuredSelection.empty()) {
+        // As a final fallback, do nothing to avoid errors in Observable Desktop
+        return;
+      }
+
+      // Prepare starting geometry for a clean animation
+      ensuredSelection.classed("hidden", false).attr("d", function (d) {
+        var arcGenStart = d3.arc().innerRadius(startInnerRadius).outerRadius(startOuterRadius);
+        return arcGenStart(d);
+      }).transition().duration(styles.durations.stepRotation).ease(d3.easeExpOut).attrTween("d", function (d) {
         var currentData = d;
         return function (t) {
-          var newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
-          var newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
+          var newInnerRadius = d3.interpolate(startInnerRadius, endInnerRadius)(t);
+          var newOuterRadius = d3.interpolate(startOuterRadius, endOuterRadius)(t);
           var arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
           return arcGen(currentData);
         };
-      }).style("opacity", d3.interpolate(0, ringType === "invisible" ? 1 : ringType === "outer" ? 1 : ringType === "middle" ? 0.9 : 0.8));
+      }).styleTween("opacity", function () {
+        var base = ringType === "invisible" ? 1 : ringType === "negative" ? 1 : ringType === "neutral" ? 0.9 : 0.8;
+        return function (t) {
+          return String(base * t);
+        };
+      });
 
       // Show label with position animation
-      labelsGroup.selectAll("text").filter(function (d) {
-        return d.data.unitId === unitId;
-      }).style("font-size", function () {
-        // Set font size immediately when text becomes visible
+      // De-duplicate any stray duplicate labels for this unit in this labels group, scoped to this polarity
+      (function dedupeLabels() {
+        var seen = new Set();
+        labelsGroup.selectAll("text.cell-label").filter(function (d) {
+          return d && d.data && (d.data.polarity === ringType || !d.data.polarity && ringType === "neutral");
+        }).each(function (d) {
+          var key = d.data.unitId;
+          if (seen.has(key)) {
+            d3.select(this).remove();
+          } else {
+            seen.add(key);
+          }
+        });
+      })();
+      var labelsForUnit = labelsGroup.selectAll("text").filter(function (d) {
+        return d && d.data && d.data.unitId === unitId && (d.data.polarity === ringType || !d.data.polarity && ringType === "neutral");
+      }).interrupt() // cancel any prior transitions that may cause overlaps
+      .style("opacity", 0) // start hidden to avoid overlap flicker
+      .attr("transform", function (d) {
+        // reset transform to current arc geometry before wrapping
+        var dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
+        var pieData, arcGen;
+        if (ringType === "invisible") {
+          pieData = pie(dataToUse.invisible);
+          arcGen = d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
+        } else if (ringType === "positive") {
+          pieData = pie(dataToUse.positive);
+          arcGen = d3.arc().innerRadius(30).outerRadius(centerRadius);
+        } else if (ringType === "negative") {
+          pieData = pie(dataToUse.negative);
+          var rr = getRadiiForSemantic('negative', {
+            innerRadius: innerRadius,
+            innerInnerRadius: innerInnerRadius,
+            middleRadius: middleRadius,
+            outerRadius: outerRadius,
+            centerRadius: centerRadius
+          }, styles);
+          arcGen = d3.arc().innerRadius(rr.inner).outerRadius(rr.outer);
+        } else {
+          pieData = pie(dataToUse.neutral);
+          var _rr5 = getRadiiForSemantic('neutral', {
+            innerRadius: innerRadius,
+            innerInnerRadius: innerInnerRadius,
+            middleRadius: middleRadius,
+            outerRadius: outerRadius,
+            centerRadius: centerRadius
+          }, styles);
+          arcGen = d3.arc().innerRadius(_rr5.inner).outerRadius(_rr5.outer);
+        }
+        var datum = pieData.find(function (p) {
+          return p.data.unitId === unitId;
+        }) || d;
+        return calculateTextTransform(datum, arcGen);
+      });
+      labelsForUnit.style("font-size", function () {
         var baseSizes = styles.fonts.labels.baseSize;
-        return "".concat(ringType === "invisible" ? baseSizes.outer : ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner, "px");
+        var fontSizeMap = {
+          invisible: baseSizes.outer,
+          negative: baseSizes.outer,
+          neutral: baseSizes.middle,
+          positive: baseSizes.inner
+        };
+        return "".concat(fontSizeMap[ringType] || baseSizes.middle, "px");
       }).each(function (d) {
-        // Do text wrapping immediately with current data
         var textElement = d3.select(this);
         var baseSizes = styles.fonts.labels.baseSize;
-        textElement.style("font-size", "".concat(ringType === "outer" ? baseSizes.outer : ringType === "middle" ? baseSizes.middle : baseSizes.inner, "px"));
+        var fontSizeMap = {
+          invisible: baseSizes.outer,
+          negative: baseSizes.outer,
+          neutral: baseSizes.middle,
+          positive: baseSizes.inner
+        };
+        textElement.style("font-size", "".concat(fontSizeMap[ringType] || baseSizes.middle, "px"));
         textElement.selectAll("tspan").remove();
-        var text = d.data.fullText || d.data.name;
-
-        // Use the current data (either animationData if in step mode, or nestedData otherwise)
+        var text = d && d.data ? d.data.fullText || d.data.name : this.textContent || "";
         var dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
         var pieData;
         if (ringType === "invisible") {
           pieData = pie(dataToUse.invisible);
           d3.arc().innerRadius(outerRadius).outerRadius(styles.radii.invisible);
-        } else if (ringType === "outer") {
-          pieData = pie(dataToUse.outer);
-          d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-        } else if (ringType === "middle") {
-          pieData = pie(dataToUse.middle);
-          d3.arc().innerRadius(innerInnerRadius).outerRadius(middleRadius);
-        } else {
-          pieData = pie(dataToUse.inner);
+        } else if (ringType === "positive") {
+          pieData = pie(dataToUse.positive);
           d3.arc().innerRadius(30).outerRadius(centerRadius);
+        } else if (ringType === "negative") {
+          pieData = pie(dataToUse.negative);
+          var rr = getRadiiForSemantic('negative', {
+            innerRadius: innerRadius,
+            innerInnerRadius: innerInnerRadius,
+            middleRadius: middleRadius,
+            outerRadius: outerRadius,
+            centerRadius: centerRadius
+          }, styles);
+          d3.arc().innerRadius(rr.inner).outerRadius(rr.outer);
+        } else {
+          pieData = pie(dataToUse.neutral);
+          var _rr6 = getRadiiForSemantic('neutral', {
+            innerRadius: innerRadius,
+            innerInnerRadius: innerInnerRadius,
+            middleRadius: middleRadius,
+            outerRadius: outerRadius,
+            centerRadius: centerRadius
+          }, styles);
+          d3.arc().innerRadius(_rr6.inner).outerRadius(_rr6.outer);
         }
         var arcDatum = pieData.find(function (p) {
-          return p.data.unitId === d.data.unitId;
+          return p.data.unitId === unitId;
         });
         var constraints = getTextConstraints(ringType, arcDatum);
         wrapText(textElement, text, constraints);
-      }).transition().duration(styles.durations.stepRotation).ease(d3.easeExpOut).attrTween("transform", function (d) {
+        // Ensure some content exists
+        if (textElement.text().trim() === "") {
+          textElement.text(text || d.data.name || unitId);
+        }
+      }).transition().duration(styles.durations.stepRotation).style("opacity", 1).attrTween("transform", function (d) {
         var currentData = d;
-        return function (t) {
-          var newInnerRadius = d3.interpolate(startRadius, endInnerRadius)(t);
-          var newOuterRadius = d3.interpolate(startRadius, endOuterRadius)(t);
-          var arcGen = d3.arc().innerRadius(newInnerRadius).outerRadius(newOuterRadius);
-
-          // Use the simple text transform function
+        return function () {
+          // keep transform in sync with the cell's final arc geometry
+          var arcGen = d3.arc().innerRadius(endInnerRadius).outerRadius(endOuterRadius);
           return calculateTextTransform(currentData, arcGen);
         };
-      }).style("opacity", 1);
+      });
+
+      // Ensure a label exists for this polarity; if not, create it
+      var labelExists = !labelsForUnit.empty();
+      if (!labelExists) {
+        var datumFactory = function () {
+          var dataToUse = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
+          var pieData;
+          if (ringType === "invisible") pieData = pie(dataToUse.invisible);else if (ringType === "positive") pieData = pie(dataToUse.positive);else if (ringType === "negative") pieData = pie(dataToUse.negative);else pieData = pie(dataToUse.neutral);
+          return pieData.find(function (p) {
+            return p.data.unitId === unitId;
+          });
+        }();
+        if (datumFactory) {
+          labelsGroup.append("text").datum(datumFactory).attr("class", "cell-label").style("opacity", 0).style("text-anchor", "middle").style("dominant-baseline", "central").style("font-family", styles.fonts.family).style("font-weight", styles.fonts.labels.weight).style("fill", function (d) {
+            // ✅ Semantic text color mapping - use USER colors directly (not position-based)
+            var textColorMap = {
+              invisible: 'black',
+              positive: userTextColors.positive,
+              negative: userTextColors.negative,
+              neutral: userTextColors.neutral
+            };
+            return textColorMap[ringType] || userTextColors.neutral;
+          });
+          labelsForUnit = labelsGroup.selectAll("text").filter(function (d) {
+            return d && d.data && d.data.unitId === unitId && (d.data.polarity === ringType || !d.data.polarity && ringType === "neutral");
+          });
+        }
+      }
+
+      // Apply semantic text color to existing labels as well
+      labelsForUnit.style("fill", function (d) {
+        // ✅ Semantic text color mapping - use USER colors directly (not position-based)
+        var textColorMap = {
+          invisible: 'black',
+          positive: userTextColors.positive,
+          negative: userTextColors.negative,
+          neutral: userTextColors.neutral
+        };
+        return textColorMap[ringType] || userTextColors.neutral;
+      });
     }
 
     // Change data moved to makeRings
@@ -7556,7 +7916,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       var dataToModify = isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0 ? stepMode.animationData : nestedData;
 
       // Reset all opacities to original values
-      ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
+      // ✅ Use semantic keys
+      ["invisible", "negative", "neutral", "positive"].forEach(function (ringType) {
         dataToModify[ringType].forEach(function (item) {
           var originalItem = originalNestedData[ringType].find(function (orig) {
             return orig.unitId === item.unitId;
@@ -7580,7 +7941,7 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
     // Function to zoom to entire slice (all three rings of a unitId)
     function _focusPair() {
       _focusPair = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(clickedUnitId) {
-        var dataToModify, isThesis, pairId, thesis, antithesis, isAlreadyFocused, sliceData, sliceAngle, visualAngle, rotateUnitId;
+        var dataToModify, isThesis, pairId, thesis, antithesis, isAlreadyFocused, sliceData, sliceAngle, visualAngle, rotateUnitId, groups, positiveMapping, negativeMapping, neutralMapping, positivePhysicalGroup, negativePhysicalGroup, neutralPhysicalGroup;
         return _regenerator().w(function (_context) {
           while (1) switch (_context.n) {
             case 0:
@@ -7605,7 +7966,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
               thesis = isThesis ? clickedUnitId : pairId;
               antithesis = isThesis ? pairId : clickedUnitId;
               isAlreadyFocused = focusedPair && focusedPair.thesis === thesis && focusedPair.antithesis === antithesis; // Check if clickedUnitId is within 90 degrees of 0 degrees (or 180 degrees)
-              sliceData = pie(dataToModify.middle).find(function (d) {
+              // ✅ Use semantic key (neutral for center ring)
+              sliceData = pie(dataToModify.neutral).find(function (d) {
                 return d.data.unitId === clickedUnitId;
               });
               sliceAngle = (sliceData.startAngle + sliceData.endAngle) / 2;
@@ -7649,7 +8011,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
               focusedPair = null;
               clickedSlice = null;
               // Reset all opacities to original values
-              ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
+              // ✅ Use semantic keys
+              ["invisible", "negative", "neutral", "positive"].forEach(function (ringType) {
                 dataToModify[ringType].forEach(function (item) {
                   var originalItem = originalNestedData[ringType].find(function (orig) {
                     return orig.unitId === item.unitId;
@@ -7671,7 +8034,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
               rotateToSlice(rotateUnitId, styles.durations.stepRotation);
 
               // Dim all cells first (but only if they were originally visible)
-              ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
+              // ✅ Use semantic keys
+              ["invisible", "negative", "neutral", "positive"].forEach(function (ringType) {
                 dataToModify[ringType].forEach(function (item) {
                   var originalItem = originalNestedData[ringType].find(function (orig) {
                     return orig.unitId === item.unitId;
@@ -7686,7 +8050,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
                 });
               });
               // Highlight the focused pair (restore original opacity)
-              ["invisible", "outer", "middle", "inner"].forEach(function (ringType) {
+              // ✅ Use semantic keys
+              ["invisible", "negative", "neutral", "positive"].forEach(function (ringType) {
                 dataToModify[ringType].forEach(function (item) {
                   if (item.unitId === thesis || item.unitId === antithesis) {
                     var originalItem = originalNestedData[ringType].find(function (orig) {
@@ -7702,10 +8067,25 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
             case 8:
               // Re-render with updated opacity
               if (isStepMode && stepMode.animationData && Object.keys(stepMode.animationData).length > 0) {
+                // ✅ Use helper to map semantic data to physical groups
+                groups = {
+                  invisibleGroup: invisibleGroup,
+                  innerGroup: innerGroup,
+                  middleGroup: middleGroup,
+                  outerGroup: outerGroup
+                };
                 rings.changeData("invisible", stepMode.animationData.invisible, invisibleArc);
-                rings.changeData("outer", stepMode.animationData.outer, outerArc);
-                rings.changeData("middle", stepMode.animationData.middle, middleArc);
-                rings.changeData("inner", stepMode.animationData.inner, innerArc);
+
+                // Map semantic data to physical groups using helper
+                positiveMapping = getPhysicalGroupsForSemantics("positive", groups);
+                negativeMapping = getPhysicalGroupsForSemantics("negative", groups);
+                neutralMapping = getPhysicalGroupsForSemantics("neutral", groups); // Determine which physical group each semantic type maps to
+                positivePhysicalGroup = positiveMapping.group === innerGroup ? "inner" : "unknown";
+                negativePhysicalGroup = negativeMapping.group === middleGroup ? "middle" : "outer";
+                neutralPhysicalGroup = neutralMapping.group === outerGroup ? "outer" : "middle";
+                rings.changeData(positivePhysicalGroup, stepMode.animationData.positive, innerArc);
+                rings.changeData(negativePhysicalGroup, stepMode.animationData.negative, negativePhysicalGroup === "middle" ? middleArc : outerArc);
+                rings.changeData(neutralPhysicalGroup, stepMode.animationData.neutral, neutralPhysicalGroup === "outer" ? outerArc : middleArc);
               } else {
                 updateAllRings();
               }
@@ -7936,10 +8316,11 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       },
       colorScales: {
         invisibleColor: invisibleColor,
-        outerColor: outerColor,
-        middleColor: middleColor,
-        innerColor: innerColor
+        negativeColor: negativeColor,
+        neutralColor: neutralColor,
+        positiveColor: positiveColor
       },
+      // ✅ Semantic colors
       styles: styles,
       pie: pie,
       radii: {
@@ -7960,7 +8341,10 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       getCellVisibility: function getCellVisibility(unitId, ringType) {
         return cellVisibility[unitId] && cellVisibility[unitId][ringType];
       },
-      bindCellEvents: bindCellEvents
+      bindCellEvents: bindCellEvents,
+      getIsWhiteOutside: function getIsWhiteOutside() {
+        return isWhiteOutside;
+      }
     });
     var updateAllRings = rings.updateAllRings;
 
@@ -7988,7 +8372,8 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
     innerLabelsGroup.raise();
     coordinateGroup.raise();
     function clearArrows() {
-      arrows.clearArrows();
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      arrows.clearArrows(options);
     }
     function drawArrow(from, to) {
       var color = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "#666";
@@ -8003,7 +8388,10 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
       return arrows.getCellCentroid(unitId, ringType);
     }
     function drawAllArrows() {
-      clearArrows();
+      // Preserve flow arrows when redrawing main arrows
+      clearArrows({
+        includeFlow: false
+      });
       var connections = parseArrowConnections(arrowConnections, dialecticalData);
 
       // Use arrowOptions if available, otherwise use defaults
@@ -8016,7 +8404,13 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
         padEnd: arrowOptions[5],
         maxPadPercent: arrowOptions[6],
         flip: arrowOptions[7],
-        straights: arrowOptions[8]
+        straights: arrowOptions[8],
+        onArrowClick: function onArrowClick(dotLine, connection) {
+          viewof_clickedArrowInfo.value = {
+            dotLine: dotLine,
+            connection: connection
+          };
+        }
       } : {
         bow: 0,
         stretch: 0.5,
@@ -8026,7 +8420,15 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
         padEnd: 20,
         maxPadPercent: 0.25,
         flip: false,
-        straights: true
+        straights: true,
+        onArrowClick: function onArrowClick(dotLine, connection) {
+          if (typeof viewof_clickedArrowInfo !== 'undefined') {
+            viewof_clickedArrowInfo.value = {
+              dotLine: dotLine,
+              connection: connection
+            };
+          }
+        }
       };
       arrows.drawLabelLinks(connections, options);
     }
@@ -8045,7 +8447,15 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
         padEnd: flowArrowOptions[5],
         maxPadPercent: flowArrowOptions[6],
         flip: flowArrowOptions[7],
-        straights: flowArrowOptions[8]
+        straights: flowArrowOptions[8],
+        onArrowClick: function onArrowClick(dotLine, connection) {
+          if (typeof viewof_clickedArrowInfo !== 'undefined') {
+            viewof_clickedArrowInfo.value = {
+              dotLine: dotLine,
+              connection: connection
+            };
+          }
+        }
       } : {
         klass: "flow-arrows",
         bow: 0.1,
@@ -8056,7 +8466,15 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
         padEnd: 30,
         maxPadPercent: 0.35,
         flip: false,
-        straights: true
+        straights: true,
+        onArrowClick: function onArrowClick(dotLine, connection) {
+          if (typeof viewof_clickedArrowInfo !== 'undefined') {
+            viewof_clickedArrowInfo.value = {
+              dotLine: dotLine,
+              connection: connection
+            };
+          }
+        }
       };
       arrows.drawLabelLinks(connections, options);
     }
@@ -8130,6 +8548,9 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
         },
         getIsStepMode: function getIsStepMode() {
           return isStepMode;
+        },
+        getIsWhiteOutside: function getIsWhiteOutside() {
+          return isWhiteOutside;
         },
         nestedData: nestedData,
         originalNestedData: originalNestedData,
@@ -8399,7 +8820,7 @@ function _chart(styles, radii, d3, selectedFont, dialecticalData, arcs, makeText
 }
 function _stepControls(html, viewof_chart) {
   return function () {
-    var container = html(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n          <div style=\"display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;\">\n            <button id=\"start\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Start Step Mode</button>\n            <button id=\"prev\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; display: none;\" disabled>Previous</button>\n            <span id=\"counter\" style=\"margin: 0 10px; font-weight: bold;\">Step 0 of 24</span>\n            <button id=\"next\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Next</button>\n            <button id=\"reset\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show All</button>\n          </div>\n          <div style=\"display: flex; align-items: center; gap: 10px;\">\n            <label for=\"rotation-slider\" style=\"font-weight: bold;\">Rotation:</label>\n            <input type=\"range\" id=\"rotation-slider\" min=\"0\" max=\"360\" value=\"0\" step=\"1\" \n                   style=\"width: 200px; cursor: pointer;\" />\n            <span id=\"rotation-value\" style=\"min-width: 40px; font-family: monospace;\">0\xB0</span>\n            <button id=\"rotation-reset\" style=\"padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 12px;\">Reset</button>\n          </div>\n        </div>"])));
+    var container = html(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n        <div style=\"display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; align-items: center;\">\n          <button id=\"start\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Start Step Mode</button>\n          <button id=\"prev\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; display: none;\" disabled>Previous</button>\n          <span id=\"counter\" style=\"margin: 0 10px; font-weight: bold;\">Step 0 of 24</span>\n          <button id=\"next\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\" disabled>Next</button>\n          <button id=\"reset\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer;\">Show All</button>\n        </div>\n        <div style=\"display: flex; align-items: center; gap: 10px;\">\n          <label for=\"rotation-slider\" style=\"font-weight: bold;\">Rotation:</label>\n          <input type=\"range\" id=\"rotation-slider\" min=\"0\" max=\"360\" value=\"0\" step=\"1\" \n                 style=\"width: 200px; cursor: pointer;\" />\n          <span id=\"rotation-value\" style=\"min-width: 40px; font-family: monospace;\">0\xB0</span>\n          <button id=\"rotation-reset\" style=\"padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: #f8f9fa; cursor: pointer; font-size: 12px;\">Reset</button>\n        </div>\n      </div>"])));
     var startBtn = container.querySelector('#start');
     // const prevBtn = container.querySelector('#prev'); // Hidden - commenting out
     var nextBtn = container.querySelector('#next');
@@ -8555,6 +8976,35 @@ function _flowArrowOptions(Inputs, htl) {
     }
   });
 }
+function _clickedArrowInfo(htl) {
+  var currentValue = {
+    dotLine: null,
+    connection: null
+  };
+  var container = htl.html(_templateObject6 || (_templateObject6 = _taggedTemplateLiteral(["<div style=\"\n          padding: 15px;\n          background: #f8f9fa;\n          border-radius: 8px;\n          border-left: 4px solid #4a90e2;\n          margin: 10px 0;\n          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\n        \">\n          <h4 style=\"margin: 0 0 10px 0; color: #2c3e50; font-size: 14px; font-weight: 600;\">\n            Clicked Arrow Info\n          </h4>\n          <div id=\"arrow-info\" style=\"font-size: 13px; color: #555;\">\n            <em style=\"color: #999;\">Click an arrow to see details...</em>\n          </div>\n        </div>"])));
+  var infoDiv = container.querySelector('#arrow-info');
+  Object.defineProperty(container, 'value', {
+    get: function get() {
+      return currentValue;
+    },
+    set: function set(val) {
+      currentValue = val;
+      var dotLine = val.dotLine,
+        connection = val.connection;
+      if (dotLine && connection) {
+        // Show all connection properties
+        var allProps = Object.keys(connection).map(function (key) {
+          return "<div style=\"color: #666; font-size: 11px;\"><strong>".concat(key, ":</strong> ").concat(JSON.stringify(connection[key]), "</div>");
+        }).join('');
+        infoDiv.innerHTML = "\n                <div style=\"background: white; padding: 12px; border-radius: 6px; margin-top: 8px;\">\n                  <div style=\"margin-bottom: 8px;\">\n                    <strong style=\"color: #4a90e2;\">DOT Line:</strong>\n                    <code style=\"\n                      background: #e8f4f8;\n                      padding: 4px 8px;\n                      border-radius: 4px;\n                      color: #2c3e50;\n                      font-family: 'Monaco', 'Courier New', monospace;\n                      font-size: 12px;\n                      display: inline-block;\n                      margin-left: 8px;\n                    \">".concat(dotLine, "</code>\n                  </div>\n                  <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;\">\n                    <div style=\"background: #fff3cd; padding: 8px; border-radius: 4px;\">\n                      <div style=\"font-weight: 600; color: #856404; margin-bottom: 4px;\">From</div>\n                      <div style=\"color: #856404;\">").concat(connection.from, "</div>\n                      <div style=\"color: #856404; font-size: 11px; margin-top: 2px;\">Ring: ").concat(connection.fromRing || 'middle', "</div>\n                    </div>\n                    <div style=\"background: #d4edda; padding: 8px; border-radius: 4px;\">\n                      <div style=\"font-weight: 600; color: #155724; margin-bottom: 4px;\">To</div>\n                      <div style=\"color: #155724;\">").concat(connection.to, "</div>\n                      <div style=\"color: #155724; font-size: 11px; margin-top: 2px;\">Ring: ").concat(connection.toRing || 'middle', "</div>\n                    </div>\n                  </div>\n                  <details style=\"margin-top: 12px;\">\n                    <summary style=\"cursor: pointer; color: #666; font-size: 12px; font-weight: 600;\">All Properties</summary>\n                    <div style=\"margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;\">\n                      ").concat(allProps, "\n                    </div>\n                  </details>\n                </div>\n              ");
+      } else {
+        infoDiv.innerHTML = '<em style="color: #999;">Click an arrow to see details...</em>';
+      }
+      container.dispatchEvent(new CustomEvent('input'));
+    }
+  });
+  return container;
+}
 function _4(chart) {
   return chart.focusedPair;
 }
@@ -8600,7 +9050,7 @@ function _topSlice(chart, dialecticalData) {
 }
 function _topSliceTracker(html, chart, dialecticalData) {
   return function () {
-    var container = html(_templateObject6 || (_templateObject6 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n          <div style=\"margin-bottom: 10px; font-weight: bold;\">Top Slice Tracker</div>\n  \n          <div id=\"top-slice-info\" style=\"border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9; min-width: 300px; max-width: 500px;\">\n            <div id=\"top-slice-status\" style=\"font-weight: bold; color: #666; margin-bottom: 10px;\">Calculating...</div>\n            <div id=\"top-slice-details\" style=\"font-size: 14px; line-height: 1.4; color: #333;\"></div>\n          </div>\n  \n          <div style=\"margin-top: 10px; font-size: 12px; color: #666;\">\n            Shows the slice currently at the top (0\xB0) position\n          </div>\n        </div>"])));
+    var container = html(_templateObject7 || (_templateObject7 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n        <div style=\"margin-bottom: 10px; font-weight: bold;\">Top Slice Tracker</div>\n\n        <div id=\"top-slice-info\" style=\"border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9; min-width: 300px; max-width: 500px;\">\n          <div id=\"top-slice-status\" style=\"font-weight: bold; color: #666; margin-bottom: 10px;\">Calculating...</div>\n          <div id=\"top-slice-details\" style=\"font-size: 14px; line-height: 1.4; color: #333;\"></div>\n        </div>\n\n        <div style=\"margin-top: 10px; font-size: 12px; color: #666;\">\n          Shows the slice currently at the top (0\xB0) position\n        </div>\n      </div>"])));
     var topSliceStatus = container.querySelector('#top-slice-status');
     var topSliceDetails = container.querySelector('#top-slice-details');
     function updateTopSliceDisplay() {
@@ -8630,7 +9080,7 @@ function _topSliceTracker(html, chart, dialecticalData) {
         // Get the data for this unit
         var unitData = dialecticalData[topUnitId];
         if (unitData) {
-          var details = "\n                <div style=\"margin-bottom: 10px;\">\n                  <div style=\"font-weight: bold; color: #333; margin-bottom: 5px;\">".concat(topUnitId, ":</div>\n                  <div style=\"margin-left: 10px; margin-bottom: 8px;\">\n                    <strong>Statement:</strong> ").concat(unitData.statement, "\n                  </div>\n                  <div style=\"margin-left: 10px; margin-bottom: 8px;\">\n                    <strong>Positive:</strong> ").concat(unitData.positive, "\n                  </div>\n                  <div style=\"margin-left: 10px;\">\n                    <strong>Negative:</strong> ").concat(unitData.negative, "\n                  </div>\n                </div>\n                <div style=\"font-size: 12px; color: #666; margin-top: 10px;\">\n                  Rotation: ").concat((currentRotation * 180 / Math.PI).toFixed(1), "\xB0\n                </div>\n              ");
+          var details = "\n              <div style=\"margin-bottom: 10px;\">\n                <div style=\"font-weight: bold; color: #333; margin-bottom: 5px;\">".concat(topUnitId, ":</div>\n                <div style=\"margin-left: 10px; margin-bottom: 8px;\">\n                  <strong>Statement:</strong> ").concat(unitData.statement, "\n                </div>\n                <div style=\"margin-left: 10px; margin-bottom: 8px;\">\n                  <strong>Positive:</strong> ").concat(unitData.positive, "\n                </div>\n                <div style=\"margin-left: 10px;\">\n                  <strong>Negative:</strong> ").concat(unitData.negative, "\n                </div>\n              </div>\n              <div style=\"font-size: 12px; color: #666; margin-top: 10px;\">\n                Rotation: ").concat((currentRotation * 180 / Math.PI).toFixed(1), "\xB0\n              </div>\n            ");
           topSliceDetails.innerHTML = details;
         } else {
           topSliceDetails.innerHTML = '<em>Data not available</em>';
@@ -8697,19 +9147,20 @@ function _parseArrowConnections() {
             to = _match2[2];
 
           // Extract unit ID and ring type
+          // ✅ SEMANTIC NAMES - Return polarity, not physical position
           var parseUnit = function parseUnit(unit) {
             if (unit.endsWith('+')) {
               var unitId = unit.slice(0, -1);
               return dialecticalData[unitId] ? {
                 unitId: unitId,
-                ringType: 'inner'
-              } : null;
+                ringType: 'positive'
+              } : null; // ✅ Green/positive
             } else if (unit.endsWith('-')) {
               var _unitId = unit.slice(0, -1);
               return dialecticalData[_unitId] ? {
                 unitId: _unitId,
-                ringType: 'outer'
-              } : null;
+                ringType: 'negative'
+              } : null; // ✅ Red/negative
             } else if (unit.endsWith('i')) {
               var _unitId2 = unit.slice(0, -1);
               return dialecticalData[_unitId2] ? {
@@ -8719,8 +9170,8 @@ function _parseArrowConnections() {
             } else {
               return dialecticalData[unit] ? {
                 unitId: unit,
-                ringType: 'middle'
-              } : null;
+                ringType: 'neutral'
+              } : null; // ✅ White/neutral
             }
           };
           var fromParsed = parseUnit(from);
@@ -8745,7 +9196,7 @@ function _parseArrowConnections() {
 }
 function _dotScriptEditor(html, dialecticalData, arrowConnections, viewof_chart, parseArrowConnections) {
   return function () {
-    var container = html(_templateObject7 || (_templateObject7 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n          <div style=\"margin-bottom: 10px; font-weight: bold;\">DOT Script Editor</div>\n  \n          <!-- DOT Script Editor -->\n          <div style=\"margin-bottom: 10px;\">\n            <label for=\"connections-editor\" style=\"font-weight: bold;\">Edit Connections (DOT syntax):</label>\n          </div>\n          <textarea id=\"connections-editor\" style=\"width: 400px; height: 150px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 8px;\"></textarea>\n          <div style=\"margin-top: 10px;\">\n            <button id=\"update-connections\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #007bff; color: white; cursor: pointer;\">Update Arrows</button>\n          </div>\n          <div style=\"margin-top: 15px; font-size: 12px; color: #666; max-width: 400px;\">\n            <strong>Syntax:</strong> Use \"A -> B\" format. Available units: ", "<br/>\n            <strong>Ring-specific:</strong> Add + for positives (e.g., T1+) or - for negatives (e.g., T1-)<br/>\n            <strong>Colors:</strong> \uD83D\uDD34Red for oppositions, \uD83D\uDD35Blue for same type, \uD83D\uDFE2Green for same polarity, \uD83D\uDFE3Purple for mixed\n          </div>\n        </div>"])), Object.keys(dialecticalData).join(', '));
+    var container = html(_templateObject8 || (_templateObject8 = _taggedTemplateLiteral(["<div style=\"display: flex; flex-direction: column; align-items: center; margin: 20px 0;\">\n        <div style=\"margin-bottom: 10px; font-weight: bold;\">DOT Script Editor</div>\n\n        <!-- DOT Script Editor -->\n        <div style=\"margin-bottom: 10px;\">\n          <label for=\"connections-editor\" style=\"font-weight: bold;\">Edit Connections (DOT syntax):</label>\n        </div>\n        <textarea id=\"connections-editor\" style=\"width: 400px; height: 150px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 8px;\"></textarea>\n        <div style=\"margin-top: 10px;\">\n          <button id=\"update-connections\" style=\"padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: #007bff; color: white; cursor: pointer;\">Update Arrows</button>\n        </div>\n        <div style=\"margin-top: 15px; font-size: 12px; color: #666; max-width: 400px;\">\n          <strong>Syntax:</strong> Use \"A -> B\" format. Available units: ", "<br/>\n          <strong>Ring-specific:</strong> Add + for positives (e.g., T1+) or - for negatives (e.g., T1-)<br/>\n          <strong>Colors:</strong> \uD83D\uDD34Red for oppositions, \uD83D\uDD35Blue for same type, \uD83D\uDFE2Green for same polarity, \uD83D\uDFE3Purple for mixed\n        </div>\n      </div>"])), Object.keys(dialecticalData).join(', '));
     var editor = container.querySelector('#connections-editor');
     var updateBtn = container.querySelector('#update-connections');
 
@@ -8935,16 +9386,13 @@ function _parseArrowConnectionsAsSourceTarget() {
 function _6() {
   return null;
 }
-function _transformToNestedPieData(isWhiteOutside, whitesOnly) {
+function _transformToNestedPieData(whitesOnly) {
   return function (dialecticalData) {
-    var whiteOutside = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : isWhiteOutside;
-    var whiteOnly = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : whitesOnly;
+    var whiteOnly = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : whitesOnly;
     var units = Object.keys(dialecticalData);
-    var _ref5 = whiteOutside ? ['middle', 'outer'] : ['outer', 'middle'],
-      _ref6 = _slicedToArray(_ref5, 2),
-      outerKey = _ref6[0],
-      middleKey = _ref6[1];
-    return _defineProperty(_defineProperty(_defineProperty({
+    // ✅ SEMANTIC KEYS - No more position-based hack!
+
+    return {
       invisible: units.map(function (unit, index) {
         return {
           name: "".concat(unit, "i"),
@@ -8952,44 +9400,51 @@ function _transformToNestedPieData(isWhiteOutside, whitesOnly) {
           value: 1,
           opacity: 1,
           fullText: "".concat(unit),
+          polarity: 'invisible',
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        };
+      }),
+      negative: units.map(function (unit) {
+        return {
+          name: "".concat(unit, "-"),
+          unitId: unit,
+          value: whiteOnly ? 0 : 1,
+          opacity: whiteOnly ? 0 : 1,
+          fullText: dialecticalData[unit].negative,
+          polarity: 'negative',
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        };
+      }),
+      neutral: units.map(function (unit) {
+        return {
+          name: unit,
+          unitId: unit,
+          value: 1,
+          opacity: 1,
+          fullText: dialecticalData[unit].statement,
+          polarity: 'neutral',
+          pairWith: dialecticalData[unit].pairWith,
+          pairId: dialecticalData[unit].pairId
+        };
+      }),
+      positive: units.map(function (unit) {
+        return {
+          name: "".concat(unit, "+"),
+          unitId: unit,
+          value: whiteOnly ? 0 : 1,
+          opacity: whiteOnly ? 0 : 1,
+          fullText: dialecticalData[unit].positive,
+          polarity: 'positive',
           pairWith: dialecticalData[unit].pairWith,
           pairId: dialecticalData[unit].pairId
         };
       })
-    }, outerKey, units.map(function (unit) {
-      return {
-        name: "".concat(unit, "-"),
-        unitId: unit,
-        value: whiteOnly ? 0 : 1,
-        opacity: whiteOnly ? 0 : 1,
-        fullText: dialecticalData[unit].negative,
-        pairWith: dialecticalData[unit].pairWith,
-        pairId: dialecticalData[unit].pairId
-      };
-    })), middleKey, units.map(function (unit) {
-      return {
-        name: unit,
-        unitId: unit,
-        value: 1,
-        opacity: 1,
-        fullText: dialecticalData[unit].statement,
-        pairWith: dialecticalData[unit].pairWith,
-        pairId: dialecticalData[unit].pairId
-      };
-    })), "inner", units.map(function (unit) {
-      return {
-        name: "".concat(unit, "+"),
-        unitId: unit,
-        value: whiteOnly ? 0 : 1,
-        opacity: whiteOnly ? 0 : 1,
-        fullText: dialecticalData[unit].positive,
-        pairWith: dialecticalData[unit].pairWith,
-        pairId: dialecticalData[unit].pairId
-      };
-    }));
+    };
   };
 }
-function _wrapText(styles, tryWrapWithLineBreaks, truncateWithEllipses) {
+function _wrapText(getRingOrder, styles, tryWrapWithLineBreaks, truncateWithEllipses) {
   return function (textElement, text, constraints) {
     constraints.midWidth;
       var maxHeight = constraints.maxHeight,
@@ -8997,14 +9452,22 @@ function _wrapText(styles, tryWrapWithLineBreaks, truncateWithEllipses) {
       arcData = constraints.arcData;
     // New: also get angle, innerRadius, outerRadius
     var angle = arcData.endAngle - arcData.startAngle;
+
+    // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii via centralized order
+    var order = getRingOrder();
+    var physicalPosition = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
     var innerRadius, outerRadius;
-    if (ringType === "outer") {
+    if (physicalPosition === "outer") {
       innerRadius = styles.radii.middleOuter;
       outerRadius = styles.radii.outer;
-    } else if (ringType === "middle") {
+    } else if (physicalPosition === "middle") {
       innerRadius = styles.radii.middleInner;
       outerRadius = styles.radii.middleOuter;
+    } else if (physicalPosition === "invisible") {
+      innerRadius = styles.radii.outer;
+      outerRadius = styles.radii.invisible;
     } else {
+      // inner
       innerRadius = styles.radii.hub;
       outerRadius = styles.radii.middleInner;
     }
@@ -9057,11 +9520,6 @@ function _tryWrapWithLineBreaks() {
     // Calculate margin proportional to inner/outer radius
     var margin = 0.8;
 
-    // Convert text to word queue
-    var wordQueue = text.split(/([ -])/);
-    var lines = [];
-    var lineIdx = 0;
-
     // Helper function to get chord length for a given line index
     var getChordLength = function getChordLength(lineIndex) {
       var radius = outerRadius - (lineIndex + 0.5) * lineHeight;
@@ -9070,48 +9528,115 @@ function _tryWrapWithLineBreaks() {
       return 2 * radius * Math.sin(Math.min(bestAngle, angle / 2)) * margin;
     };
 
-    // Helper function to measure a line
-    var measureLine = function measureLine(words) {
-      tempTspan.text(words.join(""));
+    // Helper function to measure text
+    var measureText = function measureText(txt) {
+      tempTspan.text(txt);
       return tempTspan.node().getComputedTextLength();
     };
+
+    // Simple hyphenation - only break long words that don't fit
+    var hyphenate = function hyphenate(word) {
+      if (word.length < 6) return null; // Don't hyphenate short words
+
+      var syllables = [];
+      var current = '';
+      var vowels = 'aeiouyAEIOUY';
+      var lastWasVowel = false;
+      for (var _i2 = 0; _i2 < word.length; _i2++) {
+        var _char = word[_i2];
+        var isVowel = vowels.includes(_char);
+        current += _char;
+
+        // Break after vowel-consonant transitions
+        if (_i2 > 1 && _i2 < word.length - 2 && lastWasVowel && !isVowel) {
+          syllables.push(current);
+          current = '';
+        }
+        lastWasVowel = isVowel;
+      }
+      if (current) syllables.push(current);
+      return syllables.length > 1 ? syllables : null;
+    };
+
+    // ======= GREEDY LINE BREAKING WITH FALLBACK HYPHENATION =======
+
+    var words = text.split(/\s+/);
+    var lines = [];
+    var lineIdx = 0;
     var i = 0;
-    while (i < wordQueue.length && lines.length < maxLines) {
-      var lo = 1;
-      var hi = wordQueue.length - i;
-      var bestFit = 0;
-      // Binary search for the max number of words that fit on this line
-      while (lo <= hi) {
-        var mid = Math.floor((lo + hi) / 2);
-        var candidate = wordQueue.slice(i, i + mid);
-        var width = measureLine(candidate);
-        if (width <= getChordLength(lineIdx)) {
-          bestFit = mid;
-          lo = mid + 1;
+    while (i < words.length && lines.length < maxLines) {
+      var maxWidth = getChordLength(lineIdx);
+      var currentLine = [];
+      var currentWidth = 0;
+
+      // Greedily pack words on this line
+      while (i < words.length) {
+        var word = words[i];
+        var spaceWidth = currentLine.length > 0 ? measureText(' ') : 0;
+        var wordWidth = measureText(word);
+        var testWidth = currentWidth + spaceWidth + wordWidth;
+        if (testWidth <= maxWidth) {
+          // Word fits, add it
+          if (currentLine.length > 0) currentWidth += spaceWidth;
+          currentLine.push(word);
+          currentWidth += wordWidth;
+          i++;
+        } else if (currentLine.length === 0) {
+          // First word on line doesn't fit - try hyphenating it
+          var syllables = hyphenate(word);
+          if (!syllables) {
+            // Can't hyphenate or word is too short, fail
+            tempTspan.remove();
+            return {
+              success: false
+            };
+          }
+
+          // Find how many syllables fit with hyphen
+          var hyphenWidth = measureText('-');
+          var accumulated = '';
+          var fitted = 0;
+          for (var si = 0; si < syllables.length - 1; si++) {
+            var testPart = accumulated + syllables[si];
+            var _testWidth = measureText(testPart) + hyphenWidth;
+            if (_testWidth <= maxWidth) {
+              accumulated = testPart;
+              fitted = si + 1;
+            } else {
+              break;
+            }
+          }
+          if (fitted === 0) {
+            // Even one syllable doesn't fit
+            tempTspan.remove();
+            return {
+              success: false
+            };
+          }
+
+          // Use the fitted syllables with hyphen
+          currentLine.push(accumulated + '-');
+          currentWidth = measureText(accumulated) + hyphenWidth;
+
+          // Put remaining syllables back for next line
+          var remaining = syllables.slice(fitted).join('');
+          words[i] = remaining;
+          break; // Line is done
         } else {
-          hi = mid - 1;
+          // We have words on the line, move to next line
+          break;
         }
       }
-      if (bestFit === 0) {
-        // Single word doesn't fit on the line
-        tempTspan.remove();
-        return {
-          success: false
-        };
+      if (currentLine.length > 0) {
+        lines.push(currentLine.join(' '));
+        lineIdx++;
+      } else {
+        break;
       }
-      lines.push(wordQueue.slice(i, i + bestFit).join(""));
-      i += bestFit;
-      lineIdx++;
     }
 
-    // Add the last line if there are remaining words (shouldn't happen with this logic, but for safety)
-    if (i < wordQueue.length && lines.length < maxLines) {
-      lines.push(wordQueue.slice(i).join(""));
-      i = wordQueue.length;
-    }
-
-    // If we still have words left, fail
-    if (i < wordQueue.length) {
+    // Check if all words were placed
+    if (i < words.length) {
       tempTspan.remove();
       return {
         success: false
@@ -9121,13 +9646,11 @@ function _tryWrapWithLineBreaks() {
 
     // Calculate total text height for centering
     var totalHeight = lines.length * lineHeight;
-    var offsetY = -(totalHeight - lineHeight) / 2; // Center the text block
+    var offsetY = -(totalHeight - lineHeight) / 2;
 
-    // Create the actual tspans with proper centering and per-line width
+    // Create the actual tspans
     lines.forEach(function (line, index) {
-      getChordLength(index);
       textElement.append("tspan").attr("x", 0).attr("dy", index === 0 ? offsetY : lineHeight).text(line);
-      // Optionally, set a data attribute for debugging: tspan.attr("data-chordwidth", chordLen);
     });
     return {
       success: true,
@@ -9165,8 +9688,8 @@ function _truncateWithEllipses() {
     var lines = [];
     var currentLine = [];
     var tempTspan = textElement.append("tspan").attr("x", 0).attr("dy", 0);
-    for (var _i2 = 0; _i2 < words.length; _i2++) {
-      var word = words[_i2];
+    for (var _i3 = 0; _i3 < words.length; _i3++) {
+      var word = words[_i3];
       var testLine = [].concat(_toConsumableArray(currentLine), [word]);
       var isLastPossibleLine = lines.length === maxLines - 1;
       var _testText = isLastPossibleLine ? testLine.join(" ") + "..." : testLine.join(" ");
@@ -9223,19 +9746,23 @@ function _truncateWithEllipses() {
     };
   };
 }
-function _getTextConstraints(styles) {
+function _getTextConstraints(getRingOrder, styles) {
   return function (ringType, arcData) {
     var angle = arcData.endAngle - arcData.startAngle;
 
-    // Calculate actual ring dimensions
+    // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii via centralized order
+    var order = getRingOrder();
+    var physicalPosition = ringType === "positive" ? "inner" : ringType === "invisible" ? "invisible" : order.bySemantic[ringType];
+
+    // Calculate actual ring dimensions based on physical position
     var innerRadius, outerRadius;
-    if (ringType === "invisible") {
+    if (physicalPosition === "invisible") {
       innerRadius = styles.radii.outer;
       outerRadius = styles.radii.invisible;
-    } else if (ringType === "outer") {
+    } else if (physicalPosition === "outer") {
       innerRadius = styles.radii.middleOuter; // innerRadius
       outerRadius = styles.radii.outer; // outerRadius
-    } else if (ringType === "middle") {
+    } else if (physicalPosition === "middle") {
       innerRadius = styles.radii.middleInner; // innerInnerRadius  
       outerRadius = styles.radii.middleOuter; // middleRadius
     } else {
@@ -9487,10 +10014,10 @@ function _initializeBuildSteps(getOppositePrefix, isThesisType) {
         processedUnits.add(oppositeUnitId);
       }
     });
-    buildSequence.forEach(function (_ref8) {
-      var _ref9 = _slicedToArray(_ref8, 2),
-        thesis = _ref9[0],
-        antithesis = _ref9[1];
+    buildSequence.forEach(function (_ref5) {
+      var _ref6 = _slicedToArray(_ref5, 2),
+        thesis = _ref6[0],
+        antithesis = _ref6[1];
       // Show thesis (T)
       buildSteps.push({
         type: 'showWhite',
@@ -9660,7 +10187,7 @@ function _parseFont(selectedFont) {
   return selectedFont.split(" ").join("+");
 }
 function _style(html, parseFont, selectedFont) {
-  return html(_templateObject8 || (_templateObject8 = _taggedTemplateLiteral(["\n      <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=", ":ital@0;1&display=swap\">\n  \n      <style>\n        body, svg {\n              font-family: ", ", sans-serif;\n              /* font-size: 48px; */\n       }\n      </style>\n      "])), parseFont, selectedFont);
+  return html(_templateObject9 || (_templateObject9 = _taggedTemplateLiteral(["\n    <link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=", ":ital@0;1&display=swap\">\n\n    <style>\n      body, svg {\n            font-family: ", ", sans-serif;\n            /* font-size: 48px; */\n     }\n    </style>\n    "])), parseFont, selectedFont);
 }
 function _fontCDN(parseFont) {
   return "https://fonts.googleapis.com/css2?family=".concat(parseFont, ":ital@0;1&display=swap");
@@ -9735,19 +10262,7 @@ function _rotationAngle(Inputs) {
     label: "Rotation"
   });
 }
-function _8(viewof_chart, arrowOptions) {
-  if (typeof viewof_chart !== 'undefined' && viewof_chart.drawAllArrows) {
-    viewof_chart.drawAllArrows();
-  }
-  return arrowOptions;
-}
-function _9(viewof_chart, flowArrowOptions) {
-  if (typeof viewof_chart !== 'undefined' && viewof_chart.redrawFlowArrows) {
-    viewof_chart.redrawFlowArrows();
-  }
-  return flowArrowOptions;
-}
-function _10(rotationAngle) {
+function _8(rotationAngle) {
   // effect: apply rotation without restarting simulation
   var apply = function apply() {
     var root = document.querySelector('svg .graph-rotate');
@@ -9882,8 +10397,8 @@ function _graph(componentOrder, styles, flowSuits, contraSuits, d3, location, dr
     // If still no wrapping happened, force it by character count
     if (lines.length === 1 && bodyText.length > maxCharsPerLine) {
       lines.length = 0;
-      for (var _i3 = 0; _i3 < bodyText.length; _i3 += maxCharsPerLine) {
-        lines.push(bodyText.slice(_i3, _i3 + maxCharsPerLine));
+      for (var _i4 = 0; _i4 < bodyText.length; _i4 += maxCharsPerLine) {
+        lines.push(bodyText.slice(_i4, _i4 + maxCharsPerLine));
       }
     }
     var totalLines = Math.max(1, lines.length);
@@ -9900,8 +10415,8 @@ function _graph(componentOrder, styles, flowSuits, contraSuits, d3, location, dr
       if (lines.length > 0) {
         textElement.append("tspan").attr("text-anchor", "middle").text(lines[0]);
       }
-      for (var _i4 = 1; _i4 < lines.length; _i4++) {
-        textElement.append("tspan").attr("x", 0).attr("dy", "".concat(lineHeight, "em")).attr("text-anchor", "middle").text(lines[_i4]);
+      for (var _i5 = 1; _i5 < lines.length; _i5++) {
+        textElement.append("tspan").attr("x", 0).attr("dy", "".concat(lineHeight, "em")).attr("text-anchor", "middle").text(lines[_i5]);
       }
     } else {
       // No prefix; regular multi-line tspans
@@ -10115,7 +10630,7 @@ function _wisdomUnits() {
     },
     "t_plus": {
       "alias": "A4+",
-      "statement": "Understandi",
+      "statement": "Understanding",
       "explanation": "Identified as positive aspect of A."
     },
     "a_plus": {
@@ -10253,7 +10768,7 @@ function _transformWisdomUnitsToDialecticalData(extractStatement) {
   };
 }
 function _mermaid_graph(mermaid) {
-  return mermaid(_templateObject9 || (_templateObject9 = _taggedTemplateLiteral(["graph TD\n        W[\"wisdomUnits\"] --> T[\"transformWisdomUnitsToDialecticalData\"]\n        C[\"componentOrder\"] --> T\n        T --> D[\"dialecticalData (Object)\"]\n        D --> FC[\"flowConnections\"]\n        D --> CC[\"contraConnections\"]\n        FC --> P[\"parseArrowConnectionsAsSourceTarget\"]\n        CC --> P\n        D --> P\n        P --> FS[\"flowSuits\"]\n        P --> CS[\"contraSuits\"]\n        FS --> G[\"graph\"]\n        CS --> G\n        FZ[\"fontsize\" ] --> G\n        SF[\"selectedFont\" ] --> G\n        STY[\"styles\" ] --> G\n        D3[\"d3/drag\" ] --> G\n  \n        classDef note fill:#fff,stroke:#999,color:#333;\n        N1[\"nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order\"]:::note\n        FS --> N1\n        CS --> N1"], ["graph TD\n        W[\"wisdomUnits\"] --> T[\"transformWisdomUnitsToDialecticalData\"]\n        C[\"componentOrder\"] --> T\n        T --> D[\"dialecticalData (Object)\"]\n        D --> FC[\"flowConnections\"]\n        D --> CC[\"contraConnections\"]\n        FC --> P[\"parseArrowConnectionsAsSourceTarget\"]\n        CC --> P\n        D --> P\n        P --> FS[\"flowSuits\"]\n        P --> CS[\"contraSuits\"]\n        FS --> G[\"graph\"]\n        CS --> G\n        FZ[\"fontsize\" ] --> G\n        SF[\"selectedFont\" ] --> G\n        STY[\"styles\" ] --> G\n        D3[\"d3/drag\" ] --> G\n  \n        classDef note fill:#fff,stroke:#999,color:#333;\n        N1[\"nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\\n=> comes from links order, not D's key order\"]:::note\n        FS --> N1\n        CS --> N1"])));
+  return mermaid(_templateObject0 || (_templateObject0 = _taggedTemplateLiteral(["graph TD\n      W[\"wisdomUnits\"] --> T[\"transformWisdomUnitsToDialecticalData\"]\n      C[\"componentOrder\"] --> T\n      T --> D[\"dialecticalData (Object)\"]\n      D --> FC[\"flowConnections\"]\n      D --> CC[\"contraConnections\"]\n      FC --> P[\"parseArrowConnectionsAsSourceTarget\"]\n      CC --> P\n      D --> P\n      P --> FS[\"flowSuits\"]\n      P --> CS[\"contraSuits\"]\n      FS --> G[\"graph\"]\n      CS --> G\n      FZ[\"fontsize\" ] --> G\n      SF[\"selectedFont\" ] --> G\n      STY[\"styles\" ] --> G\n      D3[\"d3/drag\" ] --> G\n\n      classDef note fill:#fff,stroke:#999,color:#333;\n      N1[\"nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\n=> comes from links order, not D's key order\"]:::note\n      FS --> N1\n      CS --> N1"], ["graph TD\n      W[\"wisdomUnits\"] --> T[\"transformWisdomUnitsToDialecticalData\"]\n      C[\"componentOrder\"] --> T\n      T --> D[\"dialecticalData (Object)\"]\n      D --> FC[\"flowConnections\"]\n      D --> CC[\"contraConnections\"]\n      FC --> P[\"parseArrowConnectionsAsSourceTarget\"]\n      CC --> P\n      D --> P\n      P --> FS[\"flowSuits\"]\n      P --> CS[\"contraSuits\"]\n      FS --> G[\"graph\"]\n      CS --> G\n      FZ[\"fontsize\" ] --> G\n      SF[\"selectedFont\" ] --> G\n      STY[\"styles\" ] --> G\n      D3[\"d3/drag\" ] --> G\n\n      classDef note fill:#fff,stroke:#999,color:#333;\n      N1[\"nodes = Array.from(new Set(links.flatMap(s,t=>[s,t])))\\n=> comes from links order, not D's key order\"]:::note\n      FS --> N1\n      CS --> N1"])));
 }
 function _mermaid_graph_from_suits(mermaid) {
   return function (suits) {
@@ -10284,7 +10799,7 @@ function _mermaid_graph_from_suits(mermaid) {
       parts.push("linkStyle ".concat(i, " stroke:").concat(color, ",stroke-width:2px,opacity:0.85"));
     });
     var def = parts.join("\n");
-    return mermaid(_templateObject0 || (_templateObject0 = _taggedTemplateLiteral(["", ""])), def);
+    return mermaid(_templateObject1 || (_templateObject1 = _taggedTemplateLiteral(["", ""])), def);
   };
 }
 function define(runtime, observer) {
@@ -10294,7 +10809,9 @@ function define(runtime, observer) {
     return fileAttachments.get(name);
   }));
   main.variable(observer()).define(["md"], _1);
-  main.variable(observer("makeRings")).define("makeRings", ["arcTween", "d3"], _makeRings);
+  main.variable(observer("getRingOrder")).define("getRingOrder", ["isWhiteOutside"], _getRingOrder);
+  main.variable(observer("getRadiiForSemantic")).define("getRadiiForSemantic", ["getRingOrder"], _getRadiiForSemantic);
+  main.variable(observer("makeRings")).define("makeRings", ["arcTween", "getRingOrder", "userTextColors", "d3", "getRadiiForSemantic"], _makeRings);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder", "TsOnly", "AsOnly"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", ["userHubColor", "ringColors", "textColors"], _styles);
@@ -10316,8 +10833,8 @@ function define(runtime, observer) {
   main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
   main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
   main.variable(observer("userHubColor")).define("userHubColor", _userHubColor);
-  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
-  main.variable(observer("textColors")).define("textColors", ["isWhiteOutside", "userTextColors"], _textColors);
+  main.variable(observer("ringColors")).define("ringColors", ["getRingOrder", "userRingColors"], _ringColors);
+  main.variable(observer("textColors")).define("textColors", ["userTextColors"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], function (G, _) {
     return G.input(_);
@@ -10331,16 +10848,18 @@ function define(runtime, observer) {
     return G.input(_);
   });
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
-  main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["d3", "location"], _makeArrowsModule);
+  main.variable(observer("getRingRadii")).define("getRingRadii", _getRingRadii);
+  main.variable(observer("getPhysicalGroupsForSemantics")).define("getPhysicalGroupsForSemantics", ["getRingOrder"], _getPhysicalGroupsForSemantics);
+  main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["getRadiiForSemantic", "d3", "getRingOrder", "location"], _makeArrowsModule);
   main.variable(observer("radii")).define("radii", ["styles"], _radii);
   main.variable(observer("pie")).define("pie", ["d3"], _pie);
   main.variable(observer("arcs")).define("arcs", ["d3", "radii", "styles"], _arcs);
-  main.variable(observer("colorScales")).define("colorScales", ["d3", "dialecticalData", "styles"], _colorScales);
+  main.variable(observer("colorScales")).define("colorScales", ["d3", "dialecticalData", "userRingColors"], _colorScales);
   main.variable(observer("arcTween")).define("arcTween", ["d3"], _arcTween);
   main.variable(observer("makeTextTransform")).define("makeTextTransform", _makeTextTransform);
-  main.variable(observer("makeAxisModule")).define("makeAxisModule", ["d3"], _makeAxisModule);
-  main.variable(observer("makeStepMode")).define("makeStepMode", ["d3"], _makeStepMode);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "makeAxisModule", "getOppositePrefix", "colorScales", "getTextConstraints", "wrapText", "isThesisType", "arcTween", "makeRings", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "arrowOptions", "flowConnections", "flowArrowOptions", "makeStepMode", "initializeBuildSteps"], _chart);
+  main.variable(observer("makeAxisModule")).define("makeAxisModule", ["getRingOrder", "d3"], _makeAxisModule);
+  main.variable(observer("makeStepMode")).define("makeStepMode", _makeStepMode);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "getRingOrder", "makeAxisModule", "getOppositePrefix", "colorScales", "getPhysicalGroupsForSemantics", "getRadiiForSemantic", "getTextConstraints", "wrapText", "userTextColors", "isThesisType", "arcTween", "makeRings", "isWhiteOutside", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "arrowOptions", "viewof clickedArrowInfo", "flowConnections", "flowArrowOptions", "makeStepMode", "initializeBuildSteps"], _chart);
   main.define("chart", ["Generators", "viewof chart"], function (G, _) {
     return G.input(_);
   });
@@ -10352,6 +10871,10 @@ function define(runtime, observer) {
   });
   main.variable(observer("viewof flowArrowOptions")).define("viewof flowArrowOptions", ["Inputs", "htl"], _flowArrowOptions);
   main.define("flowArrowOptions", ["Generators", "viewof flowArrowOptions"], function (G, _) {
+    return G.input(_);
+  });
+  main.variable(observer("viewof clickedArrowInfo")).define("viewof clickedArrowInfo", ["htl"], _clickedArrowInfo);
+  main.define("clickedArrowInfo", ["Generators", "viewof clickedArrowInfo"], function (G, _) {
     return G.input(_);
   });
   main.variable(observer()).define(["chart"], _4);
@@ -10371,11 +10894,11 @@ function define(runtime, observer) {
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
   main.variable(observer()).define(_6);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly"], _transformToNestedPieData);
-  main.variable(observer("wrapText")).define("wrapText", ["styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["whitesOnly"], _transformToNestedPieData);
+  main.variable(observer("wrapText")).define("wrapText", ["getRingOrder", "styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
-  main.variable(observer("getTextConstraints")).define("getTextConstraints", ["styles"], _getTextConstraints);
+  main.variable(observer("getTextConstraints")).define("getTextConstraints", ["getRingOrder", "styles"], _getTextConstraints);
   main.variable(observer("arrowUtilities")).define("arrowUtilities", ["isThesisType"], _arrowUtilities);
   main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
   main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", ["getOppositePrefix", "isThesisType"], _initializeBuildSteps);
@@ -10398,14 +10921,14 @@ function define(runtime, observer) {
   main.define("rotationAngle", ["Generators", "viewof rotationAngle"], function (G, _) {
     return G.input(_);
   });
-  main.variable(observer()).define(["viewof_chart", "arrowOptions"], _8);
-  main.variable(observer()).define(["viewof_chart", "flowArrowOptions"], _9);
-  main.variable(observer()).define(["rotationAngle"], _10);
+  main.variable(observer()).define(["rotationAngle"], _8);
   main.variable(observer("graph")).define("graph", ["componentOrder", "styles", "flowSuits", "contraSuits", "d3", "location", "drag", "fontsize", "selectedFont", "invalidation"], _graph);
   main.variable(observer("drag")).define("drag", ["d3"], _drag);
   main.variable(observer("flowSuits")).define("flowSuits", ["parseArrowConnectionsAsSourceTarget", "flowConnections", "dialecticalData"], _flowSuits);
   main.variable(observer("contraSuits")).define("contraSuits", ["parseArrowConnectionsAsSourceTarget", "contraConnections", "dialecticalData"], _contraSuits);
   main.variable(observer("suits")).define("suits", ["flowSuits", "contraSuits"], _suits);
+  var child1 = runtime.module(define1);
+  main["import"]("Swatches", child1);
   main.variable(observer("getOppositePrefix")).define("getOppositePrefix", ["dialecticalData"], _getOppositePrefix);
   main.variable(observer("getUnitType")).define("getUnitType", _getUnitType);
   main.variable(observer("isThesisType")).define("isThesisType", _isThesisType);
@@ -10429,14 +10952,19 @@ var DEFAULT_PREFERENCES = {
 };
 var DEFAULT_COLORS = {
   userRingColors: {
-    outer: "#F9C6CC",
-    middle: "#ffffff",
-    inner: "#C6E5B3"
+    negative: "#F9C6CC",
+    // Red ring (semantic)
+    neutral: "#ffffff",
+    // White ring (semantic)
+    positive: "#C6E5B3" // Green ring (semantic)
   },
   userTextColors: {
-    outer: "#8b1538",
-    middle: "#333",
-    inner: "#2d5a2d",
+    negative: "#8b1538",
+    // Red ring text (semantic)
+    neutral: "#333",
+    // White ring text (semantic)
+    positive: "#2d5a2d",
+    // Green ring text (semantic)
     coordinates: "#333"
   },
   userHubColor: "#ffff7a"
@@ -10564,7 +11092,7 @@ function DialecticalWheel(_ref) {
           value: preferences.AsOnly
         }));
         module.redefine('viewof isWhiteOutside', toggle({
-          label: 'Swap red and white layer',
+          label: 'Neutral outside',
           value: preferences.isWhiteOutside
         }));
         //module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
