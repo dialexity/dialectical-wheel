@@ -45,14 +45,14 @@ export interface Preferences {
 }
 export interface Colors {
     userRingColors: {
-        outer: string;
-        middle: string;
-        inner: string;
+        negative: string;
+        neutral: string;
+        positive: string;
     };
     userTextColors: {
-        outer: string;
-        middle: string;
-        inner: string;
+        negative: string;
+        neutral: string;
+        positive: string;
         coordinates: string;
     };
     userHubColor: string;

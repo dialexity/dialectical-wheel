@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
-// Test the built package from dist
-import DialecticalWheel from '../../dist/index.esm.js';
-// Import the CSS from the built package
-import '../../dist/index.esm.css';
+// Import directly from source for testing
+import DialecticalWheel from '../components/DialecticalWheel';
+// Import the CSS from source
+import '../components/DialecticalWheel/DialecticalWheel.css';
 
 // Sample wisdom units data from the HTML file
 const sampleWisdomUnits = [
@@ -182,14 +182,14 @@ export const Default: Story = {
     },
     colors: {
       userRingColors: {
-        outer: "#F9C6CC",
-        middle: "#ffffff",
-        inner: "#C6E5B3"
+        negative: "#F9C6CC",
+        neutral: "#ffffff",
+        positive: "#C6E5B3"
       },
       userTextColors: {
-        outer: "#8b1538",
-        middle: "#333",
-        inner: "#2d5a2d",
+        negative: "#8b1538",
+        neutral: "#333",
+        positive: "#2d5a2d",
         coordinates: "#333"
       },
       userHubColor: "#ffff7a"
@@ -216,14 +216,14 @@ export const CustomColors: Story = {
     ...Default.args,
     colors: {
       userRingColors: {
-        outer: "#F9C6CC",
-        middle: "#ffffff",
-        inner: "#C6E5B3"
+        negative: "#F9C6CC",
+        neutral: "#ffffff",
+        positive: "#C6E5B3"
       },
       userTextColors: {
-        outer: "#8b1538",
-        middle: "#333",
-        inner: "#2d5a2d",
+        negative: "#8b1538",
+        neutral: "#333",
+        positive: "#2d5a2d",
         coordinates: "#333"
       },
       userHubColor: "#ffff7a"

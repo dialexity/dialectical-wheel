@@ -18,14 +18,14 @@ const DEFAULT_PREFERENCES = {
 
 const DEFAULT_COLORS = {
   userRingColors: {
-    outer: "#F9C6CC",
-    middle: "#ffffff",
-    inner: "#C6E5B3"
+    negative: "#F9C6CC",  // Red ring (semantic)
+    neutral: "#ffffff",   // White ring (semantic)
+    positive: "#C6E5B3"   // Green ring (semantic)
   },
   userTextColors: {
-    outer: "#8b1538",
-    middle: "#333",
-    inner: "#2d5a2d",
+    negative: "#8b1538",  // Red ring text (semantic)
+    neutral: "#333",      // White ring text (semantic)
+    positive: "#2d5a2d",  // Green ring text (semantic)
     coordinates: "#333"
   },
   userHubColor: "#ffff7a"
@@ -135,7 +135,7 @@ export default function DialecticalWheel({
         module.redefine('viewof whitesOnly', toggle({label: 'White cells only', value: preferences.whitesOnly}));
         module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
         module.redefine('viewof AsOnly', toggle({label: 'As only', value: preferences.AsOnly}));
-        module.redefine('viewof isWhiteOutside', toggle({label: 'Swap red and white layer', value: preferences.isWhiteOutside}));
+        module.redefine('viewof isWhiteOutside', toggle({label: 'Neutral outside', value: preferences.isWhiteOutside}));
         //module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
         module.redefine('userRingColors', (colors.userRingColors));
         module.redefine('userTextColors', (colors.userTextColors));

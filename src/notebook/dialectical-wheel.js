@@ -5,7 +5,37 @@ return (
 md`# Dialectical Wheel with Arrows`
 );
 }
-function _makeRings(arcTween,userTextColors,d3,getRingOrder){
+function _getRingOrder(isWhiteOutside){
+return (
+() => {
+      const neutralOutside = isWhiteOutside; // legacy toggle name maps to neutral outside
+      const byPhysical = [
+        'positive',
+        neutralOutside ? 'negative' : 'neutral',
+        neutralOutside ? 'neutral' : 'negative'
+      ];
+      const bySemantic = {
+        positive: 'inner',
+        negative: byPhysical[1] === 'negative' ? 'middle' : 'outer',
+        neutral: byPhysical[1] === 'neutral' ? 'middle' : 'outer'
+      };
+      return { byPhysical, bySemantic };
+    }
+);
+}
+function _getRadiiForSemantic(getRingOrder){
+return (
+(semantic, radii, styles) => {
+      const order = getRingOrder();
+      const physical = semantic === 'positive' ? 'inner' : (semantic === 'invisible' ? 'invisible' : order.bySemantic[semantic]);
+      if (physical === 'outer') return { inner: radii.innerRadius, outer: radii.outerRadius };
+      if (physical === 'middle') return { inner: radii.innerInnerRadius, outer: radii.middleRadius };
+      if (physical === 'invisible') return { inner: radii.outerRadius, outer: styles.radii.invisible };
+      return { inner: 30, outer: radii.centerRadius };
+    }
+);
+}
+function _makeRings(arcTween,getRingOrder,userTextColors,d3,getRadiiForSemantic){
 return (
 ({
       groups,
@@ -60,8 +90,11 @@ return (
           .style("font-size", d => {
             const b = styles.fonts.labels.baseSize;
             // ✅ Semantic font size mapping
-            const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
-            return `${fontSizeMap[ringType] || b.middle}px`;
+            const order = getRingOrder();
+            const physical = ringType === "positive" ? "inner" : (ringType === "invisible" ? "invisible" : order.bySemantic[ringType]);
+            const fontSizeMap = { invisible: b.outer, outer: b.outer, middle: b.middle, inner: b.inner };
+            const fontSize = fontSizeMap[physical] || b.middle;
+            return `${fontSize}px`;
           })
           .style("font-weight", styles.fonts.labels.weight)
           .style("fill", d => {
@@ -120,8 +153,11 @@ return (
               const textElement = d3.select(this);
               const b = styles.fonts.labels.baseSize;
               // ✅ Semantic font size mapping
-              const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
-              textElement.style("font-size", `${fontSizeMap[ringType] || b.middle}px`);
+              const order = getRingOrder();
+              const physical = ringType === "positive" ? "inner" : (ringType === "invisible" ? "invisible" : order.bySemantic[ringType]);
+              const fontSizeMap = { invisible: b.outer, outer: b.outer, middle: b.middle, inner: b.inner };
+              const fontSize = fontSizeMap[physical] || b.middle;
+              textElement.style("font-size", `${fontSize}px`);
               const text = d.data.fullText || d.data.name;
               const dataToUse = getDataToUse();
               let pieDataLocal, arcGen;
@@ -199,14 +235,14 @@ return (
         const dataToUse = getDataToUse();
         const order = getRingOrder();
         
-        // ✅ SEMANTIC MAPPING: Map semantic data to physical groups based on toggle
+        // ✅ SEMANTIC MAPPING: Map semantic data to physical groups based on central order
         // Invisible always stays in invisible ring
         updateRing(invisibleGroup, invisibleLabelsGroup, dataToUse.invisible, invisibleArc, "invisible", invisibleColor);
         
         // Positive (green) always in inner ring - color matches semantic type
         updateRing(innerGroup, innerLabelsGroup, dataToUse.positive, innerArc, "positive", positiveColor);
         
-        // Middle and outer rings determined by central order mapping
+        // Middle and outer rings determined by central order
         const middleSemantic = order.byPhysical[1];
         const outerSemantic = order.byPhysical[2];
         const middleColor = middleSemantic === "negative" ? negativeColor : neutralColor;
@@ -584,7 +620,7 @@ Generators.observe(notify => {
 }
 function _isWhiteOutside(Inputs){
 return (
-Inputs.toggle({label: "Swap red and white layer"})
+Inputs.toggle({label: "Neutral outside"})
 );
 }
 function _userRingColors(){
@@ -611,11 +647,17 @@ return (
 "#ffff7a"
 );
 }
-function _ringColors(isWhiteOutside,userRingColors){
+function _ringColors(getRingOrder,userRingColors){
 return (
-isWhiteOutside
-      ? { outer: userRingColors.neutral, middle: userRingColors.negative, inner: userRingColors.positive }
-      : { outer: userRingColors.negative, middle: userRingColors.neutral, inner: userRingColors.positive }
+(() => {
+      const order = getRingOrder();
+      const physicalToSemantic = order.byPhysical;
+      return {
+        outer: physicalToSemantic[2] === 'neutral' ? userRingColors.neutral : userRingColors.negative,
+        middle: physicalToSemantic[1] === 'neutral' ? userRingColors.neutral : userRingColors.negative,
+        inner: userRingColors.positive
+      };
+    })()
 );
 }
 function _textColors(userTextColors){
@@ -685,67 +727,32 @@ return (
     }
 );
 }
-function _getRingOrder(isWhiteOutside){
-return (
-  () => {
-      const neutralOutside = isWhiteOutside; // legacy naming → neutral outside
-      const byPhysical = [
-        'positive',
-        neutralOutside ? 'negative' : 'neutral',
-        neutralOutside ? 'neutral' : 'negative'
-      ];
-      const bySemantic = {
-        positive: 'inner',
-        negative: byPhysical[1] === 'negative' ? 'middle' : 'outer',
-        neutral: byPhysical[1] === 'neutral' ? 'middle' : 'outer'
-      };
-      return { byPhysical, bySemantic };
-    }
-);
-}
-function _getCurrentRingOrder(getRingOrder,isWhiteOutside){
-return (
-  () => getRingOrder()
-);
-}
-function _getRadiiForSemantic(getCurrentRingOrder){
-return (
-  (semantic, radiiObj, stylesObj) => {
-      const order = getCurrentRingOrder();
-      const physical = order.bySemantic[semantic];
-      if (physical === 'inner') return { inner: 30, outer: radiiObj.centerRadius };
-      if (physical === 'middle') return { inner: radiiObj.innerInnerRadius, outer: radiiObj.middleRadius };
-      if (physical === 'outer') return { inner: radiiObj.innerRadius, outer: radiiObj.outerRadius };
-      if (physical === 'invisible') return { inner: radiiObj.outerRadius, outer: stylesObj.radii.invisible };
-      return { inner: radiiObj.innerInnerRadius, outer: radiiObj.middleRadius };
-    }
-);
-}
-function _getPhysicalGroupsForSemantics(getCurrentRingOrder){
+function _getPhysicalGroupsForSemantics(getRingOrder){
 return (
 (ringType, groups) => {
-      const order = getCurrentRingOrder();
-      const semantic = ringType;
-      let physical = 'middle';
-      if (semantic === 'invisible') physical = 'invisible';
-      else if (semantic === 'positive') physical = 'inner';
-      else physical = order.bySemantic[semantic];
-
-      const group = physical === 'outer' ? groups.outerGroup
-        : physical === 'middle' ? groups.middleGroup
-        : physical === 'inner' ? groups.innerGroup
+      const order = getRingOrder();
+      const physical = (
+        ringType === "positive" ? "inner"
+        : ringType === "invisible" ? "invisible"
+        : order.bySemantic[ringType]
+      );
+      
+      const group = physical === "outer" ? groups.outerGroup
+        : physical === "middle" ? groups.middleGroup
+        : physical === "inner" ? groups.innerGroup
         : groups.invisibleGroup;
-      const labelsGroup = physical === 'outer' ? groups.outerLabelsGroup
-        : physical === 'middle' ? groups.middleLabelsGroup
-        : physical === 'inner' ? groups.innerLabelsGroup
+      const labelsGroup = physical === "outer" ? groups.outerLabelsGroup
+        : physical === "middle" ? groups.middleLabelsGroup
+        : physical === "inner" ? groups.innerLabelsGroup
         : groups.invisibleLabelsGroup;
+      
       return { group, labelsGroup };
     }
 );
 }
-function _makeArrowsModule(getRingRadii,d3,location){
+function _makeArrowsModule(getRadiiForSemantic,d3,getRingOrder,location){
 return (
-({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities, isWhiteOutside }) => {
+({ defs, contentGroup, centerCircle, nestedData, pie, radii, styles, arrowUtilities }) => {
       const arrowsGroup = contentGroup.append("g")
         .attr("class", "arrows-group")
         .style("pointer-events", "all"); // Enable pointer events for clickable arrows
@@ -834,10 +841,12 @@ return (
         const { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius } = radii;
         
         // ✅ SEMANTIC: Use helper to get radii and data key
-        const ringRadii = getRingRadii(ringType, isWhiteOutside, radii, styles);
+        const ringRadii = getRadiiForSemantic(ringType, radii, styles);
         
         // Get pie data using semantic key
-        const pieData = pie(dataToUse[ringType]);
+        const ringData = dataToUse[ringType];
+        if (!ringData) return null;
+        const pieData = pie(ringData);
         const arcGenerator = d3.arc().innerRadius(ringRadii.inner).outerRadius(ringRadii.outer);
         
         const cellData = pieData.find(d => d.data.unitId === unitId);
@@ -864,7 +873,13 @@ return (
       }
       // Compute label info (center in contentGroup coords and bounding radius from text bbox)
       function getLabelInfo(unitId, ringType) {
-        const group = labelGroups[ringType];
+        const order = getRingOrder();
+        const physical = (
+          ringType === "positive" ? "inner"
+          : ringType === "invisible" ? "invisible"
+          : order.bySemantic[ringType]
+        );
+        const group = labelGroups[physical];
         if (!group || group.empty()) return null;
         const sel = group.selectAll('text.cell-label').filter(d => d && d.data && d.data.unitId === unitId);
         if (sel.empty()) return null;
@@ -1438,13 +1453,17 @@ return (
                     path.attr("stroke-width", 2.5)
                       .attr("opacity", 1)
                       .style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
-                    staticHead.style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+                    staticHead
+                      .style("filter", "drop-shadow(0 0 2px rgba(0,0,0,0.5))")
+                      .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle}) scale(2)`);
                   })
                   .on("mouseout", function() {
                     path.attr("stroke-width", 1.25)
                       .attr("opacity", 0.85)
                       .style("filter", null);
-                    staticHead.style("filter", null);
+                    staticHead
+                      .style("filter", null)
+                      .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle}) scale(1)`);
                   });
               }
 
@@ -1468,13 +1487,13 @@ return (
         const anchorGroup = arrowsGroup.append("g")
           .attr("class", "anchor-points-visualization");
 
-        // For each ring type
-        const ringTypes = ['invisible', 'outer', 'middle', 'inner'];
+        // For each semantic ring type
+        const ringTypes = ['invisible', 'positive', 'negative', 'neutral'];
         const ringColors = {
           invisible: '#999',
-          outer: '#dc2626',
-          middle: '#666',
-          inner: '#16a34a'
+          positive: '#16a34a',
+          negative: '#dc2626',
+          neutral: '#666'
         };
 
         // Get all unit IDs from nested data
@@ -1483,6 +1502,10 @@ return (
 
         unitIds.forEach(unitId => {
           ringTypes.forEach(ringType => {
+            // Check if this unit has data in this ring type
+            const hasData = nestedData[ringType] && nestedData[ringType].some(d => d.unitId === unitId);
+            if (!hasData) return;
+            
             const cellInfo = getCellCentroid(unitId, ringType);
             if (!cellInfo) return;
 
@@ -1648,12 +1671,14 @@ return (
     }
 );
 }
-function _makeAxisModule(d3,getCurrentRingOrder){
+function _makeAxisModule(getRingOrder,d3){
 return (
 ({ coordinateGroup, defs, pie, radii, styles, getDataToUse, getOppositePrefix, dialecticalData }) => {
       function updateCoordinateNumbersOpacities() {
         const units = Object.keys(dialecticalData);
-        const middleData = getDataToUse().middle;
+        const order = getRingOrder();
+        const middleSemantic = order.byPhysical[1];
+        const middleData = getDataToUse()[middleSemantic];
         coordinateGroup.selectAll("text.coordinate-number").each(function() {
           const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
           const unitId = units[sliceIndex];
@@ -1690,7 +1715,7 @@ return (
         }
         const axisAngles = [axisAngle, axisAngle + Math.PI];
         const ringRadii = [radii.centerRadius, radii.middleRadius, radii.outerRadius];
-        const order = getCurrentRingOrder();
+        const order = getRingOrder();
         const axisColors = [
           styles.colors.text.positive,
           styles.colors.text[order.byPhysical[1]],
@@ -1718,9 +1743,11 @@ return (
             let clipLabel = clipUnitId;
             (function deriveClipLabel(){
               const dataToUse = getDataToUse();
-              const order = getCurrentRingOrder();
-              const semantic = ringIndex === 0 ? 'positive' : order.byPhysical[ringIndex];
-              const pieData = pie(dataToUse[semantic]);
+              let pieData;
+              // ✅ Map physical ring index to semantic data key
+              if (ringIndex === 0) pieData = pie(dataToUse.positive);  // Inner ring always has positive
+              else if (ringIndex === 1) { const semantic = getRingOrder().byPhysical[1]; pieData = pie(dataToUse[semantic]); }
+              else { const semantic = getRingOrder().byPhysical[2]; pieData = pie(dataToUse[semantic]); }
               const cell = pieData.find(d => d.data.unitId === clipUnitId);
               if (cell && cell.data && cell.data.name) clipLabel = cell.data.name;
             })();
@@ -1729,16 +1756,16 @@ return (
             clipPath.append("path").attr("d", function() {
               const dataToUse = getDataToUse();
               let pieData, arcGen;
-              const order = getCurrentRingOrder();
+              // ✅ Map physical ring index to semantic data key
               if (ringIndex === 0) { // inner ring
-                pieData = pie(dataToUse.positive);  // Inner ring is positive by default
+                pieData = pie(dataToUse.positive);  // Inner ring always has positive
                 arcGen = d3.arc().innerRadius(styles.radii.hub).outerRadius(radii.centerRadius);
               } else if (ringIndex === 1) { // middle ring
-                const semantic = order.byPhysical[1];
+                const semantic = getRingOrder().byPhysical[1];
                 pieData = pie(dataToUse[semantic]);
                 arcGen = d3.arc().innerRadius(radii.innerInnerRadius).outerRadius(radii.middleRadius);
               } else { // outer ring
-                const semantic = order.byPhysical[2];
+                const semantic = getRingOrder().byPhysical[2];
                 pieData = pie(dataToUse[semantic]);
                 arcGen = d3.arc().innerRadius(radii.innerRadius).outerRadius(radii.outerRadius);
               }
@@ -1952,7 +1979,7 @@ return (
     }
 );
 }
-function _chart(styles,radii,d3,selectedFont,dialecticalData,arcs,makeTextTransform,pie,transformToNestedPieData,isWhiteOutside,makeAxisModule,getOppositePrefix,colorScales,getPhysicalGroupsForSemantics,getTextConstraints,wrapText,userTextColors,isThesisType,arcTween,makeRings,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,arrowOptions,viewof_clickedArrowInfo,flowConnections,flowArrowOptions,makeStepMode,initializeBuildSteps){
+function _chart(styles,radii,d3,selectedFont,dialecticalData,arcs,makeTextTransform,pie,transformToNestedPieData,getRingOrder,makeAxisModule,getOppositePrefix,colorScales,getPhysicalGroupsForSemantics,getRadiiForSemantic,getTextConstraints,wrapText,userTextColors,isThesisType,arcTween,makeRings,isWhiteOutside,makeArrowsModule,arrowUtilities,parseArrowConnections,arrowConnections,arrowOptions,viewof_clickedArrowInfo,flowConnections,flowArrowOptions,makeStepMode,initializeBuildSteps){
 return (
 (() => {
 
@@ -2223,10 +2250,11 @@ return (
     ];
 
     //const symbols = ["T+", "T", "T-"]; // Positive, neutral, negative
+    const order = getRingOrder();
     const axisColors = [
       styles.colors.text.positive,
-      (isWhiteOutside ? styles.colors.text.negative : styles.colors.text.neutral),
-      (isWhiteOutside ? styles.colors.text.neutral : styles.colors.text.negative)
+      styles.colors.text[order.byPhysical[1]],
+      styles.colors.text[order.byPhysical[2]]
     ];
 
     // Coordinate number opacity updates now handled inside axis module
@@ -2784,8 +2812,8 @@ return (
         .append("path")
         .attr("class", "cell")
         .attr("fill", d => colorScale(d.data.unitId))
-        .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
-        .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+        .attr("stroke", ringType === "neutral" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
+        .attr("stroke-width", ringType === "neutral" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
         .attr("stroke-dasharray", "1,3") // Dotted border
         .attr("stroke-linecap", "round")
         .attr("stroke-opacity", 0.3)
@@ -3272,8 +3300,7 @@ return (
       pie,
       radii: { outerRadius, innerRadius, innerInnerRadius, middleRadius, centerRadius },
       styles,
-      arrowUtilities,
-      isWhiteOutside
+      arrowUtilities
     });
     // Keep label/coordinate groups above arrows
     invisibleLabelsGroup.raise();
@@ -3281,8 +3308,8 @@ return (
     middleLabelsGroup.raise();
     innerLabelsGroup.raise();
     coordinateGroup.raise();
-    function clearArrows() {
-      arrows.clearArrows();
+    function clearArrows(options = {}) {
+      arrows.clearArrows(options);
     }
     function drawArrow(from, to, color = "#666", strokeWidth = 2, fromRing = "middle", toRing = "middle", delay = 0) {
       arrows.drawArrow(from, to, color, strokeWidth, fromRing, toRing, delay);
@@ -4249,9 +4276,9 @@ return (
 null
 );
 }
-function _transformToNestedPieData(isWhiteOutside,whitesOnly){
+function _transformToNestedPieData(whitesOnly){
 return (
-(dialecticalData, whiteOutside= isWhiteOutside, whiteOnly= whitesOnly) => {
+(dialecticalData, whiteOnly= whitesOnly) => {
           const units = Object.keys(dialecticalData);
           // ✅ SEMANTIC KEYS - No more position-based hack!
 
@@ -4301,24 +4328,20 @@ return (
         }
 );
 }
-function _wrapText(isWhiteOutside,styles,tryWrapWithLineBreaks,truncateWithEllipses){
+function _wrapText(getRingOrder,styles,tryWrapWithLineBreaks,truncateWithEllipses){
 return (
 (textElement, text, constraints) => {
       const { midWidth, maxHeight, ringType, arcData } = constraints;
       // New: also get angle, innerRadius, outerRadius
       const angle = arcData.endAngle - arcData.startAngle;
       
-      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii
-      let physicalPosition = ringType;
-      if (ringType === "positive") {
-        physicalPosition = "inner";
-      } else if (ringType === "negative") {
-        physicalPosition = isWhiteOutside ? "middle" : "outer";
-      } else if (ringType === "neutral") {
-        physicalPosition = isWhiteOutside ? "outer" : "middle";
-      } else if (ringType === "invisible") {
-        physicalPosition = "invisible";
-      }
+      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii via centralized order
+      const order = getRingOrder();
+      const physicalPosition = (
+        ringType === "positive" ? "inner"
+        : ringType === "invisible" ? "invisible"
+        : order.bySemantic[ringType]
+      );
       
       let innerRadius, outerRadius;
       if (physicalPosition === "outer") {
@@ -4621,21 +4644,18 @@ return (
     }
 );
 }
-function _getTextConstraints(isWhiteOutside,styles){
+function _getTextConstraints(getRingOrder,styles){
 return (
-(ringType, arcData, whiteOutside = isWhiteOutside) => {
+(ringType, arcData) => {
       const angle = arcData.endAngle - arcData.startAngle;
 
-      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii
-      // Determine physical position from semantic ringType
-      let physicalPosition = ringType;
-      if (ringType === "positive") {
-        physicalPosition = "inner";  // Always inner
-      } else if (ringType === "negative") {
-        physicalPosition = whiteOutside ? "middle" : "outer";
-      } else if (ringType === "neutral") {
-        physicalPosition = whiteOutside ? "outer" : "middle";
-      }
+      // ✅ SEMANTIC SUPPORT: Map semantic names to physical radii via centralized order
+      const order = getRingOrder();
+      const physicalPosition = (
+        ringType === "positive" ? "inner"
+        : ringType === "invisible" ? "invisible"
+        : order.bySemantic[ringType]
+      );
 
       // Calculate actual ring dimensions based on physical position
       let innerRadius, outerRadius;
@@ -5859,7 +5879,9 @@ export default function define(runtime, observer) {
   main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
 
   main.variable(observer()).define(["md"], _1);
-  main.variable(observer("makeRings")).define("makeRings", ["arcTween", "userTextColors", "d3"], _makeRings);
+  main.variable(observer("getRingOrder")).define("getRingOrder", ["isWhiteOutside"], _getRingOrder);
+  main.variable(observer("getRadiiForSemantic")).define("getRadiiForSemantic", ["getRingOrder"], _getRadiiForSemantic);
+  main.variable(observer("makeRings")).define("makeRings", ["arcTween", "getRingOrder", "userTextColors", "d3", "getRadiiForSemantic"], _makeRings);
   main.variable(observer("dialecticalData")).define("dialecticalData", ["transformWisdomUnitsToDialecticalData", "wisdomUnits", "componentOrder", "TsOnly", "AsOnly"], _dialecticalData);
   main.variable(observer("width")).define("width", _width);
   main.variable(observer("styles")).define("styles", ["userHubColor", "ringColors", "textColors"], _styles);
@@ -5875,7 +5897,7 @@ export default function define(runtime, observer) {
   main.variable(observer("userRingColors")).define("userRingColors", _userRingColors);
   main.variable(observer("userTextColors")).define("userTextColors", _userTextColors);
   main.variable(observer("userHubColor")).define("userHubColor", _userHubColor);
-  main.variable(observer("ringColors")).define("ringColors", ["isWhiteOutside", "userRingColors"], _ringColors);
+  main.variable(observer("ringColors")).define("ringColors", ["getRingOrder", "userRingColors"], _ringColors);
   main.variable(observer("textColors")).define("textColors", ["userTextColors"], _textColors);
   main.variable(observer("viewof whitesOnly")).define("viewof whitesOnly", ["Inputs"], _whitesOnly);
   main.define("whitesOnly", ["Generators", "viewof whitesOnly"], (G, _) => G.input(_));
@@ -5885,17 +5907,17 @@ export default function define(runtime, observer) {
   main.define("AsOnly", ["Generators", "viewof AsOnly"], (G, _) => G.input(_));
   main.variable(observer()).define(["DOM", "serialize", "viewof chart"], _3);
   main.variable(observer("getRingRadii")).define("getRingRadii", _getRingRadii);
-  main.variable(observer("getPhysicalGroupsForSemantics")).define("getPhysicalGroupsForSemantics", ["getRingRadii"], _getPhysicalGroupsForSemantics);
-  main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["getRingRadii", "d3", "location"], _makeArrowsModule);
+  main.variable(observer("getPhysicalGroupsForSemantics")).define("getPhysicalGroupsForSemantics", ["getRingOrder"], _getPhysicalGroupsForSemantics);
+  main.variable(observer("makeArrowsModule")).define("makeArrowsModule", ["getRadiiForSemantic", "d3", "getRingOrder", "location"], _makeArrowsModule);
   main.variable(observer("radii")).define("radii", ["styles"], _radii);
   main.variable(observer("pie")).define("pie", ["d3"], _pie);
   main.variable(observer("arcs")).define("arcs", ["d3", "radii", "styles"], _arcs);
   main.variable(observer("colorScales")).define("colorScales", ["d3", "dialecticalData", "userRingColors"], _colorScales);
   main.variable(observer("arcTween")).define("arcTween", ["d3"], _arcTween);
   main.variable(observer("makeTextTransform")).define("makeTextTransform", _makeTextTransform);
-  main.variable(observer("makeAxisModule")).define("makeAxisModule", ["d3", "isWhiteOutside"], _makeAxisModule);
+  main.variable(observer("makeAxisModule")).define("makeAxisModule", ["getRingOrder", "d3"], _makeAxisModule);
   main.variable(observer("makeStepMode")).define("makeStepMode", _makeStepMode);
-  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "isWhiteOutside", "makeAxisModule", "getOppositePrefix", "colorScales", "getPhysicalGroupsForSemantics", "getTextConstraints", "wrapText", "userTextColors", "isThesisType", "arcTween", "makeRings", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "arrowOptions", "viewof clickedArrowInfo", "flowConnections", "flowArrowOptions", "makeStepMode", "initializeBuildSteps"], _chart);
+  main.variable(observer("viewof chart")).define("viewof chart", ["styles", "radii", "d3", "selectedFont", "dialecticalData", "arcs", "makeTextTransform", "pie", "transformToNestedPieData", "getRingOrder", "makeAxisModule", "getOppositePrefix", "colorScales", "getPhysicalGroupsForSemantics", "getRadiiForSemantic", "getTextConstraints", "wrapText", "userTextColors", "isThesisType", "arcTween", "makeRings", "isWhiteOutside", "makeArrowsModule", "arrowUtilities", "parseArrowConnections", "arrowConnections", "arrowOptions", "viewof clickedArrowInfo", "flowConnections", "flowArrowOptions", "makeStepMode", "initializeBuildSteps"], _chart);
   main.define("chart", ["Generators", "viewof chart"], (G, _) => G.input(_));
   main.variable(observer("stepControls")).define("stepControls", ["html", "viewof chart"], _stepControls);
   main.variable(observer("focusedSlice")).define("focusedSlice", ["chart"], _focusedSlice);
@@ -5920,11 +5942,11 @@ export default function define(runtime, observer) {
   main.variable(observer("contraConnections")).define("contraConnections", ["dialecticalData"], _contraConnections);
   main.variable(observer("parseArrowConnectionsAsSourceTarget")).define("parseArrowConnectionsAsSourceTarget", _parseArrowConnectionsAsSourceTarget);
   main.variable(observer()).define(_6);
-  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["isWhiteOutside", "whitesOnly"], _transformToNestedPieData);
-  main.variable(observer("wrapText")).define("wrapText", ["isWhiteOutside", "styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
+  main.variable(observer("transformToNestedPieData")).define("transformToNestedPieData", ["whitesOnly"], _transformToNestedPieData);
+  main.variable(observer("wrapText")).define("wrapText", ["getRingOrder", "styles", "tryWrapWithLineBreaks", "truncateWithEllipses"], _wrapText);
   main.variable(observer("tryWrapWithLineBreaks")).define("tryWrapWithLineBreaks", _tryWrapWithLineBreaks);
   main.variable(observer("truncateWithEllipses")).define("truncateWithEllipses", _truncateWithEllipses);
-  main.variable(observer("getTextConstraints")).define("getTextConstraints", ["isWhiteOutside", "styles"], _getTextConstraints);
+  main.variable(observer("getTextConstraints")).define("getTextConstraints", ["getRingOrder", "styles"], _getTextConstraints);
   main.variable(observer("arrowUtilities")).define("arrowUtilities", ["isThesisType"], _arrowUtilities);
   main.variable(observer("getPointAlongQuadraticCurve")).define("getPointAlongQuadraticCurve", ["arrowUtilities"], _getPointAlongQuadraticCurve);
   main.variable(observer("initializeBuildSteps")).define("initializeBuildSteps", ["getOppositePrefix", "isThesisType"], _initializeBuildSteps);

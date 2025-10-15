@@ -36,8 +36,8 @@ export default function App() {
       componentOrder={[]}
       preferences={{ whitesOnly: false, TsOnly: false, isWhiteOutside: false, showFlow: true, graphView: false }}
       colors={{
-        userRingColors: { outer: '#F9C6CC', middle: '#ffffff', inner: '#C6E5B3' },
-        userTextColors: { outer: '#8b1538', middle: '#333', inner: '#2d5a2d', coordinates: '#333' },
+        userRingColors: { negative: '#F9C6CC', neutral: '#ffffff', positive: '#C6E5B3' },
+        userTextColors: { negative: '#8b1538', neutral: '#333', positive: '#2d5a2d', coordinates: '#333' },
         userHubColor: '#ffff7a'
       }}
       arrowConnections={''}
@@ -67,8 +67,8 @@ The interactive wheel component that renders wisdom units and optional flow/grap
   - `showFlow` (boolean)
   - `graphView` (boolean)
 - `colors` (object): Custom colors.
-  - `userRingColors` { `outer`, `middle`, `inner` }
-  - `userTextColors` { `outer`, `middle`, `inner`, `coordinates` }
+  - `userRingColors` { `negative`, `neutral`, `positive` }
+  - `userTextColors` { `negative`, `neutral`, `positive`, `coordinates` }
   - `userHubColor` (string)
 - `arrowConnections` (string): Newline-delimited connections, e.g. `"T1 -> A1\nT2 -> A2"`.
 - `style` (object): Inline styles for the container.
@@ -108,13 +108,13 @@ Notes on interactions:
 Customize ring fills and text colors. All values are CSS color strings.
 
 - `userRingColors`
-  - `outer`: Fill color for the outer ring
-  - `middle`: Fill color for the middle ring
-  - `inner`: Fill color for the inner ring
+  - `negative`: Fill color for the negative ring (red)
+  - `neutral`: Fill color for the neutral ring (white)
+  - `positive`: Fill color for the positive ring (green)
 - `userTextColors`
-  - `outer`: Text color used on outer ring
-  - `middle`: Text color used on middle ring
-  - `inner`: Text color used on inner ring
+  - `negative`: Text color used on negative ring
+  - `neutral`: Text color used on neutral ring
+  - `positive`: Text color used on positive ring
   - `coordinates`: Text color for coordinate labels
 - `userHubColor`: Fill color for the hub (center) region
 

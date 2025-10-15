@@ -85,8 +85,11 @@
           .style("font-size", d => {
             const b = styles.fonts.labels.baseSize;
             // ✅ Semantic font size mapping
-            const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
-            return `${fontSizeMap[ringType] || b.middle}px`;
+            const order = getRingOrder();
+            const physical = ringType === "positive" ? "inner" : (ringType === "invisible" ? "invisible" : order.bySemantic[ringType]);
+            const fontSizeMap = { invisible: b.outer, outer: b.outer, middle: b.middle, inner: b.inner };
+            const fontSize = fontSizeMap[physical] || b.middle;
+            return `${fontSize}px`;
           })
           .style("font-weight", styles.fonts.labels.weight)
           .style("fill", d => {
@@ -145,8 +148,11 @@
               const textElement = d3.select(this);
               const b = styles.fonts.labels.baseSize;
               // ✅ Semantic font size mapping
-              const fontSizeMap = { invisible: b.outer, negative: b.outer, neutral: b.middle, positive: b.inner };
-              textElement.style("font-size", `${fontSizeMap[ringType] || b.middle}px`);
+              const order = getRingOrder();
+              const physical = ringType === "positive" ? "inner" : (ringType === "invisible" ? "invisible" : order.bySemantic[ringType]);
+              const fontSizeMap = { invisible: b.outer, outer: b.outer, middle: b.middle, inner: b.inner };
+              const fontSize = fontSizeMap[physical] || b.middle;
+              textElement.style("font-size", `${fontSize}px`);
               const text = d.data.fullText || d.data.name;
               const dataToUse = getDataToUse();
               let pieDataLocal, arcGen;
@@ -920,8 +926,13 @@
               .attr("opacity", 0.9);
           });
       }
-      function clearArrows() {
-        arrowsGroup.selectAll("*").remove();
+      function clearArrows(options = {}) {
+        const { includeFlow = true } = options;
+        // Only remove label-link groups. Optionally preserve flow arrows (klass: 'flow-arrows').
+        const selector = includeFlow
+          ? ".label-link-group"
+          : ".label-link-group:not(.flow-arrows)";
+        arrowsGroup.selectAll(selector).remove();
       }
       /**
        * Draw arrows between label nodes using perfect-arrows inspired API.
@@ -1403,13 +1414,17 @@
                     path.attr("stroke-width", 2.5)
                       .attr("opacity", 1)
                       .style("filter", "drop-shadow(0 0 3px rgba(0,0,0,0.3))");
-                    staticHead.style("filter", "brightness(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.5))");
+                    staticHead
+                      .style("filter", "drop-shadow(0 0 2px rgba(0,0,0,0.5))")
+                      .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle}) scale(2)`);
                   })
                   .on("mouseout", function() {
                     path.attr("stroke-width", 1.25)
                       .attr("opacity", 0.85)
                       .style("filter", null);
-                    staticHead.style("filter", null);
+                    staticHead
+                      .style("filter", null)
+                      .attr("transform", `translate(${endPoint.x}, ${endPoint.y}) rotate(${arrowheadAngle}) scale(1)`);
                   });
               }
 
@@ -1608,7 +1623,9 @@
     makeAxisModule = ({ coordinateGroup, defs, pie, radii, styles, getDataToUse, getOppositePrefix, dialecticalData }) => {
       function updateCoordinateNumbersOpacities() {
         const units = Object.keys(dialecticalData);
-        const middleData = getDataToUse().middle;
+        const order = getRingOrder();
+        const middleSemantic = order.byPhysical[1];
+        const middleData = getDataToUse()[middleSemantic];
         coordinateGroup.selectAll("text.coordinate-number").each(function() {
           const sliceIndex = parseInt(d3.select(this).attr("data-slice-index"));
           const unitId = units[sliceIndex];
@@ -2738,8 +2755,8 @@
         .append("path")
         .attr("class", "cell")
         .attr("fill", d => colorScale(d.data.unitId))
-        .attr("stroke", ringType === "middle" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
-        .attr("stroke-width", ringType === "middle" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
+        .attr("stroke", ringType === "neutral" ? styles.colors.strokes.middleRing : styles.colors.strokes.default)
+        .attr("stroke-width", ringType === "neutral" ? styles.strokes.middleRingWidth : styles.strokes.defaultWidth)
         .attr("stroke-dasharray", "1,3") // Dotted border
         .attr("stroke-linecap", "round")
         .attr("stroke-opacity", 0.3)
@@ -3234,8 +3251,8 @@
     middleLabelsGroup.raise();
     innerLabelsGroup.raise();
     coordinateGroup.raise();
-    function clearArrows() {
-      arrows.clearArrows();
+    function clearArrows(options = {}) {
+      arrows.clearArrows(options);
     }
     function drawArrow(from, to, color = "#666", strokeWidth = 2, fromRing = "middle", toRing = "middle", delay = 0) {
       arrows.drawArrow(from, to, color, strokeWidth, fromRing, toRing, delay);
@@ -3244,7 +3261,8 @@
       return arrows.getCellCentroid(unitId, ringType);
     }
     function drawAllArrows() {
-      clearArrows();
+      // Preserve flow arrows when redrawing main arrows
+      clearArrows({ includeFlow: false });
       const connections = parseArrowConnections(arrowConnections, dialecticalData);
 
       // Use arrowOptions if available, otherwise use defaults
