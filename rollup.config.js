@@ -3,7 +3,6 @@ import commonjs from '@rollup/plugin-commonjs';
 import babel from '@rollup/plugin-babel';
 import typescript from '@rollup/plugin-typescript';
 import peerDepsExternal from 'rollup-plugin-peer-deps-external';
-import postcss from 'rollup-plugin-postcss';
 
 export default {
   input: 'src/index.ts',
@@ -23,9 +22,7 @@ export default {
   ],
   plugins: [
     peerDepsExternal(),
-    resolve({
-      browser: true,
-    }),
+    resolve({ browser: true }),
     typescript({
       tsconfig: './tsconfig.json',
       declaration: true,
@@ -38,10 +35,6 @@ export default {
       extensions: ['.js', '.jsx', '.ts', '.tsx'],
     }),
     commonjs(),
-    postcss({
-      extract: true,
-      minimize: true,
-    }),
   ],
   external: ['react', 'react-dom'],
-}; 
+};

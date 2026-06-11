@@ -1,13 +1,5 @@
 import React from 'react';
 
-// Core types for dialectical wheel components
-
-export interface GenerationSettings {
-  component_length: number;
-  causality_type: string;
-  reasoning_mode?: string;
-}
-
 export interface Component {
   statement?: string;
   alias?: string;
@@ -23,59 +15,44 @@ export interface WisdomUnit {
   a_minus: string | Component;
 }
 
-export interface WheelStructure {
-  session_id: string;
-  cardinality: number;
-  user_message: string;
-  cycle: {
-    dialectical_components: Component[];
-    argumentation: string;
-    probability: number;
-    causality_direction: string;
-    reasoning_explanation: string;
-  };
-  wisdom_units: WisdomUnit[];
-  creation_metadata: {
-    created_at: string;
-    generation_settings: GenerationSettings;
-    original_text: string;
-  };
-}
-
-export interface Preferences {
-  whitesOnly: boolean; //white ring only, hides red and green rings when true
-  TsOnly: boolean; //Theses slices only, hides Antitheses slices when true (pending behavior on Ac/Re)
-  AsOnly: boolean; //Antitheses slices only, hides Theses slices when true (pending behavior on Ac/Re)
-  isWhiteOutside: boolean; //swap red and white rings, white ring on the outermost layer when true
-  showFlow: boolean; //show arrows on the outermost edge of the wheel when true
-  graphView: boolean; //show graph view (Cycle view) when true
-}
-
 export interface Colors {
   userRingColors: {
-    negative: string;  // Red ring (semantic)
-    neutral: string;   // White ring (semantic)
-    positive: string;  // Green ring (semantic)
+    negative: string;
+    neutral: string;
+    positive: string;
   };
   userTextColors: {
-    negative: string;  // Red ring text (semantic)
-    neutral: string;   // White ring text (semantic)
-    positive: string;  // Green ring text (semantic)
+    negative: string;
+    neutral: string;
+    positive: string;
     coordinates: string;
   };
   userHubColor: string;
 }
-export interface DialecticalWheelProps {
-  wisdomUnits: WisdomUnit[];
-  componentOrder: string[];
-  preferences?: Preferences;
-  colors?: Colors;
-  arrowConnections?: string;
-  style?: React.CSSProperties;
-  onChartReady?: (chart: any) => void;
-  onTopSliceChange?: (topSlice: string) => void;
-  onFocusedSliceChange?: (focusedSlice: string) => void;
-  onClickedCellChange?: (clickedCellObject: any) => void;
-  debug?: boolean;
+
+export interface CellInfo {
+  unitId: string;
+  polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+  statement: string;
+  pairWith: string;
 }
 
+export interface SliceData {
+  unitId: string;
+  polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+  fullText: string;
+  pairWith: string;
+  startAngle: number;
+  endAngle: number;
+}
+
+export interface DialecticalWheelProps {
+  wisdomUnits: WisdomUnit[];
+  componentOrder?: string[];
+  isWhiteOutside?: boolean;
+  colors?: Colors;
+  style?: React.CSSProperties;
+  onTopSliceChange?: (topSlice: string) => void;
+  onClickedCellChange?: (cell: CellInfo | null) => void;
+  debug?: boolean;
+}

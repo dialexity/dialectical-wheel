@@ -1,9 +1,4 @@
 import React from 'react';
-export interface GenerationSettings {
-    component_length: number;
-    causality_type: string;
-    reasoning_mode?: string;
-}
 export interface Component {
     statement?: string;
     alias?: string;
@@ -16,32 +11,6 @@ export interface WisdomUnit {
     a_plus: string | Component;
     a: string | Component;
     a_minus: string | Component;
-}
-export interface WheelStructure {
-    session_id: string;
-    cardinality: number;
-    user_message: string;
-    cycle: {
-        dialectical_components: Component[];
-        argumentation: string;
-        probability: number;
-        causality_direction: string;
-        reasoning_explanation: string;
-    };
-    wisdom_units: WisdomUnit[];
-    creation_metadata: {
-        created_at: string;
-        generation_settings: GenerationSettings;
-        original_text: string;
-    };
-}
-export interface Preferences {
-    whitesOnly: boolean;
-    TsOnly: boolean;
-    AsOnly: boolean;
-    isWhiteOutside: boolean;
-    showFlow: boolean;
-    graphView: boolean;
 }
 export interface Colors {
     userRingColors: {
@@ -57,17 +26,28 @@ export interface Colors {
     };
     userHubColor: string;
 }
+export interface CellInfo {
+    unitId: string;
+    polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+    statement: string;
+    pairWith: string;
+}
+export interface SliceData {
+    unitId: string;
+    polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+    fullText: string;
+    pairWith: string;
+    startAngle: number;
+    endAngle: number;
+}
 export interface DialecticalWheelProps {
     wisdomUnits: WisdomUnit[];
-    componentOrder: string[];
-    preferences?: Preferences;
+    componentOrder?: string[];
+    isWhiteOutside?: boolean;
     colors?: Colors;
-    arrowConnections?: string;
     style?: React.CSSProperties;
-    onChartReady?: (chart: any) => void;
     onTopSliceChange?: (topSlice: string) => void;
-    onFocusedSliceChange?: (focusedSlice: string) => void;
-    onClickedCellChange?: (clickedCellObject: any) => void;
+    onClickedCellChange?: (cell: CellInfo | null) => void;
     debug?: boolean;
 }
 //# sourceMappingURL=index.d.ts.map

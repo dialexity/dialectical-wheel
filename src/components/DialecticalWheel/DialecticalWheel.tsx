@@ -1,213 +1,117 @@
-import {Runtime, Inspector} from '@observablehq/runtime';
-import {useEffect, useRef, useState} from 'react';
-import {toggle} from '@observablehq/inputs';
-// @ts-ignore - Import from local notebook file
-import notebook from '../../notebook/dialectical-wheel.js';
-//import './DialecticalWheel.css';
-import './DialecticalWheel-fonts.css';
-import type { DialecticalWheelProps } from '../../types';
-
-const DEFAULT_PREFERENCES = {
-  whitesOnly: false,
-  TsOnly: false,
-  AsOnly: false,
-  isWhiteOutside: false,
-  showFlow: false,
-  graphView: false
-};
+import { useMemo } from 'react';
+import { Ring } from './Ring';
+import { Hub } from './Hub';
+import { CoordinateLabels } from './CoordinateLabels';
+import { useTextMeasure } from './hooks/useTextMeasure';
+import { useRotation } from './hooks/useRotation';
+import { transformWisdomUnits } from './utils/dataTransform';
+import { RADII } from './utils/geometry';
+import type { DialecticalWheelProps, CellInfo } from '../../types';
 
 const DEFAULT_COLORS = {
-  userRingColors: {
-    negative: "#F9C6CC",  // Red ring (semantic)
-    neutral: "#ffffff",   // White ring (semantic)
-    positive: "#C6E5B3"   // Green ring (semantic)
-  },
-  userTextColors: {
-    negative: "#8b1538",  // Red ring text (semantic)
-    neutral: "#333",      // White ring text (semantic)
-    positive: "#2d5a2d",  // Green ring text (semantic)
-    coordinates: "#333"
-  },
-  userHubColor: "#ffff7a"
+  userRingColors: { negative: '#F9C6CC', neutral: '#ffffff', positive: '#C6E5B3' },
+  userTextColors: { negative: '#8b1538', neutral: '#333333', positive: '#2d5a2d', coordinates: '#333333' },
+  userHubColor: '#ffff7a',
 };
 
 export default function DialecticalWheel({
   wisdomUnits,
   componentOrder,
-  preferences = DEFAULT_PREFERENCES,
+  isWhiteOutside = false,
   colors = DEFAULT_COLORS,
-  arrowConnections = '',
-  style = {},
-  onChartReady,
+  style,
   onTopSliceChange,
-  onFocusedSliceChange,
   onClickedCellChange,
-  debug = false
+  debug = false,
 }: DialecticalWheelProps) {
-  const chartRef = useRef<HTMLDivElement>(null);
-  const graphRef = useRef<HTMLDivElement>(null);
-  const [module, setModule] = useState<any>(null);
-  const [chart, setChart] = useState<any>(null);
-  //const [runtime, setRuntime] = useState<any>(null);
-  
-  useEffect(() => {
-    console.log('Loading Observable notebook from local npm package...');
-    
-    const runtime = new Runtime();
-    //setRuntime(runtime);
-    
-    const main = runtime.module(notebook, (name: string) => {
-      if (name === 'viewof chart') {
-        // Only attach an Inspector when the chart container is mounted.
-        // When graphView is true, chartRef.current will be null because the ref is assigned to graphRef instead.
-        if (!chartRef.current) return undefined;
-        return new class extends Inspector {
-          constructor(node: any) {
-            super(node);
-          }
-          fulfilled(value: any) {
-            // The chart value IS the SVG node with methods attached
-            setChart(value);
-            if (onChartReady) onChartReady(value);
-            return super.fulfilled(value);
-          }
-        }(chartRef.current);
-      }
-      if (name === 'topSlice') {
-        return {
-          fulfilled(value: any) {
-            console.log('topSlice updated:', value);
-            if (onTopSliceChange) onTopSliceChange(value);
-          }
-        };
-      }
-      if (name === 'focusedSlice') {
-        return {
-          fulfilled(value: any) {
-            console.log('focusedSlice updated:', value);
-            if (onFocusedSliceChange) onFocusedSliceChange(value);
-          }
-        };
-      }
-      if (name === "clickedCellObject") {
-        return {
-          fulfilled(value: any) {
-            console.log('clickedCellObject updated:', value);
-            if (onClickedCellChange) onClickedCellChange(value);
-          }
-        };
-      }
-      if (name === "graph") return graphRef.current ? new Inspector(graphRef.current) : undefined;
-      /*if (name === "graph") {
-        return new class extends Inspector {
-          constructor(node: any) {
-            super(node);
-          }
-          fulfilled(value: any) {
-            console.log('graph updated:', value);
-            return super.fulfilled(value);
-          }
-        }(graphRef.current);
-      }*/
-      // Don't render the Observable controls - we'll use React components instead
-      return undefined;
-    });
+  const measure = useTextMeasure();
+  const ringData = useMemo(
+    () => transformWisdomUnits(wisdomUnits, componentOrder),
+    [wisdomUnits, componentOrder]
+  );
 
-    setModule(main);
-    
-    return () => {
-      setModule(null);
-      setChart(null);
-      //setRuntime(null);
-      runtime.dispose();
-    };
-  }, []);
+  const sliceIds = useMemo(() => ringData.neutral.map(s => s.unitId), [ringData]);
+  const { rotationDeg, rotationRad, isDragging, svgRef, pointerHandlers } = useRotation({
+    onTopSliceChange,
+    sliceIds,
+  });
 
-  // Separate useEffect for redefining data - this follows the Observable examples pattern
-  useEffect(() => {
-    if (module) {
-      try {
-        //module.redefine('dialecticalData', dialecticalData);
-        module.redefine('arrowConnections', arrowConnections);
-        module.redefine('wisdomUnits', wisdomUnits);
-        module.redefine('componentOrder', componentOrder);
-        // Redefine the actual view cells so downstream `Generators.input(viewof ...)` works
-        module.redefine('viewof whitesOnly', toggle({label: 'White cells only', value: preferences.whitesOnly}));
-        module.redefine('viewof TsOnly', toggle({label: 'Ts only', value: preferences.TsOnly}));
-        module.redefine('viewof AsOnly', toggle({label: 'As only', value: preferences.AsOnly}));
-        module.redefine('viewof isWhiteOutside', toggle({label: 'Neutral outside', value: preferences.isWhiteOutside}));
-        //module.redefine('viewof showFlow', toggle({label: 'Show sequential flow', value: preferences.showFlow}));
-        module.redefine('userRingColors', (colors.userRingColors));
-        module.redefine('userTextColors', (colors.userTextColors));
-        module.redefine('userHubColor', (colors.userHubColor));
-      } catch (error) {
-        console.warn('Could not redefine variables in notebook:', error);
-      }
-    }
-  }, [
-    wisdomUnits,
-    componentOrder,
-    preferences.whitesOnly,
-    preferences.TsOnly,
-    preferences.AsOnly,
-    preferences.isWhiteOutside,
-    //preferences.showFlow,
-    preferences.graphView,
-    colors.userRingColors,
-    colors.userTextColors,
-    colors.userHubColor,
-    arrowConnections,
-    module
-  ]);
+  const outerSemantic = isWhiteOutside ? 'neutral' : 'negative';
+  const middleSemantic = isWhiteOutside ? 'negative' : 'neutral';
 
-  // Dynamic chart control useEffect - handles real-time flow toggling
-  useEffect(() => {
-    if (chart) {
-      if (preferences.showFlow) {
-        chart.toggleFlowArrows(true);
-      } else {
-        chart.toggleFlowArrows(false);
-      }
-    }
-  }, [chart, preferences.showFlow]);
+  const outerFill = isWhiteOutside ? colors.userRingColors.neutral : colors.userRingColors.negative;
+  const outerText = isWhiteOutside ? colors.userTextColors.neutral : colors.userTextColors.negative;
+  const middleFill = isWhiteOutside ? colors.userRingColors.negative : colors.userRingColors.neutral;
+  const middleText = isWhiteOutside ? colors.userTextColors.negative : colors.userTextColors.neutral;
+
+  const handleCellClick = (cell: CellInfo) => {
+    if (onClickedCellChange) onClickedCellChange(cell);
+  };
 
   return (
-    <div className="dialectical-wheel-wrapper">
-      <div 
-        ref={chartRef} 
-        className="chart-container"
-        style={{
-          borderRadius: '8px',
-          background: 'white',
-          ...style,
-          display: preferences.graphView ? 'none' : 'block'
-        }}
-      />
-      <div 
-        ref={graphRef} 
-        className="chart-container"
-        style={{
-          borderRadius: '8px',
-          background: 'white',
-          ...style,
-          display: preferences.graphView ? 'block' : 'none'
-        }}
-      />
-      
-      {/* Debug info */}
+    <div style={{ background: 'white', borderRadius: 8, ...style }}>
+      <svg
+        ref={svgRef}
+        viewBox="-250 -250 500 500"
+        style={{ width: '100%', height: 'auto', touchAction: 'none' }}
+        {...pointerHandlers}
+      >
+        <g
+          transform={`rotate(${rotationDeg})`}
+          style={{ transition: isDragging ? 'none' : 'transform 300ms ease-out' }}
+        >
+          {/* Outer ring */}
+          <Ring
+            slices={ringData[outerSemantic]}
+            innerR={RADII.outerStart}
+            outerR={RADII.outerEnd}
+            fillColor={outerFill}
+            textColor={outerText}
+            rotationRad={rotationRad}
+            measure={measure}
+            baseFontSize={10}
+            onClick={handleCellClick}
+          />
+          {/* Middle ring */}
+          <Ring
+            slices={ringData[middleSemantic]}
+            innerR={RADII.middleStart}
+            outerR={RADII.middleEnd}
+            fillColor={middleFill}
+            textColor={middleText}
+            rotationRad={rotationRad}
+            measure={measure}
+            baseFontSize={10}
+            onClick={handleCellClick}
+          />
+          {/* Inner ring (positive/green) */}
+          <Ring
+            slices={ringData.positive}
+            innerR={RADII.innerStart}
+            outerR={RADII.innerEnd}
+            fillColor={colors.userRingColors.positive}
+            textColor={colors.userTextColors.positive}
+            rotationRad={rotationRad}
+            measure={measure}
+            baseFontSize={10}
+            onClick={handleCellClick}
+          />
+          {/* Hub */}
+          <Hub color={colors.userHubColor} />
+          {/* Coordinate labels in invisible ring area */}
+          <CoordinateLabels
+            slices={ringData.invisible}
+            radius={(RADII.invisibleStart + RADII.invisibleEnd) / 2}
+            rotationRad={rotationRad}
+            color={colors.userTextColors.coordinates}
+          />
+        </g>
+      </svg>
       {debug && (
-        <div style={{ 
-          marginTop: '10px', 
-          padding: '10px', 
-          background: '#f8f9fa', 
-          borderRadius: '4px',
-          fontSize: '12px',
-          color: '#666'
-        }}>
-          Debug: {wisdomUnits.length} entries passed: {componentOrder.join(', ')}<br/>
-          Using local notebook: src/notebook/dialectical-wheel.js
+        <div style={{ marginTop: 8, padding: 8, background: '#f8f9fa', borderRadius: 4, fontSize: 12, color: '#666' }}>
+          {wisdomUnits.length} wisdom units, {sliceIds.length} slices, rotation: {rotationDeg.toFixed(1)}°
         </div>
       )}
     </div>
   );
-} 
+}
