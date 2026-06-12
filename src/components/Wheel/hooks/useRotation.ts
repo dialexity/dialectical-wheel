@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 
 interface UseRotationOptions {
-  onTopSliceChange?: (topSlice: string) => void;
-  sliceIds: string[];
+  onTopSegmentChange?: (topSegment: string) => void;
+  segmentIds: string[];
 }
 
-export function useRotation({ onTopSliceChange, sliceIds }: UseRotationOptions) {
+export function useRotation({ onTopSegmentChange, segmentIds }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ angle: number; rotation: number } | null>(null);
@@ -20,14 +20,14 @@ export function useRotation({ onTopSliceChange, sliceIds }: UseRotationOptions) 
     return Math.atan2(e.clientX - cx, -(e.clientY - cy));
   }, []);
 
-  const reportTopSlice = useCallback((deg: number) => {
-    if (!onTopSliceChange || sliceIds.length === 0) return;
-    const N = sliceIds.length;
-    const sliceAngle = 360 / N;
+  const reportTopSegment = useCallback((deg: number) => {
+    if (!onTopSegmentChange || segmentIds.length === 0) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
     const normalized = ((deg % 360) + 360) % 360;
-    const index = Math.round(normalized / sliceAngle) % N;
-    onTopSliceChange(sliceIds[index]);
-  }, [onTopSliceChange, sliceIds]);
+    const index = Math.round(normalized / segmentAngle) % N;
+    onTopSegmentChange(segmentIds[index]);
+  }, [onTopSegmentChange, segmentIds]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -50,11 +50,11 @@ export function useRotation({ onTopSliceChange, sliceIds }: UseRotationOptions) 
       const delta = (angle - dragStart.current.angle) * (180 / Math.PI);
       const finalDeg = dragStart.current.rotation + delta;
       setRotationDeg(finalDeg);
-      reportTopSlice(finalDeg);
+      reportTopSegment(finalDeg);
     }
     dragStart.current = null;
     setIsDragging(false);
-  }, [getAngleFromEvent, reportTopSlice]);
+  }, [getAngleFromEvent, reportTopSegment]);
 
   const rotationRad = (rotationDeg * Math.PI) / 180;
 

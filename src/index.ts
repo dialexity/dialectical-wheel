@@ -1,11 +1,3 @@
-// Main entry point for dialectical-wheel npm module
-
-// Export all components
-export { DialecticalWheel } from './components';
-
-// Export types
+export { Wheel } from './components';
 export * from './types';
-
-// Default export for convenience
-export { DialecticalWheel as default } from './components';
-
+export { Wheel as default } from './components';

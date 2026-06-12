@@ -1,67 +1,72 @@
 import React from 'react';
-export interface Component {
+export type CSSValue = string | number;
+export interface CellStyle {
+    background: string;
+    color: string;
+    fontSize: CSSValue;
+    padding: CSSValue;
+    topMargin: CSSValue;
+    border: {
+        width: CSSValue;
+        color: string;
+    };
+}
+export interface Styles extends Partial<CellStyle> {
+    thead?: Partial<CellStyle>;
+    tbody?: Partial<CellStyle> & {
+        positive?: Partial<CellStyle>;
+        negative?: Partial<CellStyle>;
+        neutral?: Partial<CellStyle>;
+        synthesis?: Partial<CellStyle>;
+    };
+}
+export interface Cell {
     statement?: string;
     alias?: string;
     explanation?: string;
+    style?: Partial<CellStyle>;
 }
-export interface WisdomUnit {
-    t_minus: string | Component;
-    t: string | Component;
-    t_plus: string | Component;
-    a_plus: string | Component;
-    a: string | Component;
-    a_minus: string | Component;
+export interface Perspective {
+    t_minus: string | Cell;
+    t: string | Cell;
+    t_plus: string | Cell;
+    a_plus: string | Cell;
+    a: string | Cell;
+    a_minus: string | Cell;
+    style?: Partial<CellStyle>;
 }
-export interface RingStyle {
-    maxFontSize: number;
-    padding: number;
-    textBias: number;
-}
-export interface Styles {
-    ringColors: {
-        negative: string;
-        neutral: string;
-        positive: string;
-    };
-    textColors: {
-        negative: string;
-        neutral: string;
-        positive: string;
-        coordinates: string;
-    };
-    hubColor: string;
-    maxFontSize: number;
-    ringStyles?: {
-        positive?: Partial<RingStyle>;
-        neutral?: Partial<RingStyle>;
-        negative?: Partial<RingStyle>;
-    };
-    coordinateLabelSize: number;
-    strokeWidth: number;
-    strokeColor: string;
-}
-export interface CellInfo {
-    unitId: string;
-    polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
-    statement: string;
-    pairWith: string;
-}
-export interface SliceData {
-    unitId: string;
+export interface SegmentData {
+    segmentId: string;
     polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
     fullText: string;
     pairWith: string;
     startAngle: number;
     endAngle: number;
+    cellStyle?: Partial<CellStyle>;
 }
-export interface DialecticalWheelProps {
-    wisdomUnits: WisdomUnit[];
-    componentOrder?: string[];
+export interface ClickedCell {
+    segmentId: string;
+    polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+    statement: string;
+    pairWith: string;
+}
+export interface ResolvedCellStyle {
+    background: string;
+    color: string;
+    fontSize: number;
+    padding: number;
+    topMargin: number;
+    borderWidth: number;
+    borderColor: string;
+}
+export interface WheelProps {
+    perspectives: Perspective[];
+    segmentOrder?: string[];
     isWhiteOutside?: boolean;
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
-    onTopSliceChange?: (topSlice: string) => void;
-    onClickedCellChange?: (cell: CellInfo | null) => void;
+    onTopSegmentChange?: (topSegment: string) => void;
+    onClickedCellChange?: (cell: ClickedCell | null) => void;
     debug?: boolean;
 }
 //# sourceMappingURL=index.d.ts.map

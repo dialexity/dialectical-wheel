@@ -18,24 +18,18 @@ export function describeArc(innerR: number, outerR: number, startAngle: number, 
   ].join(' ');
 }
 
-export function arcCentroid(innerR: number, outerR: number, startAngle: number, endAngle: number): [number, number] {
-  const midAngle = (startAngle + endAngle) / 2;
-  const midR = (innerR + outerR) / 2;
-  return polarToCartesian(midR, midAngle);
-}
-
 export function normalizeAngle(angle: number): number {
   return ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 }
 
 export const RADII = {
-  hub: 30,
+  synthesis: 30,
   innerStart: 30,
   innerEnd: 100,
   middleStart: 100,
   middleEnd: 150,
   outerStart: 150,
   outerEnd: 200,
-  invisibleStart: 200,
-  invisibleEnd: 250,
+  cycleStart: 200,
+  cycleEnd: 250,
 } as const;

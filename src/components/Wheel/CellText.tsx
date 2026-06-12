@@ -9,10 +9,9 @@ interface CellTextProps {
   text: string;
   color: string;
   rotationRad: number;
-  measure: (text: string, fontSize: number) => number;
-  baseFontSize: number;
+  fontSize: number;
   padding: number;
-  textBias: number;
+  topMargin: number;
 }
 
 function chordWidth(r: number, halfAngle: number): number {
@@ -20,20 +19,19 @@ function chordWidth(r: number, halfAngle: number): number {
 }
 
 export const CellText: React.FC<CellTextProps> = ({
-  innerR, outerR, startAngle, endAngle, text, color, rotationRad, baseFontSize, padding, textBias
+  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, topMargin
 }) => {
   const midAngle = (startAngle + endAngle) / 2;
   const halfAngle = (endAngle - startAngle) / 2;
-  // textBias shifts center toward outer edge (positive = outward)
-  const biasedR = (innerR + outerR) / 2 + (outerR - innerR) * textBias * 0.5;
+  // topMargin: negative shifts text toward outer edge (like negative CSS top margin)
+  const biasedR = (innerR + outerR) / 2 - topMargin;
   const [cx, cy] = polarToCartesian(biasedR, midAngle);
 
   const visualAngle = normalizeAngle(midAngle + rotationRad);
   const needsFlip = visualAngle > Math.PI / 2 && visualAngle < (3 * Math.PI) / 2;
   const textRotDeg = (midAngle * 180) / Math.PI + (needsFlip ? 180 : 0);
 
-  const pad = (outerR - innerR) * padding;
-  const boxHeight = (outerR - innerR) - pad * 2;
+  const boxHeight = (outerR - innerR) - padding * 2;
   const boxWidth = chordWidth(biasedR, halfAngle);
 
   return (
@@ -53,7 +51,7 @@ export const CellText: React.FC<CellTextProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
-          fontSize: baseFontSize,
+          fontSize,
           fontWeight: 600,
           fontFamily: 'system-ui, sans-serif',
           color,

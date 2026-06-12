@@ -169,15 +169,15 @@ function normalizeAngle(angle) {
   return (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 }
 var RADII = {
-  hub: 30,
+  synthesis: 30,
   innerStart: 30,
   innerEnd: 100,
   middleStart: 100,
   middleEnd: 150,
   outerStart: 150,
   outerEnd: 200,
-  invisibleStart: 200,
-  invisibleEnd: 250
+  cycleStart: 200,
+  cycleEnd: 250
 };
 
 function chordWidth(r, halfAngle) {
@@ -191,13 +191,13 @@ var CellText = function CellText(_ref) {
     text = _ref.text,
     color = _ref.color,
     rotationRad = _ref.rotationRad,
-    baseFontSize = _ref.baseFontSize,
+    fontSize = _ref.fontSize,
     padding = _ref.padding,
-    textBias = _ref.textBias;
+    topMargin = _ref.topMargin;
   var midAngle = (startAngle + endAngle) / 2;
   var halfAngle = (endAngle - startAngle) / 2;
-  // textBias shifts center toward outer edge (positive = outward)
-  var biasedR = (innerR + outerR) / 2 + (outerR - innerR) * textBias * 0.5;
+  // topMargin: negative shifts text toward outer edge (like negative CSS top margin)
+  var biasedR = (innerR + outerR) / 2 - topMargin;
   var _polarToCartesian = polarToCartesian(biasedR, midAngle),
     _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
     cx = _polarToCartesian2[0],
@@ -205,8 +205,7 @@ var CellText = function CellText(_ref) {
   var visualAngle = normalizeAngle(midAngle + rotationRad);
   var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
   var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
-  var pad = (outerR - innerR) * padding;
-  var boxHeight = outerR - innerR - pad * 2;
+  var boxHeight = outerR - innerR - padding * 2;
   var boxWidth = chordWidth(biasedR, halfAngle);
   return jsxRuntime.jsx("foreignObject", {
     x: cx - boxWidth / 2,
@@ -226,7 +225,7 @@ var CellText = function CellText(_ref) {
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        fontSize: baseFontSize,
+        fontSize: fontSize,
         fontWeight: 600,
         fontFamily: 'system-ui, sans-serif',
         color: color,
@@ -240,33 +239,27 @@ var CellText = function CellText(_ref) {
   });
 };
 
-var ArcCell = function ArcCell(_ref) {
-  var slice = _ref.slice,
+var Cell = function Cell(_ref) {
+  var segment = _ref.segment,
     innerR = _ref.innerR,
     outerR = _ref.outerR,
-    fillColor = _ref.fillColor,
-    textColor = _ref.textColor,
+    style = _ref.style,
     rotationRad = _ref.rotationRad,
-    measure = _ref.measure,
-    baseFontSize = _ref.baseFontSize,
-    padding = _ref.padding,
-    textBias = _ref.textBias,
-    strokeWidth = _ref.strokeWidth,
-    strokeColor = _ref.strokeColor,
+    fontSize = _ref.fontSize,
     onClick = _ref.onClick,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
   var clipId = react.useMemo(function () {
-    return "dw-".concat(slice.polarity, "-").concat(slice.unitId, "-").concat(innerR).replace(/[^a-zA-Z0-9-]/g, '_');
-  }, [slice.polarity, slice.unitId, innerR]);
-  var path = describeArc(innerR, outerR, slice.startAngle, slice.endAngle);
+    return "dw-".concat(segment.polarity, "-").concat(segment.segmentId, "-").concat(innerR).replace(/[^a-zA-Z0-9-]/g, '_');
+  }, [segment.polarity, segment.segmentId, innerR]);
+  var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
   var handleClick = function handleClick() {
     if (onClick) {
       onClick({
-        unitId: slice.unitId,
-        polarity: slice.polarity,
-        statement: slice.fullText,
-        pairWith: slice.pairWith
+        segmentId: segment.segmentId,
+        polarity: segment.polarity,
+        statement: segment.fullText,
+        pairWith: segment.pairWith
       });
     }
   };
@@ -284,31 +277,27 @@ var ArcCell = function ArcCell(_ref) {
       })
     }), jsxRuntime.jsx("path", {
       d: path,
-      fill: fillColor,
-      stroke: strokeColor,
-      strokeWidth: strokeWidth
-    }), showText && slice.fullText && jsxRuntime.jsx("g", {
+      fill: style.background,
+      stroke: style.borderColor,
+      strokeWidth: style.borderWidth
+    }), showText && segment.fullText && jsxRuntime.jsx("g", {
       clipPath: "url(#".concat(clipId, ")"),
       children: jsxRuntime.jsx(CellText, {
         innerR: innerR,
         outerR: outerR,
-        startAngle: slice.startAngle,
-        endAngle: slice.endAngle,
-        text: slice.fullText,
-        color: textColor,
+        startAngle: segment.startAngle,
+        endAngle: segment.endAngle,
+        text: segment.fullText,
+        color: style.color,
         rotationRad: rotationRad,
-        measure: measure,
-        baseFontSize: baseFontSize,
-        padding: padding,
-        textBias: textBias
+        fontSize: fontSize,
+        padding: style.padding,
+        topMargin: style.topMargin
       })
     })]
   });
 };
 
-// The cell is a trapezoid: wider at the outer radius, narrower at the inner.
-// Each line of text sits at a specific radius and gets width = chord at that radius.
-// Lines are stacked from outer edge inward (top line = outermost = widest).
 function chordAt(r, halfAngle) {
   return 2 * r * Math.sin(halfAngle) * 0.9;
 }
@@ -326,8 +315,8 @@ function tryFit(text, fontSize, params) {
   var usableHeight = topR - botR;
   var maxLines = Math.floor(usableHeight / lineHeight);
   if (maxLines < 1) return null;
-  var midR = (innerR + outerR) / 2;
-  var wrapWidth = chordAt(midR, halfAngle);
+  var wrapR = innerR + (outerR - innerR) * 0.6;
+  var wrapWidth = chordAt(wrapR, halfAngle);
   var words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [''];
   var lines = [];
@@ -355,7 +344,6 @@ function tryFit(text, fontSize, params) {
   }
   if (currentLine) lines.push(currentLine);
   if (lines.length > maxLines) return null;
-  // Check that each line fits — reject if any line exceeds wrapWidth
   for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
     var line = _lines[_i];
     if (measure(line, fontSize) > wrapWidth) return null;
@@ -379,26 +367,104 @@ function computeUniformFontSize(texts, params) {
   return 3;
 }
 
+function resolveCSSValue(value, relativeTo, fallback) {
+  if (value === undefined) return fallback;
+  if (typeof value === 'number') return value;
+  var str = value.trim();
+  if (str.endsWith('%')) {
+    return parseFloat(str) / 100 * relativeTo;
+  }
+  if (str.endsWith('px')) {
+    return parseFloat(str);
+  }
+  return parseFloat(str) || fallback;
+}
+function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverride) {
+  var _styles$tbody;
+  var wheel = styles;
+  var section = ring === 'cycle' ? styles.thead : styles.tbody;
+  var ringLevel = ring !== 'cycle' ? (_styles$tbody = styles.tbody) === null || _styles$tbody === void 0 ? void 0 : _styles$tbody[ring] : undefined;
+  // Cascade: wheel -> section (thead/tbody) -> ring -> segment -> cell
+  var layers = [wheel, section, ringLevel, segmentOverride, cellOverride];
+  var get = function get(key) {
+    for (var i = layers.length - 1; i >= 0; i--) {
+      var _layers$i;
+      var v = (_layers$i = layers[i]) === null || _layers$i === void 0 ? void 0 : _layers$i[key];
+      if (v !== undefined) return v;
+    }
+    return undefined;
+  };
+  var getBorder = function getBorder(prop) {
+    for (var i = layers.length - 1; i >= 0; i--) {
+      var _layers$i2;
+      var b = (_layers$i2 = layers[i]) === null || _layers$i2 === void 0 ? void 0 : _layers$i2.border;
+      if (b && b[prop] !== undefined) return b[prop];
+    }
+    return undefined;
+  };
+  return {
+    background: get('background') || '#ffffff',
+    color: get('color') || '#333333',
+    fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 14),
+    padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
+    topMargin: resolveCSSValue(get('topMargin'), cellRadialHeight, 0),
+    borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
+    borderColor: getBorder('color') || '#ccc'
+  };
+}
+var DEFAULT_STYLES = {
+  fontSize: 14,
+  border: {
+    width: 0.5,
+    color: '#ccc'
+  },
+  thead: {
+    color: '#333333',
+    fontSize: 12
+  },
+  tbody: {
+    positive: {
+      background: '#C6E5B3',
+      color: '#2d5a2d',
+      topMargin: '-25%'
+    },
+    negative: {
+      background: '#F9C6CC',
+      color: '#8b1538'
+    },
+    neutral: {
+      background: '#ffffff',
+      color: '#333333'
+    },
+    synthesis: {
+      background: '#ffff7a'
+    }
+  }
+};
+
 var Ring = function Ring(_ref) {
-  var slices = _ref.slices,
+  var segments = _ref.segments,
     innerR = _ref.innerR,
     outerR = _ref.outerR,
-    fillColor = _ref.fillColor,
-    textColor = _ref.textColor,
+    ringName = _ref.ringName,
+    styles = _ref.styles,
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
-    baseFontSize = _ref.baseFontSize,
-    padding = _ref.padding,
-    textBias = _ref.textBias,
-    strokeWidth = _ref.strokeWidth,
-    strokeColor = _ref.strokeColor,
     onClick = _ref.onClick,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
-  var cellAngle = slices.length > 0 ? slices[0].endAngle - slices[0].startAngle : 0;
+  var cellRadialHeight = outerR - innerR;
+  var cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
+  var resolvedStyles = react.useMemo(function () {
+    return segments.map(function (seg) {
+      return resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle);
+    });
+  }, [segments, styles, ringName, cellRadialHeight]);
+  var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 14;
+  var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
   var uniformFontSize = react.useMemo(function () {
-    if (slices.length === 0) return baseFontSize;
-    var texts = slices.map(function (s) {
+    if (segments.length === 0) return baseFontSize;
+    var texts = segments.map(function (s) {
       return s.fullText;
     }).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
@@ -407,51 +473,48 @@ var Ring = function Ring(_ref) {
       outerR: outerR,
       cellAngle: cellAngle,
       baseFontSize: baseFontSize,
-      padding: padding,
+      padding: basePadding,
       measure: measure
     });
-  }, [slices, innerR, outerR, cellAngle, baseFontSize, padding, measure]);
+  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
   return jsxRuntime.jsx("g", {
-    children: slices.map(function (slice) {
-      return jsxRuntime.jsx(ArcCell, {
-        slice: slice,
+    children: segments.map(function (segment, i) {
+      return jsxRuntime.jsx(Cell, {
+        segment: segment,
         innerR: innerR,
         outerR: outerR,
-        fillColor: fillColor,
-        textColor: textColor,
+        style: resolvedStyles[i],
         rotationRad: rotationRad,
-        measure: measure,
-        baseFontSize: uniformFontSize,
-        padding: padding,
-        textBias: textBias,
-        strokeWidth: strokeWidth,
-        strokeColor: strokeColor,
+        fontSize: uniformFontSize,
         onClick: onClick,
         showText: showText
-      }, slice.unitId);
+      }, segment.segmentId);
     })
   });
 };
 
-var Hub = function Hub(_ref) {
-  var color = _ref.color;
+var SynthesisRing = function SynthesisRing(_ref) {
+  var styles = _ref.styles;
+  var resolved = resolveStyle(styles, 'synthesis', RADII.innerEnd - RADII.innerStart);
   return jsxRuntime.jsx("circle", {
     cx: 0,
     cy: 0,
-    r: RADII.hub,
-    fill: color
+    r: RADII.synthesis,
+    fill: resolved.background,
+    stroke: resolved.borderColor,
+    strokeWidth: resolved.borderWidth
   });
 };
 
-var CoordinateLabels = function CoordinateLabels(_ref) {
-  var slices = _ref.slices,
+var CycleRing = function CycleRing(_ref) {
+  var segments = _ref.segments,
     radius = _ref.radius,
     rotationRad = _ref.rotationRad,
-    color = _ref.color,
-    fontSize = _ref.fontSize;
+    styles = _ref.styles;
+  var resolved = resolveStyle(styles, 'cycle', 50);
   return jsxRuntime.jsx("g", {
-    children: slices.map(function (slice) {
-      var midAngle = (slice.startAngle + slice.endAngle) / 2;
+    children: segments.map(function (segment) {
+      var midAngle = (segment.startAngle + segment.endAngle) / 2;
       var _polarToCartesian = polarToCartesian(radius, midAngle),
         _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
         x = _polarToCartesian2[0],
@@ -465,15 +528,15 @@ var CoordinateLabels = function CoordinateLabels(_ref) {
         transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
         textAnchor: "middle",
         dominantBaseline: "central",
-        fill: color,
-        fontSize: fontSize,
+        fill: resolved.color,
+        fontSize: resolved.fontSize,
         fontWeight: "bold",
         fontFamily: "system-ui, sans-serif",
         style: {
           pointerEvents: 'none'
         },
-        children: slice.unitId
-      }, slice.unitId);
+        children: segment.segmentId
+      }, segment.segmentId);
     })
   });
 };
@@ -494,8 +557,8 @@ function useTextMeasure() {
 }
 
 function useRotation(_ref) {
-  var onTopSliceChange = _ref.onTopSliceChange,
-    sliceIds = _ref.sliceIds;
+  var onTopSegmentChange = _ref.onTopSegmentChange,
+    segmentIds = _ref.segmentIds;
   var _useState = react.useState(0),
     _useState2 = _slicedToArray(_useState, 2),
     rotationDeg = _useState2[0],
@@ -514,14 +577,14 @@ function useRotation(_ref) {
     var cy = rect.top + rect.height / 2;
     return Math.atan2(e.clientX - cx, -(e.clientY - cy));
   }, []);
-  var reportTopSlice = react.useCallback(function (deg) {
-    if (!onTopSliceChange || sliceIds.length === 0) return;
-    var N = sliceIds.length;
-    var sliceAngle = 360 / N;
+  var reportTopSegment = react.useCallback(function (deg) {
+    if (!onTopSegmentChange || segmentIds.length === 0) return;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
     var normalized = (deg % 360 + 360) % 360;
-    var index = Math.round(normalized / sliceAngle) % N;
-    onTopSliceChange(sliceIds[index]);
-  }, [onTopSliceChange, sliceIds]);
+    var index = Math.round(normalized / segmentAngle) % N;
+    onTopSegmentChange(segmentIds[index]);
+  }, [onTopSegmentChange, segmentIds]);
   var onPointerDown = react.useCallback(function (e) {
     e.currentTarget.setPointerCapture(e.pointerId);
     var angle = getAngleFromEvent(e);
@@ -544,11 +607,11 @@ function useRotation(_ref) {
       var delta = (angle - dragStart.current.angle) * (180 / Math.PI);
       var finalDeg = dragStart.current.rotation + delta;
       setRotationDeg(finalDeg);
-      reportTopSlice(finalDeg);
+      reportTopSegment(finalDeg);
     }
     dragStart.current = null;
     setIsDragging(false);
-  }, [getAngleFromEvent, reportTopSlice]);
+  }, [getAngleFromEvent, reportTopSegment]);
   var rotationRad = rotationDeg * Math.PI / 180;
   return {
     rotationDeg: rotationDeg,
@@ -571,8 +634,12 @@ function extractAlias(value, fallback) {
   if (typeof value === 'string') return fallback;
   return (value === null || value === void 0 ? void 0 : value.alias) || fallback;
 }
-function transformWisdomUnits(wisdomUnits, componentOrder) {
-  if (!wisdomUnits || wisdomUnits.length === 0) {
+function extractCellStyle(value) {
+  if (typeof value === 'string') return undefined;
+  return value === null || value === void 0 ? void 0 : value.style;
+}
+function transformPerspectives(perspectives, segmentOrder) {
+  if (!perspectives || perspectives.length === 0) {
     return {
       invisible: [],
       negative: [],
@@ -581,154 +648,138 @@ function transformWisdomUnits(wisdomUnits, componentOrder) {
     };
   }
   var entries = [];
-  wisdomUnits.forEach(function (unit, i) {
-    var tAlias = extractAlias(unit.t, "T".concat(i + 1));
-    var aAlias = extractAlias(unit.a, "A".concat(i + 1));
+  perspectives.forEach(function (perspective, i) {
+    var tAlias = extractAlias(perspective.t, "T".concat(i + 1));
+    var aAlias = extractAlias(perspective.a, "A".concat(i + 1));
     entries.push({
-      unitId: tAlias,
-      statement: extractStatement(unit.t),
-      positive: extractStatement(unit.t_plus),
-      negative: extractStatement(unit.t_minus),
-      pairWith: aAlias
+      segmentId: tAlias,
+      statement: extractStatement(perspective.t),
+      positive: extractStatement(perspective.t_plus),
+      negative: extractStatement(perspective.t_minus),
+      pairWith: aAlias,
+      segmentStyle: perspective.style,
+      cellStyles: {
+        positive: extractCellStyle(perspective.t_plus),
+        neutral: extractCellStyle(perspective.t),
+        negative: extractCellStyle(perspective.t_minus)
+      }
     });
     entries.push({
-      unitId: aAlias,
-      statement: extractStatement(unit.a),
-      positive: extractStatement(unit.a_plus),
-      negative: extractStatement(unit.a_minus),
-      pairWith: tAlias
+      segmentId: aAlias,
+      statement: extractStatement(perspective.a),
+      positive: extractStatement(perspective.a_plus),
+      negative: extractStatement(perspective.a_minus),
+      pairWith: tAlias,
+      segmentStyle: perspective.style,
+      cellStyles: {
+        positive: extractCellStyle(perspective.a_plus),
+        neutral: extractCellStyle(perspective.a),
+        negative: extractCellStyle(perspective.a_minus)
+      }
     });
   });
   var ordered = entries;
-  if (componentOrder && componentOrder.length > 0) {
+  if (segmentOrder && segmentOrder.length > 0) {
     var byId = new Map(entries.map(function (e) {
-      return [e.unitId, e];
+      return [e.segmentId, e];
     }));
-    ordered = componentOrder.map(function (id) {
+    ordered = segmentOrder.map(function (id) {
       return byId.get(id);
     }).filter(Boolean);
   }
   var N = ordered.length;
-  var sliceAngle = 2 * Math.PI / N;
-  var buildRing = function buildRing(polarity, getText) {
+  var segmentAngle = 2 * Math.PI / N;
+  var buildRing = function buildRing(polarity, getText, getCellStyle) {
     return ordered.map(function (entry, i) {
       return {
-        unitId: entry.unitId,
+        segmentId: entry.segmentId,
         polarity: polarity,
         fullText: getText(entry),
         pairWith: entry.pairWith,
-        startAngle: i * sliceAngle,
-        endAngle: (i + 1) * sliceAngle
+        startAngle: i * segmentAngle,
+        endAngle: (i + 1) * segmentAngle,
+        cellStyle: mergeCellStyles(entry.segmentStyle, getCellStyle(entry))
       };
     });
   };
   return {
     invisible: buildRing('invisible', function (e) {
-      return e.unitId;
+      return e.segmentId;
+    }, function () {
+      return undefined;
     }),
     positive: buildRing('positive', function (e) {
       return e.positive;
+    }, function (e) {
+      return e.cellStyles.positive;
     }),
     neutral: buildRing('neutral', function (e) {
       return e.statement;
+    }, function (e) {
+      return e.cellStyles.neutral;
     }),
     negative: buildRing('negative', function (e) {
       return e.negative;
+    }, function (e) {
+      return e.cellStyles.negative;
     })
   };
 }
-
-var DEFAULT_STYLES = {
-  ringColors: {
-    negative: '#F9C6CC',
-    neutral: '#ffffff',
-    positive: '#C6E5B3'
-  },
-  textColors: {
-    negative: '#8b1538',
-    neutral: '#333333',
-    positive: '#2d5a2d',
-    coordinates: '#333333'
-  },
-  hubColor: '#ffff7a',
-  maxFontSize: 14,
-  ringStyles: {
-    positive: {
-      padding: 0.05,
-      textBias: 0.25
-    },
-    negative: {
-      padding: 0.05,
-      textBias: 0
-    },
-    neutral: {
-      padding: 0.05,
-      textBias: 0
-    }
-  },
-  coordinateLabelSize: 12,
-  strokeWidth: 1,
-  strokeColor: '#000'
-};
-function resolveRingStyle(s, ring) {
-  var _s$ringStyles, _user$maxFontSize, _user$padding, _user$textBias;
-  var user = (_s$ringStyles = s.ringStyles) === null || _s$ringStyles === void 0 ? void 0 : _s$ringStyles[ring];
-  return {
-    maxFontSize: (_user$maxFontSize = user === null || user === void 0 ? void 0 : user.maxFontSize) !== null && _user$maxFontSize !== void 0 ? _user$maxFontSize : s.maxFontSize,
-    padding: (_user$padding = user === null || user === void 0 ? void 0 : user.padding) !== null && _user$padding !== void 0 ? _user$padding : 0.05,
-    textBias: (_user$textBias = user === null || user === void 0 ? void 0 : user.textBias) !== null && _user$textBias !== void 0 ? _user$textBias : 0
-  };
+function mergeCellStyles(segment, cell) {
+  if (!segment && !cell) return undefined;
+  if (!segment) return cell;
+  if (!cell) return segment;
+  return _objectSpread2(_objectSpread2({}, segment), cell);
 }
-function DialecticalWheel(_ref) {
-  var wisdomUnits = _ref.wisdomUnits,
-    componentOrder = _ref.componentOrder,
+
+function mergeStyles(user) {
+  var _DEFAULT_STYLES$tbody, _user$tbody, _DEFAULT_STYLES$tbody2, _user$tbody2, _DEFAULT_STYLES$tbody3, _user$tbody3, _DEFAULT_STYLES$tbody4, _user$tbody4;
+  if (!user) return DEFAULT_STYLES;
+  return _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES), user), {}, {
+    border: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.border), user.border),
+    thead: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.thead), user.thead),
+    tbody: _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES.tbody), user.tbody), {}, {
+      positive: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody === void 0 ? void 0 : _DEFAULT_STYLES$tbody.positive), (_user$tbody = user.tbody) === null || _user$tbody === void 0 ? void 0 : _user$tbody.positive),
+      negative: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody2 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody2 === void 0 ? void 0 : _DEFAULT_STYLES$tbody2.negative), (_user$tbody2 = user.tbody) === null || _user$tbody2 === void 0 ? void 0 : _user$tbody2.negative),
+      neutral: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody3 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody3 === void 0 ? void 0 : _DEFAULT_STYLES$tbody3.neutral), (_user$tbody3 = user.tbody) === null || _user$tbody3 === void 0 ? void 0 : _user$tbody3.neutral),
+      synthesis: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody4 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody4 === void 0 ? void 0 : _DEFAULT_STYLES$tbody4.synthesis), (_user$tbody4 = user.tbody) === null || _user$tbody4 === void 0 ? void 0 : _user$tbody4.synthesis)
+    })
+  });
+}
+function Wheel(_ref) {
+  var perspectives = _ref.perspectives,
+    segmentOrder = _ref.segmentOrder,
     _ref$isWhiteOutside = _ref.isWhiteOutside,
     isWhiteOutside = _ref$isWhiteOutside === void 0 ? false : _ref$isWhiteOutside,
     userStyles = _ref.styles,
     css = _ref.css,
-    onTopSliceChange = _ref.onTopSliceChange,
+    onTopSegmentChange = _ref.onTopSegmentChange,
     onClickedCellChange = _ref.onClickedCellChange,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
-  var s = react.useMemo(function () {
-    var _userStyles$ringStyle, _userStyles$ringStyle2, _userStyles$ringStyle3;
-    return _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES), userStyles), {}, {
-      ringColors: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringColors), userStyles === null || userStyles === void 0 ? void 0 : userStyles.ringColors),
-      textColors: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.textColors), userStyles === null || userStyles === void 0 ? void 0 : userStyles.textColors),
-      ringStyles: {
-        positive: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.positive), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle = userStyles.ringStyles) === null || _userStyles$ringStyle === void 0 ? void 0 : _userStyles$ringStyle.positive),
-        negative: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.negative), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle2 = userStyles.ringStyles) === null || _userStyles$ringStyle2 === void 0 ? void 0 : _userStyles$ringStyle2.negative),
-        neutral: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.neutral), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle3 = userStyles.ringStyles) === null || _userStyles$ringStyle3 === void 0 ? void 0 : _userStyles$ringStyle3.neutral)
-      }
-    });
+  var styles = react.useMemo(function () {
+    return mergeStyles(userStyles);
   }, [userStyles]);
   var measure = useTextMeasure();
   var ringData = react.useMemo(function () {
-    return transformWisdomUnits(wisdomUnits, componentOrder);
-  }, [wisdomUnits, componentOrder]);
-  var sliceIds = react.useMemo(function () {
+    return transformPerspectives(perspectives, segmentOrder);
+  }, [perspectives, segmentOrder]);
+  var segmentIds = react.useMemo(function () {
     return ringData.neutral.map(function (s) {
-      return s.unitId;
+      return s.segmentId;
     });
   }, [ringData]);
   var _useRotation = useRotation({
-      onTopSliceChange: onTopSliceChange,
-      sliceIds: sliceIds
+      onTopSegmentChange: onTopSegmentChange,
+      segmentIds: segmentIds
     }),
     rotationDeg = _useRotation.rotationDeg,
     rotationRad = _useRotation.rotationRad,
     isDragging = _useRotation.isDragging,
     svgRef = _useRotation.svgRef,
     pointerHandlers = _useRotation.pointerHandlers;
-  var outerSemantic = isWhiteOutside ? 'neutral' : 'negative';
-  var middleSemantic = isWhiteOutside ? 'negative' : 'neutral';
-  var outerFill = s.ringColors[outerSemantic];
-  var outerText = s.textColors[outerSemantic];
-  var middleFill = s.ringColors[middleSemantic];
-  var middleText = s.textColors[middleSemantic];
-  var outerRingStyle = resolveRingStyle(s, outerSemantic);
-  var middleRingStyle = resolveRingStyle(s, middleSemantic);
-  var innerRingStyle = resolveRingStyle(s, 'positive');
+  var outerRing = isWhiteOutside ? 'neutral' : 'negative';
+  var middleRing = isWhiteOutside ? 'negative' : 'neutral';
   var handleCellClick = function handleCellClick(cell) {
     if (onClickedCellChange) onClickedCellChange(cell);
   };
@@ -752,55 +803,39 @@ function DialecticalWheel(_ref) {
           transition: isDragging ? 'none' : 'transform 300ms ease-out'
         },
         children: [jsxRuntime.jsx(Ring, {
-          slices: ringData[outerSemantic],
+          segments: ringData[outerRing],
           innerR: RADII.outerStart,
           outerR: RADII.outerEnd,
-          fillColor: outerFill,
-          textColor: outerText,
+          ringName: outerRing,
+          styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: outerRingStyle.maxFontSize,
-          padding: outerRingStyle.padding,
-          textBias: outerRingStyle.textBias,
-          strokeWidth: s.strokeWidth,
-          strokeColor: s.strokeColor,
           onClick: handleCellClick
         }), jsxRuntime.jsx(Ring, {
-          slices: ringData[middleSemantic],
+          segments: ringData[middleRing],
           innerR: RADII.middleStart,
           outerR: RADII.middleEnd,
-          fillColor: middleFill,
-          textColor: middleText,
+          ringName: middleRing,
+          styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: middleRingStyle.maxFontSize,
-          padding: middleRingStyle.padding,
-          textBias: middleRingStyle.textBias,
-          strokeWidth: s.strokeWidth,
-          strokeColor: s.strokeColor,
           onClick: handleCellClick
         }), jsxRuntime.jsx(Ring, {
-          slices: ringData.positive,
+          segments: ringData.positive,
           innerR: RADII.innerStart,
           outerR: RADII.innerEnd,
-          fillColor: s.ringColors.positive,
-          textColor: s.textColors.positive,
+          ringName: "positive",
+          styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: innerRingStyle.maxFontSize,
-          padding: innerRingStyle.padding,
-          textBias: innerRingStyle.textBias,
-          strokeWidth: s.strokeWidth,
-          strokeColor: s.strokeColor,
           onClick: handleCellClick
-        }), jsxRuntime.jsx(Hub, {
-          color: s.hubColor
-        }), jsxRuntime.jsx(CoordinateLabels, {
-          slices: ringData.invisible,
-          radius: (RADII.invisibleStart + RADII.invisibleEnd) / 2,
+        }), jsxRuntime.jsx(SynthesisRing, {
+          styles: styles
+        }), jsxRuntime.jsx(CycleRing, {
+          segments: ringData.invisible,
+          radius: (RADII.cycleStart + RADII.cycleEnd) / 2,
           rotationRad: rotationRad,
-          color: s.textColors.coordinates,
-          fontSize: s.coordinateLabelSize
+          styles: styles
         })]
       })
     })), debug && jsxRuntime.jsxs("div", {
@@ -812,11 +847,11 @@ function DialecticalWheel(_ref) {
         fontSize: 12,
         color: '#666'
       },
-      children: [wisdomUnits.length, " wisdom units, ", sliceIds.length, " slices, rotation: ", rotationDeg.toFixed(1), "\xB0"]
+      children: [perspectives.length, " perspectives, ", segmentIds.length, " segments, rotation: ", rotationDeg.toFixed(1), "\xB0"]
     })]
   });
 }
 
-exports.DialecticalWheel = DialecticalWheel;
-exports.default = DialecticalWheel;
+exports.Wheel = Wheel;
+exports.default = Wheel;
 //# sourceMappingURL=index.js.map

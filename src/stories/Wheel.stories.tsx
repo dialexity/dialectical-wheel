@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React from 'react';
-import DialecticalWheel from '../components/DialecticalWheel';
+import { Wheel } from '../components';
 
-const sampleWisdomUnits = [
+const samplePerspectives = [
   {
     "t_minus": { "alias": "T-", "statement": "Risk group lives", "explanation": "" },
     "t": { "alias": "T", "statement": "Pursue minister elimination", "explanation": "" },
@@ -38,23 +38,20 @@ const sampleWisdomUnits = [
 ];
 
 const defaultStyles = {
-  ringColors: { negative: '#F9C6CC', neutral: '#ffffff', positive: '#C6E5B3' },
-  textColors: { negative: '#8b1538', neutral: '#333333', positive: '#2d5a2d', coordinates: '#333333' },
-  hubColor: '#ffff7a',
-  maxFontSize: 14,
-  ringStyles: {
-    positive: { maxFontSize: 14, padding: 0.05, textBias: 0.25 },
-    negative: { maxFontSize: 14, padding: 0.05, textBias: 0 },
-    neutral: { maxFontSize: 14, padding: 0.05, textBias: 0 },
+  fontSize: 12,
+  border: { width: 0.5, color: '#ccc' },
+  thead: { color: '#333333', fontSize: 12 },
+  tbody: {
+    positive: { background: '#C6E5B3', color: '#2d5a2d', topMargin: '-25%' },
+    negative: { background: '#F9C6CC', color: '#8b1538' },
+    neutral: { background: '#ffffff', color: '#333333' },
+    synthesis: { background: '#ffff7a' },
   },
-  coordinateLabelSize: 12,
-  strokeWidth: 1,
-  strokeColor: '#000',
 };
 
-const meta: Meta<typeof DialecticalWheel> = {
-  title: 'Components/DialecticalWheel',
-  component: DialecticalWheel,
+const meta: Meta<typeof Wheel> = {
+  title: 'Components/Wheel',
+  component: Wheel,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
 };
@@ -64,10 +61,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    wisdomUnits: sampleWisdomUnits,
+    perspectives: samplePerspectives,
     styles: defaultStyles,
     debug: true,
-    onTopSliceChange: (slice) => console.log('Top slice:', slice),
+    onTopSegmentChange: (segment) => console.log('Top segment:', segment),
     onClickedCellChange: (cell) => console.log('Clicked cell:', cell),
   },
 };
@@ -79,10 +76,10 @@ export const WhiteOutside: Story = {
   },
 };
 
-export const TwoUnits: Story = {
+export const TwoPerspectives: Story = {
   args: {
     ...Default.args,
-    wisdomUnits: sampleWisdomUnits.slice(0, 2),
+    perspectives: samplePerspectives.slice(0, 2),
   },
 };
 
@@ -90,21 +87,25 @@ export const CustomColors: Story = {
   args: {
     ...Default.args,
     styles: {
-      ringColors: { negative: '#E8D5E0', neutral: '#F5F5DC', positive: '#D4E8D0' },
-      textColors: { negative: '#5C2D4F', neutral: '#4A4A2E', positive: '#2D5A2D', coordinates: '#333' },
-      hubColor: '#FFD700',
+      ...defaultStyles,
+      tbody: {
+        positive: { background: '#D4E8D0', color: '#2D5A2D', topMargin: '-25%' },
+        negative: { background: '#E8D5E0', color: '#5C2D4F' },
+        neutral: { background: '#F5F5DC', color: '#4A4A2E' },
+        synthesis: { background: '#FFD700' },
+      },
     },
   },
 };
 
-export const WithComponentOrder: Story = {
+export const WithSegmentOrder: Story = {
   args: {
     ...Default.args,
-    componentOrder: ['T', 'T2', 'T3', 'A4', 'A', 'A2', 'A3', 'T4'],
+    segmentOrder: ['T', 'T2', 'T3', 'A4', 'A', 'A2', 'A3', 'T4'],
   },
 };
 
-const longTextWisdomUnits = [
+const longTextPerspectives = [
   {
     "t_minus": { "alias": "T1-", "statement": "Isolation and uncertainty about the future of personal entrepreneurial ambitions", "explanation": "" },
     "t": { "alias": "T1", "statement": "Personal entrepreneurial aspiration and self-directed career development", "explanation": "" },
@@ -142,6 +143,6 @@ const longTextWisdomUnits = [
 export const LongText: Story = {
   args: {
     ...Default.args,
-    wisdomUnits: longTextWisdomUnits,
+    perspectives: longTextPerspectives,
   },
 };
