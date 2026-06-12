@@ -161,11 +161,6 @@ function describeArc(innerR, outerR, startAngle, endAngle) {
   var largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
   return ["M ".concat(ox1, " ").concat(oy1), "A ".concat(outerR, " ").concat(outerR, " 0 ").concat(largeArc, " 1 ").concat(ox2, " ").concat(oy2), "L ".concat(ix1, " ").concat(iy1), "A ".concat(innerR, " ").concat(innerR, " 0 ").concat(largeArc, " 0 ").concat(ix2, " ").concat(iy2), 'Z'].join(' ');
 }
-function arcCentroid(innerR, outerR, startAngle, endAngle) {
-  var midAngle = (startAngle + endAngle) / 2;
-  var midR = (innerR + outerR) / 2;
-  return polarToCartesian(midR, midAngle);
-}
 function normalizeAngle(angle) {
   return (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 }
@@ -181,114 +176,9 @@ var RADII = {
   invisibleEnd: 250
 };
 
-function chordWidth(lineIndex, lineHeight, outerR, innerR, cellAngle) {
-  var r = outerR - (lineIndex + 0.5) * lineHeight;
-  if (r <= innerR) return innerR * cellAngle * 0.8;
-  var halfAngle = Math.min(cellAngle / 2, Math.acos(Math.max(-1, Math.min(1, innerR / r))));
-  return 2 * r * Math.sin(halfAngle) * 0.8;
+function chordWidth(r, halfAngle) {
+  return 2 * r * Math.sin(halfAngle) * 0.9;
 }
-function tryWrap(text, fontSize, params) {
-  var innerR = params.innerR,
-    outerR = params.outerR,
-    cellAngle = params.cellAngle,
-    measure = params.measure;
-  var lineHeight = fontSize * 1.4;
-  var maxLines = Math.floor((outerR - innerR) * 0.8 / lineHeight);
-  if (maxLines < 1) return null;
-  var words = text.split(/\s+/).filter(Boolean);
-  var lines = [];
-  var currentLine = '';
-  var lineIdx = 0;
-  var _iterator = _createForOfIteratorHelper(words),
-    _step;
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var word = _step.value;
-      var width = chordWidth(lineIdx, lineHeight, outerR, innerR, cellAngle);
-      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-      var candidateWidth = measure(candidate, fontSize);
-      if (candidateWidth <= width) {
-        currentLine = candidate;
-      } else {
-        if (currentLine) {
-          lines.push(currentLine);
-          lineIdx++;
-          if (lineIdx >= maxLines) return null;
-          var newWidth = chordWidth(lineIdx, lineHeight, outerR, innerR, cellAngle);
-          if (measure(word, fontSize) <= newWidth) {
-            currentLine = word;
-          } else {
-            var hyphenated = hyphenate(word, fontSize, newWidth, measure);
-            if (!hyphenated) return null;
-            lines.push(hyphenated[0]);
-            lineIdx++;
-            if (lineIdx >= maxLines) return null;
-            currentLine = hyphenated[1];
-          }
-        } else {
-          var _hyphenated = hyphenate(word, fontSize, width, measure);
-          if (!_hyphenated) return null;
-          lines.push(_hyphenated[0]);
-          lineIdx++;
-          if (lineIdx >= maxLines) return null;
-          currentLine = _hyphenated[1];
-        }
-      }
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  return lines.length <= maxLines ? lines : null;
-}
-function hyphenate(word, fontSize, maxWidth, measure) {
-  if (word.length < 4) return null;
-  for (var i = word.length - 1; i >= 2; i--) {
-    var part = word.slice(0, i) + '-';
-    if (measure(part, fontSize) <= maxWidth) {
-      return [part, word.slice(i)];
-    }
-  }
-  return null;
-}
-function layoutText(text, params) {
-  var baseFontSize = params.baseFontSize;
-  var minFontSize = Math.max(4, baseFontSize * 0.5);
-  for (var _fs = baseFontSize; _fs >= minFontSize; _fs -= 0.5) {
-    var lines = tryWrap(text, _fs, _objectSpread2(_objectSpread2({}, params), {}, {
-      baseFontSize: _fs
-    }));
-    if (lines) {
-      return {
-        lines: lines,
-        fontSize: _fs,
-        lineHeight: _fs * 1.4
-      };
-    }
-  }
-  // Last resort: truncate at min font size
-  var fs = minFontSize;
-  var lineHeight = fs * 1.4;
-  var innerR = params.innerR,
-    outerR = params.outerR,
-    cellAngle = params.cellAngle,
-    measure = params.measure;
-  var width = chordWidth(0, lineHeight, outerR, innerR, cellAngle);
-  var truncated = text;
-  while (measure(truncated + '…', fs) > width && truncated.length > 1) {
-    truncated = truncated.slice(0, -1).trimEnd();
-  }
-  return {
-    lines: [truncated + '…'],
-    fontSize: fs,
-    lineHeight: lineHeight
-  };
-}
-
 var CellText = function CellText(_ref) {
   var innerR = _ref.innerR,
     outerR = _ref.outerR,
@@ -297,44 +187,51 @@ var CellText = function CellText(_ref) {
     text = _ref.text,
     color = _ref.color,
     rotationRad = _ref.rotationRad,
-    measure = _ref.measure,
-    baseFontSize = _ref.baseFontSize;
-  var _arcCentroid = arcCentroid(innerR, outerR, startAngle, endAngle),
-    _arcCentroid2 = _slicedToArray(_arcCentroid, 2),
-    cx = _arcCentroid2[0],
-    cy = _arcCentroid2[1];
-  var cellAngle = endAngle - startAngle;
-  var layout = useMemo(function () {
-    return layoutText(text, {
-      innerR: innerR,
-      outerR: outerR,
-      cellAngle: cellAngle,
-      baseFontSize: baseFontSize,
-      measure: measure
-    });
-  }, [text, innerR, outerR, cellAngle, baseFontSize, measure]);
+    baseFontSize = _ref.baseFontSize,
+    padding = _ref.padding,
+    textBias = _ref.textBias;
   var midAngle = (startAngle + endAngle) / 2;
+  var halfAngle = (endAngle - startAngle) / 2;
+  // textBias shifts center toward outer edge (positive = outward)
+  var biasedR = (innerR + outerR) / 2 + (outerR - innerR) * textBias * 0.5;
+  var _polarToCartesian = polarToCartesian(biasedR, midAngle),
+    _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
+    cx = _polarToCartesian2[0],
+    cy = _polarToCartesian2[1];
   var visualAngle = normalizeAngle(midAngle + rotationRad);
   var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
   var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
-  var totalHeight = layout.lines.length * layout.lineHeight;
-  var startY = -totalHeight / 2 + layout.lineHeight * 0.7;
-  return jsx("text", {
-    transform: "translate(".concat(cx, ", ").concat(cy, ") rotate(").concat(textRotDeg, ")"),
-    textAnchor: "middle",
-    fill: color,
-    fontSize: layout.fontSize,
-    fontWeight: 600,
-    fontFamily: "system-ui, sans-serif",
+  var pad = (outerR - innerR) * padding;
+  var boxHeight = outerR - innerR - pad * 2;
+  var boxWidth = chordWidth(biasedR, halfAngle);
+  return jsx("foreignObject", {
+    x: cx - boxWidth / 2,
+    y: cy - boxHeight / 2,
+    width: boxWidth,
+    height: boxHeight,
+    transform: "rotate(".concat(textRotDeg, ", ").concat(cx, ", ").concat(cy, ")"),
     style: {
-      pointerEvents: 'none'
+      pointerEvents: 'none',
+      overflow: 'hidden'
     },
-    children: layout.lines.map(function (line, i) {
-      return jsx("tspan", {
-        x: 0,
-        dy: i === 0 ? startY : layout.lineHeight,
-        children: line
-      }, i);
+    children: jsx("div", {
+      style: {
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontSize: baseFontSize,
+        fontWeight: 600,
+        fontFamily: 'system-ui, sans-serif',
+        color: color,
+        lineHeight: 1.2,
+        overflowWrap: 'break-word',
+        wordBreak: 'break-word',
+        overflow: 'hidden'
+      },
+      children: text
     })
   });
 };
@@ -348,9 +245,16 @@ var ArcCell = function ArcCell(_ref) {
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
     baseFontSize = _ref.baseFontSize,
+    padding = _ref.padding,
+    textBias = _ref.textBias,
+    strokeWidth = _ref.strokeWidth,
+    strokeColor = _ref.strokeColor,
     onClick = _ref.onClick,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
+  var clipId = useMemo(function () {
+    return "dw-".concat(slice.polarity, "-").concat(slice.unitId, "-").concat(innerR).replace(/[^a-zA-Z0-9-]/g, '_');
+  }, [slice.polarity, slice.unitId, innerR]);
   var path = describeArc(innerR, outerR, slice.startAngle, slice.endAngle);
   var handleClick = function handleClick() {
     if (onClick) {
@@ -367,24 +271,109 @@ var ArcCell = function ArcCell(_ref) {
     style: {
       cursor: onClick ? 'pointer' : 'default'
     },
-    children: [jsx("path", {
+    children: [jsx("defs", {
+      children: jsx("clipPath", {
+        id: clipId,
+        children: jsx("path", {
+          d: path
+        })
+      })
+    }), jsx("path", {
       d: path,
       fill: fillColor,
-      stroke: "#000",
-      strokeWidth: 1
-    }), showText && slice.fullText && jsx(CellText, {
-      innerR: innerR,
-      outerR: outerR,
-      startAngle: slice.startAngle,
-      endAngle: slice.endAngle,
-      text: slice.fullText,
-      color: textColor,
-      rotationRad: rotationRad,
-      measure: measure,
-      baseFontSize: baseFontSize
+      stroke: strokeColor,
+      strokeWidth: strokeWidth
+    }), showText && slice.fullText && jsx("g", {
+      clipPath: "url(#".concat(clipId, ")"),
+      children: jsx(CellText, {
+        innerR: innerR,
+        outerR: outerR,
+        startAngle: slice.startAngle,
+        endAngle: slice.endAngle,
+        text: slice.fullText,
+        color: textColor,
+        rotationRad: rotationRad,
+        measure: measure,
+        baseFontSize: baseFontSize,
+        padding: padding,
+        textBias: textBias
+      })
     })]
   });
 };
+
+// The cell is a trapezoid: wider at the outer radius, narrower at the inner.
+// Each line of text sits at a specific radius and gets width = chord at that radius.
+// Lines are stacked from outer edge inward (top line = outermost = widest).
+function chordAt(r, halfAngle) {
+  return 2 * r * Math.sin(halfAngle) * 0.9;
+}
+function tryFit(text, fontSize, params) {
+  var innerR = params.innerR,
+    outerR = params.outerR,
+    cellAngle = params.cellAngle,
+    paddingFrac = params.padding,
+    measure = params.measure;
+  var lineHeight = fontSize * 1.3;
+  var halfAngle = cellAngle / 2;
+  var pad = (outerR - innerR) * paddingFrac;
+  var topR = outerR - pad;
+  var botR = innerR + pad;
+  var usableHeight = topR - botR;
+  var maxLines = Math.floor(usableHeight / lineHeight);
+  if (maxLines < 1) return null;
+  var midR = (innerR + outerR) / 2;
+  var wrapWidth = chordAt(midR, halfAngle);
+  var words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [''];
+  var lines = [];
+  var currentLine = '';
+  var _iterator = _createForOfIteratorHelper(words),
+    _step;
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var word = _step.value;
+      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
+      if (measure(candidate, fontSize) <= wrapWidth) {
+        currentLine = candidate;
+      } else if (currentLine) {
+        lines.push(currentLine);
+        if (lines.length >= maxLines) return null;
+        currentLine = word;
+      } else {
+        currentLine = word;
+      }
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+  if (currentLine) lines.push(currentLine);
+  if (lines.length > maxLines) return null;
+  // Check that each line fits — reject if any line exceeds wrapWidth
+  for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
+    var line = _lines[_i];
+    if (measure(line, fontSize) > wrapWidth) return null;
+  }
+  return lines;
+}
+function computeUniformFontSize(texts, params) {
+  var baseFontSize = params.baseFontSize;
+  var _loop = function _loop(fs) {
+      if (texts.every(function (t) {
+        return tryFit(t, fs, params) !== null;
+      })) return {
+        v: fs
+      };
+    },
+    _ret;
+  for (var fs = baseFontSize; fs >= 3; fs -= 0.5) {
+    _ret = _loop(fs);
+    if (_ret) return _ret.v;
+  }
+  return 3;
+}
 
 var Ring = function Ring(_ref) {
   var slices = _ref.slices,
@@ -395,9 +384,29 @@ var Ring = function Ring(_ref) {
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
     baseFontSize = _ref.baseFontSize,
+    padding = _ref.padding,
+    textBias = _ref.textBias,
+    strokeWidth = _ref.strokeWidth,
+    strokeColor = _ref.strokeColor,
     onClick = _ref.onClick,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
+  var cellAngle = slices.length > 0 ? slices[0].endAngle - slices[0].startAngle : 0;
+  var uniformFontSize = useMemo(function () {
+    if (slices.length === 0) return baseFontSize;
+    var texts = slices.map(function (s) {
+      return s.fullText;
+    }).filter(Boolean);
+    if (texts.length === 0) return baseFontSize;
+    return computeUniformFontSize(texts, {
+      innerR: innerR,
+      outerR: outerR,
+      cellAngle: cellAngle,
+      baseFontSize: baseFontSize,
+      padding: padding,
+      measure: measure
+    });
+  }, [slices, innerR, outerR, cellAngle, baseFontSize, padding, measure]);
   return jsx("g", {
     children: slices.map(function (slice) {
       return jsx(ArcCell, {
@@ -408,7 +417,11 @@ var Ring = function Ring(_ref) {
         textColor: textColor,
         rotationRad: rotationRad,
         measure: measure,
-        baseFontSize: baseFontSize,
+        baseFontSize: uniformFontSize,
+        padding: padding,
+        textBias: textBias,
+        strokeWidth: strokeWidth,
+        strokeColor: strokeColor,
         onClick: onClick,
         showText: showText
       }, slice.unitId);
@@ -430,7 +443,8 @@ var CoordinateLabels = function CoordinateLabels(_ref) {
   var slices = _ref.slices,
     radius = _ref.radius,
     rotationRad = _ref.rotationRad,
-    color = _ref.color;
+    color = _ref.color,
+    fontSize = _ref.fontSize;
   return jsx("g", {
     children: slices.map(function (slice) {
       var midAngle = (slice.startAngle + slice.endAngle) / 2;
@@ -448,7 +462,7 @@ var CoordinateLabels = function CoordinateLabels(_ref) {
         textAnchor: "middle",
         dominantBaseline: "central",
         fill: color,
-        fontSize: 12,
+        fontSize: fontSize,
         fontWeight: "bold",
         fontFamily: "system-ui, sans-serif",
         style: {
@@ -470,7 +484,7 @@ function useTextMeasure() {
     }
     var ctx = ctxRef.current;
     ctx.font = "600 ".concat(fontSize, "px ").concat(fontFamily);
-    return ctx.measureText(text).width;
+    return ctx.measureText(text).width * 1.05;
   }, [fontFamily]);
   return measure;
 }
@@ -620,32 +634,70 @@ function transformWisdomUnits(wisdomUnits, componentOrder) {
   };
 }
 
-var DEFAULT_COLORS = {
-  userRingColors: {
+var DEFAULT_STYLES = {
+  ringColors: {
     negative: '#F9C6CC',
     neutral: '#ffffff',
     positive: '#C6E5B3'
   },
-  userTextColors: {
+  textColors: {
     negative: '#8b1538',
     neutral: '#333333',
     positive: '#2d5a2d',
     coordinates: '#333333'
   },
-  userHubColor: '#ffff7a'
+  hubColor: '#ffff7a',
+  maxFontSize: 14,
+  ringStyles: {
+    positive: {
+      padding: 0.05,
+      textBias: 0.25
+    },
+    negative: {
+      padding: 0.05,
+      textBias: 0
+    },
+    neutral: {
+      padding: 0.05,
+      textBias: 0
+    }
+  },
+  coordinateLabelSize: 12,
+  strokeWidth: 1,
+  strokeColor: '#000'
 };
+function resolveRingStyle(s, ring) {
+  var _s$ringStyles, _user$maxFontSize, _user$padding, _user$textBias;
+  var user = (_s$ringStyles = s.ringStyles) === null || _s$ringStyles === void 0 ? void 0 : _s$ringStyles[ring];
+  return {
+    maxFontSize: (_user$maxFontSize = user === null || user === void 0 ? void 0 : user.maxFontSize) !== null && _user$maxFontSize !== void 0 ? _user$maxFontSize : s.maxFontSize,
+    padding: (_user$padding = user === null || user === void 0 ? void 0 : user.padding) !== null && _user$padding !== void 0 ? _user$padding : 0.05,
+    textBias: (_user$textBias = user === null || user === void 0 ? void 0 : user.textBias) !== null && _user$textBias !== void 0 ? _user$textBias : 0
+  };
+}
 function DialecticalWheel(_ref) {
   var wisdomUnits = _ref.wisdomUnits,
     componentOrder = _ref.componentOrder,
     _ref$isWhiteOutside = _ref.isWhiteOutside,
     isWhiteOutside = _ref$isWhiteOutside === void 0 ? false : _ref$isWhiteOutside,
-    _ref$colors = _ref.colors,
-    colors = _ref$colors === void 0 ? DEFAULT_COLORS : _ref$colors,
-    style = _ref.style,
+    userStyles = _ref.styles,
+    css = _ref.css,
     onTopSliceChange = _ref.onTopSliceChange,
     onClickedCellChange = _ref.onClickedCellChange,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
+  var s = useMemo(function () {
+    var _userStyles$ringStyle, _userStyles$ringStyle2, _userStyles$ringStyle3;
+    return _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES), userStyles), {}, {
+      ringColors: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringColors), userStyles === null || userStyles === void 0 ? void 0 : userStyles.ringColors),
+      textColors: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.textColors), userStyles === null || userStyles === void 0 ? void 0 : userStyles.textColors),
+      ringStyles: {
+        positive: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.positive), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle = userStyles.ringStyles) === null || _userStyles$ringStyle === void 0 ? void 0 : _userStyles$ringStyle.positive),
+        negative: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.negative), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle2 = userStyles.ringStyles) === null || _userStyles$ringStyle2 === void 0 ? void 0 : _userStyles$ringStyle2.negative),
+        neutral: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.ringStyles.neutral), userStyles === null || userStyles === void 0 || (_userStyles$ringStyle3 = userStyles.ringStyles) === null || _userStyles$ringStyle3 === void 0 ? void 0 : _userStyles$ringStyle3.neutral)
+      }
+    });
+  }, [userStyles]);
   var measure = useTextMeasure();
   var ringData = useMemo(function () {
     return transformWisdomUnits(wisdomUnits, componentOrder);
@@ -666,10 +718,13 @@ function DialecticalWheel(_ref) {
     pointerHandlers = _useRotation.pointerHandlers;
   var outerSemantic = isWhiteOutside ? 'neutral' : 'negative';
   var middleSemantic = isWhiteOutside ? 'negative' : 'neutral';
-  var outerFill = isWhiteOutside ? colors.userRingColors.neutral : colors.userRingColors.negative;
-  var outerText = isWhiteOutside ? colors.userTextColors.neutral : colors.userTextColors.negative;
-  var middleFill = isWhiteOutside ? colors.userRingColors.negative : colors.userRingColors.neutral;
-  var middleText = isWhiteOutside ? colors.userTextColors.negative : colors.userTextColors.neutral;
+  var outerFill = s.ringColors[outerSemantic];
+  var outerText = s.textColors[outerSemantic];
+  var middleFill = s.ringColors[middleSemantic];
+  var middleText = s.textColors[middleSemantic];
+  var outerRingStyle = resolveRingStyle(s, outerSemantic);
+  var middleRingStyle = resolveRingStyle(s, middleSemantic);
+  var innerRingStyle = resolveRingStyle(s, 'positive');
   var handleCellClick = function handleCellClick(cell) {
     if (onClickedCellChange) onClickedCellChange(cell);
   };
@@ -677,7 +732,7 @@ function DialecticalWheel(_ref) {
     style: _objectSpread2({
       background: 'white',
       borderRadius: 8
-    }, style),
+    }, css),
     children: [jsx("svg", _objectSpread2(_objectSpread2({
       ref: svgRef,
       viewBox: "-250 -250 500 500",
@@ -700,7 +755,11 @@ function DialecticalWheel(_ref) {
           textColor: outerText,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: 10,
+          baseFontSize: outerRingStyle.maxFontSize,
+          padding: outerRingStyle.padding,
+          textBias: outerRingStyle.textBias,
+          strokeWidth: s.strokeWidth,
+          strokeColor: s.strokeColor,
           onClick: handleCellClick
         }), jsx(Ring, {
           slices: ringData[middleSemantic],
@@ -710,25 +769,34 @@ function DialecticalWheel(_ref) {
           textColor: middleText,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: 10,
+          baseFontSize: middleRingStyle.maxFontSize,
+          padding: middleRingStyle.padding,
+          textBias: middleRingStyle.textBias,
+          strokeWidth: s.strokeWidth,
+          strokeColor: s.strokeColor,
           onClick: handleCellClick
         }), jsx(Ring, {
           slices: ringData.positive,
           innerR: RADII.innerStart,
           outerR: RADII.innerEnd,
-          fillColor: colors.userRingColors.positive,
-          textColor: colors.userTextColors.positive,
+          fillColor: s.ringColors.positive,
+          textColor: s.textColors.positive,
           rotationRad: rotationRad,
           measure: measure,
-          baseFontSize: 10,
+          baseFontSize: innerRingStyle.maxFontSize,
+          padding: innerRingStyle.padding,
+          textBias: innerRingStyle.textBias,
+          strokeWidth: s.strokeWidth,
+          strokeColor: s.strokeColor,
           onClick: handleCellClick
         }), jsx(Hub, {
-          color: colors.userHubColor
+          color: s.hubColor
         }), jsx(CoordinateLabels, {
           slices: ringData.invisible,
           radius: (RADII.invisibleStart + RADII.invisibleEnd) / 2,
           rotationRad: rotationRad,
-          color: colors.userTextColors.coordinates
+          color: s.textColors.coordinates,
+          fontSize: s.coordinateLabelSize
         })]
       })
     })), debug && jsxs("div", {

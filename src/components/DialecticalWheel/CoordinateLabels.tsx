@@ -7,10 +7,11 @@ interface CoordinateLabelsProps {
   radius: number;
   rotationRad: number;
   color: string;
+  fontSize: number;
 }
 
 export const CoordinateLabels: React.FC<CoordinateLabelsProps> = ({
-  slices, radius, rotationRad, color
+  slices, radius, rotationRad, color, fontSize
 }) => (
   <g>
     {slices.map(slice => {
@@ -29,7 +30,7 @@ export const CoordinateLabels: React.FC<CoordinateLabelsProps> = ({
           textAnchor="middle"
           dominantBaseline="central"
           fill={color}
-          fontSize={12}
+          fontSize={fontSize}
           fontWeight="bold"
           fontFamily="system-ui, sans-serif"
           style={{ pointerEvents: 'none' }}

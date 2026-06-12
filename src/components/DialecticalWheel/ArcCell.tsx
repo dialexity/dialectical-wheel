@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { describeArc } from './utils/geometry';
 import { CellText } from './CellText';
 import type { SliceData, CellInfo } from '../../types';
@@ -12,13 +12,21 @@ interface ArcCellProps {
   rotationRad: number;
   measure: (text: string, fontSize: number) => number;
   baseFontSize: number;
+  padding: number;
+  textBias: number;
+  strokeWidth: number;
+  strokeColor: string;
   onClick?: (cell: CellInfo) => void;
   showText?: boolean;
 }
 
 export const ArcCell: React.FC<ArcCellProps> = ({
-  slice, innerR, outerR, fillColor, textColor, rotationRad, measure, baseFontSize, onClick, showText = true
+  slice, innerR, outerR, fillColor, textColor, rotationRad, measure, baseFontSize, padding, textBias, strokeWidth, strokeColor, onClick, showText = true
 }) => {
+  const clipId = useMemo(
+    () => `dw-${slice.polarity}-${slice.unitId}-${innerR}`.replace(/[^a-zA-Z0-9-]/g, '_'),
+    [slice.polarity, slice.unitId, innerR]
+  );
   const path = describeArc(innerR, outerR, slice.startAngle, slice.endAngle);
 
   const handleClick = () => {
@@ -34,24 +42,33 @@ export const ArcCell: React.FC<ArcCellProps> = ({
 
   return (
     <g onClick={handleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      <defs>
+        <clipPath id={clipId}>
+          <path d={path} />
+        </clipPath>
+      </defs>
       <path
         d={path}
         fill={fillColor}
-        stroke="#000"
-        strokeWidth={1}
+        stroke={strokeColor}
+        strokeWidth={strokeWidth}
       />
       {showText && slice.fullText && (
-        <CellText
-          innerR={innerR}
-          outerR={outerR}
-          startAngle={slice.startAngle}
-          endAngle={slice.endAngle}
-          text={slice.fullText}
-          color={textColor}
-          rotationRad={rotationRad}
-          measure={measure}
-          baseFontSize={baseFontSize}
-        />
+        <g clipPath={`url(#${clipId})`}>
+          <CellText
+            innerR={innerR}
+            outerR={outerR}
+            startAngle={slice.startAngle}
+            endAngle={slice.endAngle}
+            text={slice.fullText}
+            color={textColor}
+            rotationRad={rotationRad}
+            measure={measure}
+            baseFontSize={baseFontSize}
+            padding={padding}
+            textBias={textBias}
+          />
+        </g>
       )}
     </g>
   );

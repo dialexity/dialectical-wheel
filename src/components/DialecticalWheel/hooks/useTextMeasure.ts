@@ -10,7 +10,7 @@ export function useTextMeasure(fontFamily: string = 'system-ui, sans-serif') {
     }
     const ctx = ctxRef.current!;
     ctx.font = `600 ${fontSize}px ${fontFamily}`;
-    return ctx.measureText(text).width;
+    return ctx.measureText(text).width * 1.05;
   }, [fontFamily]);
 
   return measure;

@@ -9,6 +9,10 @@ interface ArcCellProps {
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;
     baseFontSize: number;
+    padding: number;
+    textBias: number;
+    strokeWidth: number;
+    strokeColor: string;
     onClick?: (cell: CellInfo) => void;
     showText?: boolean;
 }

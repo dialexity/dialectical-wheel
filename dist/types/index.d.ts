@@ -12,19 +12,33 @@ export interface WisdomUnit {
     a: string | Component;
     a_minus: string | Component;
 }
-export interface Colors {
-    userRingColors: {
+export interface RingStyle {
+    maxFontSize: number;
+    padding: number;
+    textBias: number;
+}
+export interface Styles {
+    ringColors: {
         negative: string;
         neutral: string;
         positive: string;
     };
-    userTextColors: {
+    textColors: {
         negative: string;
         neutral: string;
         positive: string;
         coordinates: string;
     };
-    userHubColor: string;
+    hubColor: string;
+    maxFontSize: number;
+    ringStyles?: {
+        positive?: Partial<RingStyle>;
+        neutral?: Partial<RingStyle>;
+        negative?: Partial<RingStyle>;
+    };
+    coordinateLabelSize: number;
+    strokeWidth: number;
+    strokeColor: string;
 }
 export interface CellInfo {
     unitId: string;
@@ -44,8 +58,8 @@ export interface DialecticalWheelProps {
     wisdomUnits: WisdomUnit[];
     componentOrder?: string[];
     isWhiteOutside?: boolean;
-    colors?: Colors;
-    style?: React.CSSProperties;
+    styles?: Partial<Styles>;
+    css?: React.CSSProperties;
     onTopSliceChange?: (topSlice: string) => void;
     onClickedCellChange?: (cell: CellInfo | null) => void;
     debug?: boolean;

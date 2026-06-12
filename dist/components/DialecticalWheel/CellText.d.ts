@@ -9,6 +9,8 @@ interface CellTextProps {
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;
     baseFontSize: number;
+    padding: number;
+    textBias: number;
 }
 export declare const CellText: React.FC<CellTextProps>;
 export {};

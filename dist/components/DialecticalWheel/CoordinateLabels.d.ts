@@ -5,6 +5,7 @@ interface CoordinateLabelsProps {
     radius: number;
     rotationRad: number;
     color: string;
+    fontSize: number;
 }
 export declare const CoordinateLabels: React.FC<CoordinateLabelsProps>;
 export {};

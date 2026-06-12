@@ -6,24 +6,57 @@ import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformWisdomUnits } from './utils/dataTransform';
 import { RADII } from './utils/geometry';
-import type { DialecticalWheelProps, CellInfo } from '../../types';
+import type { DialecticalWheelProps, Styles, RingStyle, CellInfo } from '../../types';
 
-const DEFAULT_COLORS = {
-  userRingColors: { negative: '#F9C6CC', neutral: '#ffffff', positive: '#C6E5B3' },
-  userTextColors: { negative: '#8b1538', neutral: '#333333', positive: '#2d5a2d', coordinates: '#333333' },
-  userHubColor: '#ffff7a',
+const DEFAULT_STYLES: Styles = {
+  ringColors: { negative: '#F9C6CC', neutral: '#ffffff', positive: '#C6E5B3' },
+  textColors: { negative: '#8b1538', neutral: '#333333', positive: '#2d5a2d', coordinates: '#333333' },
+  hubColor: '#ffff7a',
+  maxFontSize: 14,
+  ringStyles: {
+    positive: { padding: 0.05, textBias: 0.25 },
+    negative: { padding: 0.05, textBias: 0 },
+    neutral: { padding: 0.05, textBias: 0 },
+  },
+  coordinateLabelSize: 12,
+  strokeWidth: 1,
+  strokeColor: '#000',
 };
+
+function resolveRingStyle(s: Styles, ring: 'positive' | 'negative' | 'neutral'): RingStyle {
+  const user = s.ringStyles?.[ring];
+  return {
+    maxFontSize: user?.maxFontSize ?? s.maxFontSize,
+    padding: user?.padding ?? 0.05,
+    textBias: user?.textBias ?? 0,
+  };
+}
 
 export default function DialecticalWheel({
   wisdomUnits,
   componentOrder,
   isWhiteOutside = false,
-  colors = DEFAULT_COLORS,
-  style,
+  styles: userStyles,
+  css,
   onTopSliceChange,
   onClickedCellChange,
   debug = false,
 }: DialecticalWheelProps) {
+  const s: Styles = useMemo(
+    () => ({
+      ...DEFAULT_STYLES,
+      ...userStyles,
+      ringColors: { ...DEFAULT_STYLES.ringColors, ...userStyles?.ringColors },
+      textColors: { ...DEFAULT_STYLES.textColors, ...userStyles?.textColors },
+      ringStyles: {
+        positive: { ...DEFAULT_STYLES.ringStyles!.positive, ...userStyles?.ringStyles?.positive },
+        negative: { ...DEFAULT_STYLES.ringStyles!.negative, ...userStyles?.ringStyles?.negative },
+        neutral: { ...DEFAULT_STYLES.ringStyles!.neutral, ...userStyles?.ringStyles?.neutral },
+      },
+    }),
+    [userStyles]
+  );
+
   const measure = useTextMeasure();
   const ringData = useMemo(
     () => transformWisdomUnits(wisdomUnits, componentOrder),
@@ -36,20 +69,24 @@ export default function DialecticalWheel({
     sliceIds,
   });
 
-  const outerSemantic = isWhiteOutside ? 'neutral' : 'negative';
-  const middleSemantic = isWhiteOutside ? 'negative' : 'neutral';
+  const outerSemantic: 'neutral' | 'negative' = isWhiteOutside ? 'neutral' : 'negative';
+  const middleSemantic: 'neutral' | 'negative' = isWhiteOutside ? 'negative' : 'neutral';
 
-  const outerFill = isWhiteOutside ? colors.userRingColors.neutral : colors.userRingColors.negative;
-  const outerText = isWhiteOutside ? colors.userTextColors.neutral : colors.userTextColors.negative;
-  const middleFill = isWhiteOutside ? colors.userRingColors.negative : colors.userRingColors.neutral;
-  const middleText = isWhiteOutside ? colors.userTextColors.negative : colors.userTextColors.neutral;
+  const outerFill = s.ringColors[outerSemantic];
+  const outerText = s.textColors[outerSemantic];
+  const middleFill = s.ringColors[middleSemantic];
+  const middleText = s.textColors[middleSemantic];
+
+  const outerRingStyle = resolveRingStyle(s, outerSemantic);
+  const middleRingStyle = resolveRingStyle(s, middleSemantic);
+  const innerRingStyle = resolveRingStyle(s, 'positive');
 
   const handleCellClick = (cell: CellInfo) => {
     if (onClickedCellChange) onClickedCellChange(cell);
   };
 
   return (
-    <div style={{ background: 'white', borderRadius: 8, ...style }}>
+    <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
         ref={svgRef}
         viewBox="-250 -250 500 500"
@@ -60,7 +97,6 @@ export default function DialecticalWheel({
           transform={`rotate(${rotationDeg})`}
           style={{ transition: isDragging ? 'none' : 'transform 300ms ease-out' }}
         >
-          {/* Outer ring */}
           <Ring
             slices={ringData[outerSemantic]}
             innerR={RADII.outerStart}
@@ -69,10 +105,13 @@ export default function DialecticalWheel({
             textColor={outerText}
             rotationRad={rotationRad}
             measure={measure}
-            baseFontSize={10}
+            baseFontSize={outerRingStyle.maxFontSize}
+            padding={outerRingStyle.padding}
+            textBias={outerRingStyle.textBias}
+            strokeWidth={s.strokeWidth}
+            strokeColor={s.strokeColor}
             onClick={handleCellClick}
           />
-          {/* Middle ring */}
           <Ring
             slices={ringData[middleSemantic]}
             innerR={RADII.middleStart}
@@ -81,29 +120,35 @@ export default function DialecticalWheel({
             textColor={middleText}
             rotationRad={rotationRad}
             measure={measure}
-            baseFontSize={10}
+            baseFontSize={middleRingStyle.maxFontSize}
+            padding={middleRingStyle.padding}
+            textBias={middleRingStyle.textBias}
+            strokeWidth={s.strokeWidth}
+            strokeColor={s.strokeColor}
             onClick={handleCellClick}
           />
-          {/* Inner ring (positive/green) */}
           <Ring
             slices={ringData.positive}
             innerR={RADII.innerStart}
             outerR={RADII.innerEnd}
-            fillColor={colors.userRingColors.positive}
-            textColor={colors.userTextColors.positive}
+            fillColor={s.ringColors.positive}
+            textColor={s.textColors.positive}
             rotationRad={rotationRad}
             measure={measure}
-            baseFontSize={10}
+            baseFontSize={innerRingStyle.maxFontSize}
+            padding={innerRingStyle.padding}
+            textBias={innerRingStyle.textBias}
+            strokeWidth={s.strokeWidth}
+            strokeColor={s.strokeColor}
             onClick={handleCellClick}
           />
-          {/* Hub */}
-          <Hub color={colors.userHubColor} />
-          {/* Coordinate labels in invisible ring area */}
+          <Hub color={s.hubColor} />
           <CoordinateLabels
             slices={ringData.invisible}
             radius={(RADII.invisibleStart + RADII.invisibleEnd) / 2}
             rotationRad={rotationRad}
-            color={colors.userTextColors.coordinates}
+            color={s.textColors.coordinates}
+            fontSize={s.coordinateLabelSize}
           />
         </g>
       </svg>
