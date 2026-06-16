@@ -9,8 +9,9 @@ interface RingProps {
     styles: Styles;
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;
-    hoveredPerspectiveIdx?: number | null;
+    hoveredSegmentId?: string | null;
     selectedPerspectiveIdx?: number | null;
+    focusAnimatingIdx?: number | null;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;
     onPointerLeave?: (event: CellEvent) => void;

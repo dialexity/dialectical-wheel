@@ -11,13 +11,14 @@ interface CycleRingProps {
   styles: Styles;
   hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
+  focusAnimatingIdx?: number | null;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
 }
 
 export const CycleRing: React.FC<CycleRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, selectedPerspectiveIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -88,15 +89,23 @@ export const CycleRing: React.FC<CycleRingProps> = ({
     );
   };
 
+  const cellOpacity = (segment: SegmentData) =>
+    focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
+
   return (
     <g>
       {thesisSegments.map((segment, i) =>
-        isElevated(segment) ? null : renderSegment(segment, i, false)
+        isElevated(segment) ? null : (
+          <g key={`wrap-${segment.segmentId}`} opacity={cellOpacity(segment)} style={{ transition: 'opacity 200ms ease-in' }}>
+            {renderSegment(segment, i, false)}
+          </g>
+        )
       )}
       {thesisSegments.map((segment, i) =>
-        !isElevated(segment) ? null : renderSegment(
-          segment, i,
-          segment.perspectiveIndex === hoveredPerspectiveIdx,
+        !isElevated(segment) ? null : (
+          <g key={`wrap-${segment.segmentId}`} opacity={cellOpacity(segment)} style={{ transition: 'opacity 200ms ease-in' }}>
+            {renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)}
+          </g>
         )
       )}
     </g>

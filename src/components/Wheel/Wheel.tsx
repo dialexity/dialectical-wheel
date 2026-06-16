@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState } from 'react';
+import React, { useMemo, useCallback, useRef, useState, forwardRef } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { WheelRing } from './WheelRing';
@@ -29,10 +29,11 @@ function mergeStyles(user?: Partial<Styles>): Styles {
   };
 }
 
-export default function Wheel({
+const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
   headerRing = 'wheel',
   selectedPerspective,
+  focusedSegment,
   neutralOutside = false,
   styles: userStyles,
   css,
@@ -46,7 +47,7 @@ export default function Wheel({
   onPerspectiveOver,
   onPerspectiveOut,
   onPerspectiveClicked,
-}: WheelProps) {
+}, ref) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
 
   const measure = useTextMeasure();
@@ -56,10 +57,17 @@ export default function Wheel({
   );
 
   const segmentIds = useMemo(() => ringData.neutral.map(s => s.segmentId), [ringData]);
-  const { rotationDeg, rotationRad, isDragging, svgRef, pointerHandlers } = useRotation({
+  const { rotationDeg, rotationRad, isDragging, isRotationPaused, focusAnimatingIdx, svgRef, pointerHandlers } = useRotation({
     onFocusChanged,
     segmentIds,
+    focusedSegment,
   });
+
+  const setSvgRef = useCallback((el: SVGSVGElement | null) => {
+    svgRef.current = el;
+    if (typeof ref === 'function') ref(el);
+    else if (ref) ref.current = el;
+  }, [ref, svgRef]);
 
   const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
   const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
@@ -135,7 +143,7 @@ export default function Wheel({
   return (
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
-        ref={svgRef}
+        ref={setSvgRef}
         viewBox="-250 -250 500 500"
         style={{
           width: '100%',
@@ -149,7 +157,7 @@ export default function Wheel({
       >
         <g
           transform={`rotate(${rotationDeg})`}
-          style={{ transition: isDragging ? 'none' : 'transform 300ms ease-out' }}
+          style={{ transition: (isDragging || isRotationPaused) ? 'none' : 'transform 300ms ease-out' }}
         >
           <Ring
             segments={ringData[outerRing]}
@@ -161,6 +169,7 @@ export default function Wheel({
             measure={measure}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
+            focusAnimatingIdx={focusAnimatingIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -175,6 +184,7 @@ export default function Wheel({
             measure={measure}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
+            focusAnimatingIdx={focusAnimatingIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -189,6 +199,7 @@ export default function Wheel({
             measure={measure}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
+            focusAnimatingIdx={focusAnimatingIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -203,6 +214,7 @@ export default function Wheel({
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
+              focusAnimatingIdx={focusAnimatingIdx}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
@@ -217,6 +229,7 @@ export default function Wheel({
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
+              focusAnimatingIdx={focusAnimatingIdx}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
@@ -234,4 +247,6 @@ export default function Wheel({
       </svg>
     </div>
   );
-}
+});
+
+export default Wheel;

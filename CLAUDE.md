@@ -19,6 +19,14 @@
 - SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
 - SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
+- `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
+- Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
+- Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
+- Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
+- `isRotationPaused` suppresses CSS transition on `<g>` during fade-out so rotation doesn't animate early
+- `focusAnimatingIdx` drives opacity on non-focused perspective cells across all rings
+- Wheel uses `forwardRef<SVGSVGElement>` — internal svgRef merged with forwarded ref via callback ref
+- `src/export.ts` provides `exportWheelSVG`, `exportWheelPNG`, `downloadBlob` — tree-shakeable utils, not methods on the component
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
@@ -27,6 +35,9 @@
 - When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
 - Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
+- `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
+- `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
+- package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"

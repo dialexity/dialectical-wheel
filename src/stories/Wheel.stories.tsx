@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Wheel } from '../components';
-import type { PerspectiveEvent } from '../types';
+import { exportWheelSVG, exportWheelPNG, downloadBlob } from '../export';
+import type { PerspectiveEvent, SegmentEvent } from '../types';
 
 const samplePerspectives = [
   {
@@ -147,5 +148,90 @@ export const LongText: Story = {
   args: {
     ...Default.args,
     perspectives: longTextPerspectives,
+  },
+};
+
+export const Export: Story = {
+  render: (args) => {
+    const ref = useRef<SVGSVGElement>(null);
+    return (
+      <div>
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => {
+              if (!ref.current) return;
+              downloadBlob(exportWheelSVG(ref.current), 'wheel.svg');
+            }}
+            style={{ padding: '6px 12px', background: '#eee', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+          >
+            Download SVG
+          </button>
+          <button
+            onClick={async () => {
+              if (!ref.current) return;
+              const blob = await exportWheelPNG(ref.current, { width: 2048 });
+              downloadBlob(blob, 'wheel.png');
+            }}
+            style={{ padding: '6px 12px', background: '#eee', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+          >
+            Download PNG (2048px)
+          </button>
+        </div>
+        <Wheel ref={ref} {...args} />
+      </div>
+    );
+  },
+  args: {
+    perspectives: samplePerspectives,
+    styles: defaultStyles,
+  },
+};
+
+export const FocusedSegment: Story = {
+  render: (args) => {
+    const [focused, setFocused] = useState<string | null>(null);
+    const [selected, setSelected] = useState<number | null>(null);
+    const segments = ['T', 'A4', 'T2', 'T3', 'A', 'T4', 'A2', 'A3'];
+    return (
+      <div>
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {segments.map(id => (
+            <button
+              key={id}
+              onClick={() => setFocused(id)}
+              style={{
+                padding: '4px 8px',
+                background: focused === id ? '#333' : '#eee',
+                color: focused === id ? '#fff' : '#333',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
+            >
+              {id}
+            </button>
+          ))}
+          <button
+            onClick={() => { setFocused(null); setSelected(null); }}
+            style={{ padding: '4px 8px', background: '#fee', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+          >
+            Clear
+          </button>
+        </div>
+        <Wheel
+          {...args}
+          focusedSegment={focused}
+          selectedPerspective={selected}
+          onSegmentClicked={(e: SegmentEvent) => {
+            setFocused(e.segmentId);
+            setSelected(e.perspectiveIndex);
+          }}
+        />
+      </div>
+    );
+  },
+  args: {
+    perspectives: samplePerspectives,
+    styles: defaultStyles,
   },
 };

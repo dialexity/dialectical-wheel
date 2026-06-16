@@ -1,3 +1,5 @@
+import React from 'react';
 import type { WheelProps } from '../../types';
-export default function Wheel({ perspectives, headerRing, selectedPerspective, neutralOutside, styles: userStyles, css, onFocusChanged, onCellOver, onCellOut, onCellClicked, onSegmentOver, onSegmentOut, onSegmentClicked, onPerspectiveOver, onPerspectiveOut, onPerspectiveClicked, }: WheelProps): import("react/jsx-runtime").JSX.Element;
+declare const Wheel: React.ForwardRefExoticComponent<WheelProps & React.RefAttributes<SVGSVGElement>>;
+export default Wheel;
 //# sourceMappingURL=Wheel.d.ts.map

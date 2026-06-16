@@ -104,6 +104,7 @@ export interface WheelProps {
   perspectives: Perspective[];
   headerRing?: HeaderRing;
   selectedPerspective?: number | null;
+  focusedSegment?: string | null;
   neutralOutside?: boolean;
   styles?: Partial<Styles>;
   css?: React.CSSProperties;

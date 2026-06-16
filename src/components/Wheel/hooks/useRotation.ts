@@ -1,18 +1,68 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UseRotationOptions {
   onFocusChanged?: (topSegment: string) => void;
   segmentIds: string[];
+  focusedSegment?: string | null;
 }
 
-const DRAG_THRESHOLD = 3; // pixels before we consider it a drag
+const DRAG_THRESHOLD = 3;
+const FADE_OUT_MS = 200;
+const ROTATE_MS = 300;
+const FADE_IN_MS = 200;
 
-export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) {
+export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [focusAnimatingIdx, setFocusAnimatingIdx] = useState<number | null>(null);
+  const [isRotationPaused, setIsRotationPaused] = useState(false);
   const dragStart = useRef<{ angle: number; rotation: number; x: number; y: number } | null>(null);
   const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimers = () => {
+    animTimers.current.forEach(t => clearTimeout(t));
+    animTimers.current = [];
+  };
+
+  useEffect(() => {
+    if (focusedSegment == null || segmentIds.length === 0) return;
+    const idx = segmentIds.indexOf(focusedSegment);
+    if (idx === -1) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const isAntithesis = idx >= N / 2;
+    const targetPosition = isAntithesis ? 180 : 0;
+    const targetRaw = targetPosition - midAngle;
+
+    const perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
+
+    clearTimers();
+
+    // Phase 1: fade out others (pause rotation transition)
+    setIsRotationPaused(true);
+    setFocusAnimatingIdx(perspectiveIdx);
+
+    // Phase 2: after fade-out, start rotation
+    const t1 = setTimeout(() => {
+      setIsRotationPaused(false);
+      setRotationDeg(current => {
+        const delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+        return current + delta;
+      });
+    }, FADE_OUT_MS);
+
+    // Phase 3: after rotation, fade back in
+    const t2 = setTimeout(() => {
+      setFocusAnimatingIdx(null);
+    }, FADE_OUT_MS + ROTATE_MS);
+
+    animTimers.current = [t1, t2];
+
+    return () => clearTimers();
+  }, [focusedSegment, segmentIds]);
 
   const getAngleFromEvent = useCallback((e: React.PointerEvent): number => {
     const svg = svgRef.current;
@@ -27,8 +77,8 @@ export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) 
     if (!onFocusChanged || segmentIds.length === 0) return;
     const N = segmentIds.length;
     const segmentAngle = 360 / N;
-    const normalized = ((deg % 360) + 360) % 360;
-    const index = Math.round(normalized / segmentAngle) % N;
+    const normalized = ((-deg % 360) + 360) % 360;
+    const index = Math.round((normalized - segmentAngle / 2) / segmentAngle + N) % N;
     onFocusChanged(segmentIds[index]);
   }, [onFocusChanged, segmentIds]);
 
@@ -77,6 +127,8 @@ export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) 
     rotationDeg,
     rotationRad,
     isDragging,
+    isRotationPaused,
+    focusAnimatingIdx,
     svgRef,
     pointerHandlers: { onPointerDown, onPointerMove, onPointerUp },
   };

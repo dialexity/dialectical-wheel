@@ -250,7 +250,6 @@ var Cell = function Cell(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     hovered = _ref.hovered,
-    selected = _ref.selected,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
     onPointerLeave = _ref.onPointerLeave,
@@ -296,8 +295,8 @@ var Cell = function Cell(_ref) {
     }), jsxRuntime.jsx("path", {
       d: path,
       fill: style.background,
-      stroke: selected ? style.selectedBorderColor : hovered ? style.hoverBorderColor : style.borderColor,
-      strokeWidth: selected ? style.selectedBorderWidth : style.borderWidth
+      stroke: hovered ? style.hoverBorderColor : style.borderColor,
+      strokeWidth: style.borderWidth
     }), showText && segment.fullText && jsxRuntime.jsx("g", {
       clipPath: "url(#".concat(clipId, ")"),
       children: jsxRuntime.jsx(CellText, {
@@ -438,17 +437,17 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
     verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
-    borderColor: getBorder('color') || '#ccc',
-    hoverBorderColor: get('hoverBorderColor') || '#333333',
-    selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 2),
-    selectedBorderColor: getSelectedBorder('color') || '#0066cc'
+    borderColor: getBorder('color') || '#ddd',
+    hoverBorderColor: get('hoverBorderColor') || '#999',
+    selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 1),
+    selectedBorderColor: getSelectedBorder('color') || '#666'
   };
 }
 var DEFAULT_STYLES = {
   fontSize: 12,
   border: {
     width: 0.5,
-    color: '#ccc'
+    color: '#ddd'
   },
   thead: {
     color: '#333333',
@@ -486,8 +485,9 @@ var Ring = function Ring(_ref) {
     styles = _ref.styles,
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
-    hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
+    hoveredSegmentId = _ref.hoveredSegmentId,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
+    focusAnimatingIdx = _ref.focusAnimatingIdx,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
     onPointerLeave = _ref.onPointerLeave,
@@ -518,38 +518,51 @@ var Ring = function Ring(_ref) {
     });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
   var isElevated = function isElevated(segment) {
-    return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
+    return segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
+  };
+  var cellOpacity = function cellOpacity(segment) {
+    return focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
   };
   return jsxRuntime.jsxs("g", {
     children: [segments.map(function (segment, i) {
-      return isElevated(segment) ? null : jsxRuntime.jsx(Cell, {
-        segment: segment,
-        innerR: innerR,
-        outerR: outerR,
-        style: resolvedStyles[i],
-        rotationRad: rotationRad,
-        fontSize: uniformFontSize,
-        hovered: false,
-        selected: false,
-        onClick: onClick,
-        onPointerEnter: onPointerEnter,
-        onPointerLeave: onPointerLeave,
-        showText: showText
+      return isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: jsxRuntime.jsx(Cell, {
+          segment: segment,
+          innerR: innerR,
+          outerR: outerR,
+          style: resolvedStyles[i],
+          rotationRad: rotationRad,
+          fontSize: uniformFontSize,
+          hovered: false,
+          onClick: onClick,
+          onPointerEnter: onPointerEnter,
+          onPointerLeave: onPointerLeave,
+          showText: showText
+        })
       }, segment.segmentId);
     }), segments.map(function (segment, i) {
-      return !isElevated(segment) ? null : jsxRuntime.jsx(Cell, {
-        segment: segment,
-        innerR: innerR,
-        outerR: outerR,
-        style: resolvedStyles[i],
-        rotationRad: rotationRad,
-        fontSize: uniformFontSize,
-        hovered: segment.perspectiveIndex === hoveredPerspectiveIdx,
-        selected: segment.perspectiveIndex === selectedPerspectiveIdx,
-        onClick: onClick,
-        onPointerEnter: onPointerEnter,
-        onPointerLeave: onPointerLeave,
-        showText: showText
+      return !isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: jsxRuntime.jsx(Cell, {
+          segment: segment,
+          innerR: innerR,
+          outerR: outerR,
+          style: resolvedStyles[i],
+          rotationRad: rotationRad,
+          fontSize: uniformFontSize,
+          hovered: segment.segmentId === hoveredSegmentId,
+          onClick: onClick,
+          onPointerEnter: onPointerEnter,
+          onPointerLeave: onPointerLeave,
+          showText: showText
+        })
       }, segment.segmentId);
     })]
   });
@@ -576,6 +589,7 @@ var WheelRing = function WheelRing(_ref) {
     styles = _ref.styles,
     hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
+    focusAnimatingIdx = _ref.focusAnimatingIdx,
     _onClick = _ref.onClick,
     _onPointerEnter = _ref.onPointerEnter,
     _onPointerLeave = _ref.onPointerLeave;
@@ -601,7 +615,7 @@ var WheelRing = function WheelRing(_ref) {
   var isElevated = function isElevated(segment) {
     return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
-  var renderSegment = function renderSegment(segment, i, isHovered, isSelected) {
+  var renderSegment = function renderSegment(segment, i, isHovered) {
     var style = resolvedStyles[i];
     var midAngle = (segment.startAngle + segment.endAngle) / 2;
     var _polarToCartesian = polarToCartesian(radius, midAngle),
@@ -628,8 +642,8 @@ var WheelRing = function WheelRing(_ref) {
       children: [jsxRuntime.jsx("path", {
         d: path,
         fill: style.background,
-        stroke: isSelected ? style.selectedBorderColor : isHovered ? style.hoverBorderColor : style.borderColor,
-        strokeWidth: isSelected ? style.selectedBorderWidth : style.borderWidth
+        stroke: isHovered ? style.hoverBorderColor : style.borderColor,
+        strokeWidth: style.borderWidth
       }), jsxRuntime.jsx("text", {
         x: x,
         y: y,
@@ -644,11 +658,26 @@ var WheelRing = function WheelRing(_ref) {
       })]
     }, segment.segmentId);
   };
+  var cellOpacity = function cellOpacity(segment) {
+    return focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
+  };
   return jsxRuntime.jsxs("g", {
     children: [segments.map(function (segment, i) {
-      return isElevated(segment) ? null : renderSegment(segment, i, false, false);
+      return isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: renderSegment(segment, i, false)
+      }, "wrap-".concat(segment.segmentId));
     }), segments.map(function (segment, i) {
-      return !isElevated(segment) ? null : renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx, segment.perspectiveIndex === selectedPerspectiveIdx);
+      return !isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)
+      }, "wrap-".concat(segment.segmentId));
     })]
   });
 };
@@ -661,6 +690,7 @@ var CycleRing = function CycleRing(_ref) {
     styles = _ref.styles,
     hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
+    focusAnimatingIdx = _ref.focusAnimatingIdx,
     _onClick = _ref.onClick,
     _onPointerEnter = _ref.onPointerEnter,
     _onPointerLeave = _ref.onPointerLeave;
@@ -691,7 +721,7 @@ var CycleRing = function CycleRing(_ref) {
   var isElevated = function isElevated(segment) {
     return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
-  var renderSegment = function renderSegment(segment, i, isHovered, isSelected) {
+  var renderSegment = function renderSegment(segment, i, isHovered) {
     var style = resolvedStyles[i];
     var midAngle = (segment.startAngle + segment.endAngle) / 2;
     var _polarToCartesian = polarToCartesian(radius, midAngle),
@@ -718,8 +748,8 @@ var CycleRing = function CycleRing(_ref) {
       children: [jsxRuntime.jsx("path", {
         d: path,
         fill: style.background,
-        stroke: isSelected ? style.selectedBorderColor : isHovered ? style.hoverBorderColor : style.borderColor,
-        strokeWidth: isSelected ? style.selectedBorderWidth : style.borderWidth
+        stroke: isHovered ? style.hoverBorderColor : style.borderColor,
+        strokeWidth: style.borderWidth
       }), jsxRuntime.jsx("text", {
         x: x,
         y: y,
@@ -734,12 +764,56 @@ var CycleRing = function CycleRing(_ref) {
       })]
     }, segment.segmentId);
   };
+  var cellOpacity = function cellOpacity(segment) {
+    return focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
+  };
   return jsxRuntime.jsxs("g", {
     children: [thesisSegments.map(function (segment, i) {
-      return isElevated(segment) ? null : renderSegment(segment, i, false, false);
+      return isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: renderSegment(segment, i, false)
+      }, "wrap-".concat(segment.segmentId));
     }), thesisSegments.map(function (segment, i) {
-      return !isElevated(segment) ? null : renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx, segment.perspectiveIndex === selectedPerspectiveIdx);
+      return !isElevated(segment) ? null : jsxRuntime.jsx("g", {
+        opacity: cellOpacity(segment),
+        style: {
+          transition: 'opacity 200ms ease-in'
+        },
+        children: renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)
+      }, "wrap-".concat(segment.segmentId));
     })]
+  });
+};
+
+var SelectionOverlay = function SelectionOverlay(_ref) {
+  var segments = _ref.segments,
+    selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
+    headerRing = _ref.headerRing,
+    styles = _ref.styles;
+  var selected = segments.filter(function (s) {
+    return s.perspectiveIndex === selectedPerspectiveIdx;
+  });
+  if (selected.length === 0) return null;
+  var style = resolveStyle(styles, 'neutral', RADII.outerEnd - RADII.innerStart);
+  return jsxRuntime.jsx("g", {
+    style: {
+      pointerEvents: 'none'
+    },
+    children: selected.map(function (seg) {
+      var isThesis = !seg.segmentId.startsWith('A');
+      var includeHeader = headerRing === 'wheel' || headerRing === 'cycle' && isThesis;
+      var outerR = includeHeader ? RADII.cycleEnd : RADII.outerEnd;
+      var path = describeArc(RADII.innerStart, outerR, seg.startAngle, seg.endAngle);
+      return jsxRuntime.jsx("path", {
+        d: path,
+        fill: "none",
+        stroke: style.selectedBorderColor,
+        strokeWidth: style.selectedBorderWidth
+      }, seg.segmentId);
+    })
   });
 };
 
@@ -758,9 +832,13 @@ function useTextMeasure() {
   return measure;
 }
 
+var DRAG_THRESHOLD = 3;
+var FADE_OUT_MS = 200;
+var ROTATE_MS = 300;
 function useRotation(_ref) {
   var onFocusChanged = _ref.onFocusChanged,
-    segmentIds = _ref.segmentIds;
+    segmentIds = _ref.segmentIds,
+    focusedSegment = _ref.focusedSegment;
   var _useState = react.useState(0),
     _useState2 = _slicedToArray(_useState, 2),
     rotationDeg = _useState2[0],
@@ -769,8 +847,56 @@ function useRotation(_ref) {
     _useState4 = _slicedToArray(_useState3, 2),
     isDragging = _useState4[0],
     setIsDragging = _useState4[1];
+  var _useState5 = react.useState(null),
+    _useState6 = _slicedToArray(_useState5, 2),
+    focusAnimatingIdx = _useState6[0],
+    setFocusAnimatingIdx = _useState6[1];
+  var _useState7 = react.useState(false),
+    _useState8 = _slicedToArray(_useState7, 2),
+    isRotationPaused = _useState8[0],
+    setIsRotationPaused = _useState8[1];
   var dragStart = react.useRef(null);
+  var didDrag = react.useRef(false);
   var svgRef = react.useRef(null);
+  var animTimers = react.useRef([]);
+  var clearTimers = function clearTimers() {
+    animTimers.current.forEach(function (t) {
+      return clearTimeout(t);
+    });
+    animTimers.current = [];
+  };
+  react.useEffect(function () {
+    if (focusedSegment == null || segmentIds.length === 0) return;
+    var idx = segmentIds.indexOf(focusedSegment);
+    if (idx === -1) return;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
+    var midAngle = idx * segmentAngle + segmentAngle / 2;
+    var isAntithesis = idx >= N / 2;
+    var targetPosition = isAntithesis ? 180 : 0;
+    var targetRaw = targetPosition - midAngle;
+    var perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
+    clearTimers();
+    // Phase 1: fade out others (pause rotation transition)
+    setIsRotationPaused(true);
+    setFocusAnimatingIdx(perspectiveIdx);
+    // Phase 2: after fade-out, start rotation
+    var t1 = setTimeout(function () {
+      setIsRotationPaused(false);
+      setRotationDeg(function (current) {
+        var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+        return current + delta;
+      });
+    }, FADE_OUT_MS);
+    // Phase 3: after rotation, fade back in
+    var t2 = setTimeout(function () {
+      setFocusAnimatingIdx(null);
+    }, FADE_OUT_MS + ROTATE_MS);
+    animTimers.current = [t1, t2];
+    return function () {
+      return clearTimers();
+    };
+  }, [focusedSegment, segmentIds]);
   var getAngleFromEvent = react.useCallback(function (e) {
     var svg = svgRef.current;
     if (!svg) return 0;
@@ -783,42 +909,54 @@ function useRotation(_ref) {
     if (!onFocusChanged || segmentIds.length === 0) return;
     var N = segmentIds.length;
     var segmentAngle = 360 / N;
-    var normalized = (deg % 360 + 360) % 360;
-    var index = Math.round(normalized / segmentAngle) % N;
+    var normalized = (-deg % 360 + 360) % 360;
+    var index = Math.round((normalized - segmentAngle / 2) / segmentAngle + N) % N;
     onFocusChanged(segmentIds[index]);
   }, [onFocusChanged, segmentIds]);
   var onPointerDown = react.useCallback(function (e) {
-    e.currentTarget.setPointerCapture(e.pointerId);
     var angle = getAngleFromEvent(e);
     dragStart.current = {
       angle: angle,
-      rotation: rotationDeg
+      rotation: rotationDeg,
+      x: e.clientX,
+      y: e.clientY
     };
-    setIsDragging(true);
+    didDrag.current = false;
   }, [getAngleFromEvent, rotationDeg]);
   var onPointerMove = react.useCallback(function (e) {
     if (!dragStart.current) return;
+    if (!didDrag.current) {
+      var dx = e.clientX - dragStart.current.x;
+      var dy = e.clientY - dragStart.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      didDrag.current = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+    }
     var angle = getAngleFromEvent(e);
     var delta = (angle - dragStart.current.angle) * (180 / Math.PI);
     setRotationDeg(dragStart.current.rotation + delta);
   }, [getAngleFromEvent]);
   var onPointerUp = react.useCallback(function (e) {
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    if (dragStart.current) {
+    if (!dragStart.current) return;
+    if (didDrag.current) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
       var angle = getAngleFromEvent(e);
       var delta = (angle - dragStart.current.angle) * (180 / Math.PI);
       var finalDeg = dragStart.current.rotation + delta;
       setRotationDeg(finalDeg);
       reportTopSegment(finalDeg);
+      setIsDragging(false);
     }
     dragStart.current = null;
-    setIsDragging(false);
   }, [getAngleFromEvent, reportTopSegment]);
   var rotationRad = rotationDeg * Math.PI / 180;
   return {
     rotationDeg: rotationDeg,
     rotationRad: rotationRad,
     isDragging: isDragging,
+    isRotationPaused: isRotationPaused,
+    focusAnimatingIdx: focusAnimatingIdx,
     svgRef: svgRef,
     pointerHandlers: {
       onPointerDown: onPointerDown,
@@ -944,11 +1082,12 @@ function mergeStyles(user) {
     })
   });
 }
-function Wheel(_ref) {
+var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var perspectives = _ref.perspectives,
     _ref$headerRing = _ref.headerRing,
     headerRing = _ref$headerRing === void 0 ? 'wheel' : _ref$headerRing,
     selectedPerspective = _ref.selectedPerspective,
+    focusedSegment = _ref.focusedSegment,
     _ref$neutralOutside = _ref.neutralOutside,
     neutralOutside = _ref$neutralOutside === void 0 ? false : _ref$neutralOutside,
     userStyles = _ref.styles,
@@ -977,13 +1116,20 @@ function Wheel(_ref) {
   }, [ringData]);
   var _useRotation = useRotation({
       onFocusChanged: onFocusChanged,
-      segmentIds: segmentIds
+      segmentIds: segmentIds,
+      focusedSegment: focusedSegment
     }),
     rotationDeg = _useRotation.rotationDeg,
     rotationRad = _useRotation.rotationRad,
     isDragging = _useRotation.isDragging,
+    isRotationPaused = _useRotation.isRotationPaused,
+    focusAnimatingIdx = _useRotation.focusAnimatingIdx,
     svgRef = _useRotation.svgRef,
     pointerHandlers = _useRotation.pointerHandlers;
+  var setSvgRef = react.useCallback(function (el) {
+    svgRef.current = el;
+    if (typeof ref === 'function') ref(el);else if (ref) ref.current = el;
+  }, [ref, svgRef]);
   var outerRing = neutralOutside ? 'neutral' : 'negative';
   var middleRing = neutralOutside ? 'negative' : 'neutral';
   var derivePerspectiveEvent = react.useCallback(function (cell) {
@@ -1008,8 +1154,12 @@ function Wheel(_ref) {
   var lastCellEventRef = react.useRef(null);
   var _useState = react.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
-    hoveredPerspectiveIdx = _useState2[0],
-    setHoveredPerspectiveIdx = _useState2[1];
+    hoveredSegmentId = _useState2[0],
+    setHoveredSegmentId = _useState2[1];
+  var _useState3 = react.useState(null),
+    _useState4 = _slicedToArray(_useState3, 2),
+    hoveredPerspectiveIdx = _useState4[0],
+    setHoveredPerspectiveIdx = _useState4[1];
   var handleCellClick = react.useCallback(function (cell) {
     if (onCellClicked) onCellClicked(cell);
     if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
@@ -1022,6 +1172,7 @@ function Wheel(_ref) {
         onSegmentOut(deriveSegmentEvent(lastCellEventRef.current));
       }
       hoveredSegmentRef.current = cell.segmentId;
+      setHoveredSegmentId(cell.segmentId);
       if (onSegmentOver) onSegmentOver(deriveSegmentEvent(cell));
     }
     if (hoveredPerspectiveRef.current !== cell.perspectiveIndex) {
@@ -1048,6 +1199,7 @@ function Wheel(_ref) {
     hoveredSegmentRef.current = null;
     hoveredPerspectiveRef.current = null;
     lastCellEventRef.current = null;
+    setHoveredSegmentId(null);
     setHoveredPerspectiveIdx(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
   return jsxRuntime.jsx("div", {
@@ -1056,7 +1208,7 @@ function Wheel(_ref) {
       borderRadius: 8
     }, css),
     children: jsxRuntime.jsx("svg", _objectSpread2(_objectSpread2({
-      ref: svgRef,
+      ref: setSvgRef,
       viewBox: "-250 -250 500 500",
       style: {
         width: '100%',
@@ -1070,7 +1222,7 @@ function Wheel(_ref) {
       children: jsxRuntime.jsxs("g", {
         transform: "rotate(".concat(rotationDeg, ")"),
         style: {
-          transition: isDragging ? 'none' : 'transform 300ms ease-out'
+          transition: isDragging || isRotationPaused ? 'none' : 'transform 300ms ease-out'
         },
         children: [jsxRuntime.jsx(Ring, {
           segments: ringData[outerRing],
@@ -1080,8 +1232,9 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
+          focusAnimatingIdx: focusAnimatingIdx,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -1093,8 +1246,9 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
+          focusAnimatingIdx: focusAnimatingIdx,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -1106,8 +1260,9 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
+          focusAnimatingIdx: focusAnimatingIdx,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -1121,6 +1276,7 @@ function Wheel(_ref) {
           styles: styles,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
+          focusAnimatingIdx: focusAnimatingIdx,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -1132,15 +1288,78 @@ function Wheel(_ref) {
           styles: styles,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
+          focusAnimatingIdx: focusAnimatingIdx,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
+        }), selectedPerspective != null && jsxRuntime.jsx(SelectionOverlay, {
+          segments: ringData.positive,
+          selectedPerspectiveIdx: selectedPerspective,
+          headerRing: headerRing,
+          styles: styles
         })]
       })
     }))
   });
+});
+
+function exportWheelSVG(svg) {
+  var clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  var serializer = new XMLSerializer();
+  var str = serializer.serializeToString(clone);
+  return new Blob([str], {
+    type: 'image/svg+xml;charset=utf-8'
+  });
+}
+function exportWheelPNG(svg) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  var _options$width = options.width,
+    width = _options$width === void 0 ? 1024 : _options$width,
+    _options$background = options.background,
+    background = _options$background === void 0 ? 'white' : _options$background;
+  var height = options.height || width;
+  return new Promise(function (resolve, reject) {
+    var clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', String(width));
+    clone.setAttribute('height', String(height));
+    var serializer = new XMLSerializer();
+    var str = serializer.serializeToString(clone);
+    var url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      var ctx = canvas.getContext('2d');
+      if (background) {
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, width, height);
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(function (blob) {
+        if (blob) resolve(blob);else reject(new Error('Canvas toBlob returned null'));
+      }, 'image/png');
+    };
+    img.onerror = function () {
+      return reject(new Error('Failed to load SVG as image'));
+    };
+    img.src = url;
+  });
+}
+function downloadBlob(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 exports.Wheel = Wheel;
 exports.default = Wheel;
+exports.downloadBlob = downloadBlob;
+exports.exportWheelPNG = exportWheelPNG;
+exports.exportWheelSVG = exportWheelSVG;
 //# sourceMappingURL=index.js.map

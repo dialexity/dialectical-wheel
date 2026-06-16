@@ -8,6 +8,7 @@ interface CycleRingProps {
     styles: Styles;
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
+    focusAnimatingIdx?: number | null;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;
     onPointerLeave?: (event: CellEvent) => void;
