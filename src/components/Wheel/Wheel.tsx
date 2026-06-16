@@ -29,25 +29,24 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 
 export default function Wheel({
   perspectives,
-  segmentOrder,
   isWhiteOutside = false,
   styles: userStyles,
   css,
-  onTopSegmentChange,
-  onClickedCellChange,
+  onFocusChanged,
+  onCellClicked,
   debug = false,
 }: WheelProps) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
 
   const measure = useTextMeasure();
   const ringData = useMemo(
-    () => transformPerspectives(perspectives, segmentOrder),
-    [perspectives, segmentOrder]
+    () => transformPerspectives(perspectives),
+    [perspectives]
   );
 
   const segmentIds = useMemo(() => ringData.neutral.map(s => s.segmentId), [ringData]);
   const { rotationDeg, rotationRad, isDragging, svgRef, pointerHandlers } = useRotation({
-    onTopSegmentChange,
+    onFocusChanged,
     segmentIds,
   });
 
@@ -55,7 +54,7 @@ export default function Wheel({
   const middleRing: 'neutral' | 'negative' = isWhiteOutside ? 'negative' : 'neutral';
 
   const handleCellClick = (cell: ClickedCell) => {
-    if (onClickedCellChange) onClickedCellChange(cell);
+    if (onCellClicked) onCellClicked(cell);
   };
 
   return (

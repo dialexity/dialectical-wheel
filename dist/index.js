@@ -405,7 +405,7 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
   return {
     background: get('background') || '#ffffff',
     color: get('color') || '#333333',
-    fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 14),
+    fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
     topMargin: resolveCSSValue(get('topMargin'), cellRadialHeight, 0),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
@@ -413,7 +413,7 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
   };
 }
 var DEFAULT_STYLES = {
-  fontSize: 14,
+  fontSize: 12,
   border: {
     width: 0.5,
     color: '#ccc'
@@ -460,7 +460,7 @@ var Ring = function Ring(_ref) {
       return resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle);
     });
   }, [segments, styles, ringName, cellRadialHeight]);
-  var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 14;
+  var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
   var uniformFontSize = react.useMemo(function () {
     if (segments.length === 0) return baseFontSize;
@@ -557,7 +557,7 @@ function useTextMeasure() {
 }
 
 function useRotation(_ref) {
-  var onTopSegmentChange = _ref.onTopSegmentChange,
+  var onFocusChanged = _ref.onFocusChanged,
     segmentIds = _ref.segmentIds;
   var _useState = react.useState(0),
     _useState2 = _slicedToArray(_useState, 2),
@@ -578,13 +578,13 @@ function useRotation(_ref) {
     return Math.atan2(e.clientX - cx, -(e.clientY - cy));
   }, []);
   var reportTopSegment = react.useCallback(function (deg) {
-    if (!onTopSegmentChange || segmentIds.length === 0) return;
+    if (!onFocusChanged || segmentIds.length === 0) return;
     var N = segmentIds.length;
     var segmentAngle = 360 / N;
     var normalized = (deg % 360 + 360) % 360;
     var index = Math.round(normalized / segmentAngle) % N;
-    onTopSegmentChange(segmentIds[index]);
-  }, [onTopSegmentChange, segmentIds]);
+    onFocusChanged(segmentIds[index]);
+  }, [onFocusChanged, segmentIds]);
   var onPointerDown = react.useCallback(function (e) {
     e.currentTarget.setPointerCapture(e.pointerId);
     var angle = getAngleFromEvent(e);
@@ -638,7 +638,7 @@ function extractCellStyle(value) {
   if (typeof value === 'string') return undefined;
   return value === null || value === void 0 ? void 0 : value.style;
 }
-function transformPerspectives(perspectives, segmentOrder) {
+function transformPerspectives(perspectives) {
   if (!perspectives || perspectives.length === 0) {
     return {
       invisible: [],
@@ -647,11 +647,12 @@ function transformPerspectives(perspectives, segmentOrder) {
       positive: []
     };
   }
-  var entries = [];
+  var theses = [];
+  var antitheses = [];
   perspectives.forEach(function (perspective, i) {
     var tAlias = extractAlias(perspective.t, "T".concat(i + 1));
     var aAlias = extractAlias(perspective.a, "A".concat(i + 1));
-    entries.push({
+    theses.push({
       segmentId: tAlias,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
@@ -664,7 +665,7 @@ function transformPerspectives(perspectives, segmentOrder) {
         negative: extractCellStyle(perspective.t_minus)
       }
     });
-    entries.push({
+    antitheses.push({
       segmentId: aAlias,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
@@ -678,19 +679,11 @@ function transformPerspectives(perspectives, segmentOrder) {
       }
     });
   });
-  var ordered = entries;
-  if (segmentOrder && segmentOrder.length > 0) {
-    var byId = new Map(entries.map(function (e) {
-      return [e.segmentId, e];
-    }));
-    ordered = segmentOrder.map(function (id) {
-      return byId.get(id);
-    }).filter(Boolean);
-  }
-  var N = ordered.length;
+  var entries = [].concat(theses, antitheses);
+  var N = entries.length;
   var segmentAngle = 2 * Math.PI / N;
   var buildRing = function buildRing(polarity, getText, getCellStyle) {
-    return ordered.map(function (entry, i) {
+    return entries.map(function (entry, i) {
       return {
         segmentId: entry.segmentId,
         polarity: polarity,
@@ -748,13 +741,12 @@ function mergeStyles(user) {
 }
 function Wheel(_ref) {
   var perspectives = _ref.perspectives,
-    segmentOrder = _ref.segmentOrder,
     _ref$isWhiteOutside = _ref.isWhiteOutside,
     isWhiteOutside = _ref$isWhiteOutside === void 0 ? false : _ref$isWhiteOutside,
     userStyles = _ref.styles,
     css = _ref.css,
-    onTopSegmentChange = _ref.onTopSegmentChange,
-    onClickedCellChange = _ref.onClickedCellChange,
+    onFocusChanged = _ref.onFocusChanged,
+    onCellClicked = _ref.onCellClicked,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var styles = react.useMemo(function () {
@@ -762,15 +754,15 @@ function Wheel(_ref) {
   }, [userStyles]);
   var measure = useTextMeasure();
   var ringData = react.useMemo(function () {
-    return transformPerspectives(perspectives, segmentOrder);
-  }, [perspectives, segmentOrder]);
+    return transformPerspectives(perspectives);
+  }, [perspectives]);
   var segmentIds = react.useMemo(function () {
     return ringData.neutral.map(function (s) {
       return s.segmentId;
     });
   }, [ringData]);
   var _useRotation = useRotation({
-      onTopSegmentChange: onTopSegmentChange,
+      onFocusChanged: onFocusChanged,
       segmentIds: segmentIds
     }),
     rotationDeg = _useRotation.rotationDeg,
@@ -781,7 +773,7 @@ function Wheel(_ref) {
   var outerRing = isWhiteOutside ? 'neutral' : 'negative';
   var middleRing = isWhiteOutside ? 'negative' : 'neutral';
   var handleCellClick = function handleCellClick(cell) {
-    if (onClickedCellChange) onClickedCellChange(cell);
+    if (onCellClicked) onCellClicked(cell);
   };
   return jsxRuntime.jsxs("div", {
     style: _objectSpread2({

@@ -77,11 +77,10 @@ export interface ResolvedCellStyle {
 
 export interface WheelProps {
   perspectives: Perspective[];
-  segmentOrder?: string[];
   isWhiteOutside?: boolean;
   styles?: Partial<Styles>;
   css?: React.CSSProperties;
-  onTopSegmentChange?: (topSegment: string) => void;
-  onClickedCellChange?: (cell: ClickedCell | null) => void;
+  onFocusChanged?: (topSegment: string) => void;
+  onCellClicked?: (cell: ClickedCell | null) => void;
   debug?: boolean;
 }

@@ -23,8 +23,7 @@ export interface RingData {
 }
 
 export function transformPerspectives(
-  perspectives: Perspective[],
-  segmentOrder?: string[]
+  perspectives: Perspective[]
 ): RingData {
   if (!perspectives || perspectives.length === 0) {
     return { invisible: [], negative: [], neutral: [], positive: [] };
@@ -44,12 +43,13 @@ export function transformPerspectives(
     };
   };
 
-  const entries: Entry[] = [];
+  const theses: Entry[] = [];
+  const antitheses: Entry[] = [];
 
   perspectives.forEach((perspective, i) => {
     const tAlias = extractAlias(perspective.t, `T${i + 1}`);
     const aAlias = extractAlias(perspective.a, `A${i + 1}`);
-    entries.push({
+    theses.push({
       segmentId: tAlias,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
@@ -62,7 +62,7 @@ export function transformPerspectives(
         negative: extractCellStyle(perspective.t_minus),
       },
     });
-    entries.push({
+    antitheses.push({
       segmentId: aAlias,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
@@ -77,13 +77,9 @@ export function transformPerspectives(
     });
   });
 
-  let ordered = entries;
-  if (segmentOrder && segmentOrder.length > 0) {
-    const byId = new Map(entries.map(e => [e.segmentId, e]));
-    ordered = segmentOrder.map(id => byId.get(id)).filter(Boolean) as Entry[];
-  }
+  const entries = [...theses, ...antitheses];
 
-  const N = ordered.length;
+  const N = entries.length;
   const segmentAngle = (2 * Math.PI) / N;
 
   const buildRing = (
@@ -91,7 +87,7 @@ export function transformPerspectives(
     getText: (e: Entry) => string,
     getCellStyle: (e: Entry) => Partial<CellStyle> | undefined,
   ): SegmentData[] =>
-    ordered.map((entry, i) => ({
+    entries.map((entry, i) => ({
       segmentId: entry.segmentId,
       polarity,
       fullText: getText(entry),

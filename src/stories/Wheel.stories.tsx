@@ -64,8 +64,8 @@ export const Default: Story = {
     perspectives: samplePerspectives,
     styles: defaultStyles,
     debug: true,
-    onTopSegmentChange: (segment) => console.log('Top segment:', segment),
-    onClickedCellChange: (cell) => console.log('Clicked cell:', cell),
+    onFocusChanged: (segment) => console.log('Top segment:', segment),
+    onCellClicked: (cell) => console.log('Clicked cell:', cell),
   },
 };
 
@@ -95,13 +95,6 @@ export const CustomColors: Story = {
         synthesis: { background: '#FFD700' },
       },
     },
-  },
-};
-
-export const WithSegmentOrder: Story = {
-  args: {
-    ...Default.args,
-    segmentOrder: ['T', 'T2', 'T3', 'A4', 'A', 'A2', 'A3', 'T4'],
   },
 };
 

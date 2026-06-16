@@ -1,8 +1,8 @@
 interface UseRotationOptions {
-    onTopSegmentChange?: (topSegment: string) => void;
+    onFocusChanged?: (topSegment: string) => void;
     segmentIds: string[];
 }
-export declare function useRotation({ onTopSegmentChange, segmentIds }: UseRotationOptions): {
+export declare function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions): {
     rotationDeg: number;
     rotationRad: number;
     isDragging: boolean;

@@ -5,5 +5,5 @@ export interface RingData {
     neutral: SegmentData[];
     positive: SegmentData[];
 }
-export declare function transformPerspectives(perspectives: Perspective[], segmentOrder?: string[]): RingData;
+export declare function transformPerspectives(perspectives: Perspective[]): RingData;
 //# sourceMappingURL=dataTransform.d.ts.map

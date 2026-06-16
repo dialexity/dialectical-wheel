@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
 
 interface UseRotationOptions {
-  onTopSegmentChange?: (topSegment: string) => void;
+  onFocusChanged?: (topSegment: string) => void;
   segmentIds: string[];
 }
 
-export function useRotation({ onTopSegmentChange, segmentIds }: UseRotationOptions) {
+export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ angle: number; rotation: number } | null>(null);
@@ -21,13 +21,13 @@ export function useRotation({ onTopSegmentChange, segmentIds }: UseRotationOptio
   }, []);
 
   const reportTopSegment = useCallback((deg: number) => {
-    if (!onTopSegmentChange || segmentIds.length === 0) return;
+    if (!onFocusChanged || segmentIds.length === 0) return;
     const N = segmentIds.length;
     const segmentAngle = 360 / N;
     const normalized = ((deg % 360) + 360) % 360;
     const index = Math.round(normalized / segmentAngle) % N;
-    onTopSegmentChange(segmentIds[index]);
-  }, [onTopSegmentChange, segmentIds]);
+    onFocusChanged(segmentIds[index]);
+  }, [onFocusChanged, segmentIds]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
