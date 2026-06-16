@@ -12,6 +12,7 @@ export interface CellStyle {
   padding: CSSValue;
   verticalAlign: VerticalAlign;
   border: { width: CSSValue; color: string };
+  hoverBorderColor: string;
 }
 
 export interface Styles extends Partial<CellStyle> {
@@ -89,12 +90,16 @@ export interface ResolvedCellStyle {
   verticalAlign: VerticalAlign;
   borderWidth: number;
   borderColor: string;
+  hoverBorderColor: string;
 }
 
 // --- Props ---
 
+export type HeaderRing = 'wheel' | 'cycle' | 'none';
+
 export interface WheelProps {
   perspectives: Perspective[];
+  headerRing?: HeaderRing;
   neutralOutside?: boolean;
   styles?: Partial<Styles>;
   css?: React.CSSProperties;

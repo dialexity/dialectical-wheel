@@ -10,6 +10,7 @@ interface CellProps {
   style: ResolvedCellStyle;
   rotationRad: number;
   fontSize: number;
+  hovered?: boolean;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
@@ -17,7 +18,7 @@ interface CellProps {
 }
 
 export const Cell: React.FC<CellProps> = ({
-  segment, innerR, outerR, style, rotationRad, fontSize, onClick, onPointerEnter, onPointerLeave, showText = true
+  segment, innerR, outerR, style, rotationRad, fontSize, hovered, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const clipId = useMemo(
     () => `dw-${segment.polarity}-${segment.segmentId}-${innerR}`.replace(/[^a-zA-Z0-9-]/g, '_'),
@@ -54,7 +55,7 @@ export const Cell: React.FC<CellProps> = ({
       <path
         d={path}
         fill={style.background}
-        stroke={style.borderColor}
+        stroke={hovered ? style.hoverBorderColor : style.borderColor}
         strokeWidth={style.borderWidth}
       />
       {showText && segment.fullText && (

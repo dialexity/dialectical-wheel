@@ -13,7 +13,11 @@
 - Canvas measureText (with 1.05x factor) used only for font size search, not rendering
 - Bubbling event model: Cell → Segment → Perspective (like td → tr → table)
 - Segment/Perspective over/out only fire when identity changes (ref-tracked), not on every cell boundary
-- CycleRing uses transparent arc hit areas for pointer events; SynthesisRing has no events
+- Header ring: `headerRing` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
+- WheelRing = all segment labels (T1,A1..); CycleRing = thesis-only labels (T1,T2..)
+- Hover highlights full perspective (both thesis+antithesis segments) across all rings
+- SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
+- SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 
 ## Key Gotchas
@@ -21,9 +25,13 @@
 - Inner ring chords are very narrow — use textBias to shift text outward
 - The cell shape is a trapezoid (wider at outer radius); midR chord is the safe wrap width
 - When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
+- Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
+- `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
+- `HeaderRing = 'wheel' | 'cycle' | 'none'` — controls outermost ring visibility
+- `CellStyle.hoverBorderColor` — cascades through style system like other properties
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
 - `ClickedCell` is deprecated alias for `CellEvent`
 - `SegmentData` carries `perspectiveIndex` for event derivation

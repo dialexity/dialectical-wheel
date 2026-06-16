@@ -3,7 +3,7 @@ import { polarToCartesian, normalizeAngle, describeArc } from './utils/geometry'
 import { resolveStyle } from './utils/styles';
 import type { SegmentData, CellEvent, Styles } from '../../types';
 
-interface CycleRingProps {
+interface WheelRingProps {
   segments: SegmentData[];
   innerR: number;
   outerR: number;
@@ -15,31 +15,26 @@ interface CycleRingProps {
   onPointerLeave?: (event: CellEvent) => void;
 }
 
-export const CycleRing: React.FC<CycleRingProps> = ({
+export const WheelRing: React.FC<WheelRingProps> = ({
   segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
 
-  const thesisSegments = useMemo(() =>
-    segments.filter(s => !s.segmentId.startsWith('A')),
-    [segments]
-  );
-
   const resolvedStyles = useMemo(() =>
-    thesisSegments.map(seg => resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle)),
-    [thesisSegments, styles, cellRadialHeight]
+    segments.map(seg => resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle)),
+    [segments, styles, cellRadialHeight]
   );
 
   const cellEvents = useMemo(() =>
-    thesisSegments.map(segment => ({
+    segments.map(segment => ({
       segmentId: segment.segmentId,
       polarity: segment.polarity,
       statement: segment.fullText,
       pairWith: segment.pairWith,
       perspectiveIndex: segment.perspectiveIndex,
     } as CellEvent)),
-    [thesisSegments]
+    [segments]
   );
 
   const interactive = onClick || onPointerEnter;
@@ -86,10 +81,10 @@ export const CycleRing: React.FC<CycleRingProps> = ({
 
   return (
     <g>
-      {thesisSegments.map((segment, i) =>
+      {segments.map((segment, i) =>
         segment.perspectiveIndex === hoveredPerspectiveIdx ? null : renderSegment(segment, i, false)
       )}
-      {hoveredPerspectiveIdx != null && thesisSegments.map((segment, i) =>
+      {hoveredPerspectiveIdx != null && segments.map((segment, i) =>
         segment.perspectiveIndex !== hoveredPerspectiveIdx ? null : renderSegment(segment, i, true)
       )}
     </g>

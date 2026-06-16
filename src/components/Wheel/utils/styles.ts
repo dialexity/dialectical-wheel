@@ -57,6 +57,7 @@ export function resolveStyle(
     verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: (getBorder('color') as string) || '#ccc',
+    hoverBorderColor: (get('hoverBorderColor') as string) || '#333333',
   };
 }
 
@@ -66,6 +67,7 @@ export const DEFAULT_STYLES: Styles = {
   thead: {
     color: '#333333',
     fontSize: 12,
+    border: { width: 0.5, color: 'transparent' },
   },
   tbody: {
     positive: { background: '#C6E5B3', color: '#2d5a2d', verticalAlign: 'top' },

@@ -1,6 +1,7 @@
-import { useMemo, useCallback, useRef } from 'react';
+import { useMemo, useCallback, useRef, useState } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
+import { WheelRing } from './WheelRing';
 import { CycleRing } from './CycleRing';
 import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
@@ -29,6 +30,7 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 
 export default function Wheel({
   perspectives,
+  headerRing = 'wheel',
   neutralOutside = false,
   styles: userStyles,
   css,
@@ -76,6 +78,7 @@ export default function Wheel({
   const hoveredSegmentRef = useRef<string | null>(null);
   const hoveredPerspectiveRef = useRef<number | null>(null);
   const lastCellEventRef = useRef<CellEvent | null>(null);
+  const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
 
   const handleCellClick = useCallback((cell: CellEvent) => {
     if (onCellClicked) onCellClicked(cell);
@@ -99,6 +102,7 @@ export default function Wheel({
         onPerspectiveOut(derivePerspectiveEvent(lastCellEventRef.current));
       }
       hoveredPerspectiveRef.current = cell.perspectiveIndex;
+      setHoveredPerspectiveIdx(cell.perspectiveIndex);
       if (onPerspectiveOver) onPerspectiveOver(derivePerspectiveEvent(cell));
     }
 
@@ -120,6 +124,7 @@ export default function Wheel({
     hoveredSegmentRef.current = null;
     hoveredPerspectiveRef.current = null;
     lastCellEventRef.current = null;
+    setHoveredPerspectiveIdx(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
   return (
@@ -149,6 +154,7 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -161,6 +167,7 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -173,21 +180,38 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
           />
           <SynthesisRing styles={styles} />
-          <CycleRing
-            segments={ringData.invisible}
-            innerR={RADII.cycleStart}
-            outerR={RADII.cycleEnd}
-            rotationRad={rotationRad}
-            styles={styles}
-            onClick={handleCellClick}
-            onPointerEnter={handlePointerEnter}
-            onPointerLeave={handlePointerLeave}
-          />
+          {headerRing === 'wheel' && (
+            <WheelRing
+              segments={ringData.invisible}
+              innerR={RADII.cycleStart}
+              outerR={RADII.cycleEnd}
+              rotationRad={rotationRad}
+              styles={styles}
+              hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+              onClick={handleCellClick}
+              onPointerEnter={handlePointerEnter}
+              onPointerLeave={handlePointerLeave}
+            />
+          )}
+          {headerRing === 'cycle' && (
+            <CycleRing
+              segments={ringData.invisible}
+              innerR={RADII.cycleStart}
+              outerR={RADII.cycleEnd}
+              rotationRad={rotationRad}
+              styles={styles}
+              hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+              onClick={handleCellClick}
+              onPointerEnter={handlePointerEnter}
+              onPointerLeave={handlePointerLeave}
+            />
+          )}
         </g>
       </svg>
     </div>
