@@ -80,7 +80,22 @@ export function transformPerspectives(
     });
   });
 
-  const entries = [...theses, ...antitheses];
+  let entries: Entry[];
+  if (perspectives.length === 1) {
+    // 1-PP: hourglass layout — thesis at top, antithesis at bottom, spacers on sides
+    const spacer: Entry = {
+      segmentId: '__spacer__',
+      perspectiveIndex: -1,
+      statement: '',
+      positive: '',
+      negative: '',
+      pairWith: '',
+      cellStyles: {},
+    };
+    entries = [theses[0], spacer, antitheses[0], { ...spacer, segmentId: '__spacer2__' }];
+  } else {
+    entries = [...theses, ...antitheses];
+  }
 
   const N = entries.length;
   const segmentAngle = (2 * Math.PI) / N;

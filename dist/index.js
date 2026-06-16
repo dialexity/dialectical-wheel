@@ -534,6 +534,9 @@ var Ring = function Ring(_ref) {
     });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
   var textBias = computeTextBias(ringName, perspectiveCount);
+  var isSpacer = function isSpacer(segment) {
+    return segment.perspectiveIndex === -1;
+  };
   var isElevated = function isElevated(segment) {
     return segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
@@ -542,7 +545,7 @@ var Ring = function Ring(_ref) {
   };
   return jsxRuntime.jsxs("g", {
     children: [segments.map(function (segment, i) {
-      return isElevated(segment) ? null : jsxRuntime.jsx("g", {
+      return isSpacer(segment) || isElevated(segment) ? null : jsxRuntime.jsx("g", {
         opacity: cellOpacity(segment),
         style: {
           transition: 'opacity 200ms ease-in'
@@ -563,7 +566,7 @@ var Ring = function Ring(_ref) {
         })
       }, segment.segmentId);
     }), segments.map(function (segment, i) {
-      return !isElevated(segment) ? null : jsxRuntime.jsx("g", {
+      return isSpacer(segment) || !isElevated(segment) ? null : jsxRuntime.jsx("g", {
         opacity: cellOpacity(segment),
         style: {
           transition: 'opacity 200ms ease-in'
@@ -632,6 +635,9 @@ var WheelRing = function WheelRing(_ref) {
     });
   }, [segments]);
   var interactive = _onClick || _onPointerEnter;
+  var isSpacer = function isSpacer(segment) {
+    return segment.perspectiveIndex === -1;
+  };
   var isElevated = function isElevated(segment) {
     return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
@@ -683,7 +689,7 @@ var WheelRing = function WheelRing(_ref) {
   };
   return jsxRuntime.jsxs("g", {
     children: [segments.map(function (segment, i) {
-      return isElevated(segment) ? null : jsxRuntime.jsx("g", {
+      return isSpacer(segment) || isElevated(segment) ? null : jsxRuntime.jsx("g", {
         opacity: cellOpacity(segment),
         style: {
           transition: 'opacity 200ms ease-in'
@@ -691,7 +697,7 @@ var WheelRing = function WheelRing(_ref) {
         children: renderSegment(segment, i, false)
       }, "wrap-".concat(segment.segmentId));
     }), segments.map(function (segment, i) {
-      return !isElevated(segment) ? null : jsxRuntime.jsx("g", {
+      return isSpacer(segment) || !isElevated(segment) ? null : jsxRuntime.jsx("g", {
         opacity: cellOpacity(segment),
         style: {
           transition: 'opacity 200ms ease-in'
@@ -718,7 +724,7 @@ var CycleRing = function CycleRing(_ref) {
   var radius = (innerR + outerR) / 2;
   var thesisSegments = react.useMemo(function () {
     return segments.filter(function (s) {
-      return !s.segmentId.startsWith('A');
+      return !s.segmentId.startsWith('A') && s.perspectiveIndex !== -1;
     });
   }, [segments]);
   var resolvedStyles = react.useMemo(function () {
@@ -856,11 +862,17 @@ function useTextMeasure() {
 var DRAG_THRESHOLD = 3;
 var FADE_OUT_MS = 200;
 var ROTATE_MS = 300;
+function defaultRotation(segmentCount) {
+  if (segmentCount === 0) return 0;
+  return -(360 / segmentCount / 2);
+}
 function useRotation(_ref) {
   var onFocusChanged = _ref.onFocusChanged,
     segmentIds = _ref.segmentIds,
     focusedSegment = _ref.focusedSegment;
-  var _useState = react.useState(0),
+  var _useState = react.useState(function () {
+      return defaultRotation(segmentIds.length);
+    }),
     _useState2 = _slicedToArray(_useState, 2),
     rotationDeg = _useState2[0],
     setRotationDeg = _useState2[1];
@@ -932,7 +944,8 @@ function useRotation(_ref) {
     var segmentAngle = 360 / N;
     var normalized = (-deg % 360 + 360) % 360;
     var index = Math.round((normalized - segmentAngle / 2) / segmentAngle + N) % N;
-    onFocusChanged(segmentIds[index]);
+    var id = segmentIds[index];
+    if (!id.startsWith('__')) onFocusChanged(id);
   }, [onFocusChanged, segmentIds]);
   var onPointerDown = react.useCallback(function (e) {
     var angle = getAngleFromEvent(e);
@@ -1042,7 +1055,24 @@ function transformPerspectives(perspectives) {
       }
     });
   });
-  var entries = [].concat(theses, antitheses);
+  var entries;
+  if (perspectives.length === 1) {
+    // 1-PP: hourglass layout — thesis at top, antithesis at bottom, spacers on sides
+    var spacer = {
+      segmentId: '__spacer__',
+      perspectiveIndex: -1,
+      statement: '',
+      positive: '',
+      negative: '',
+      pairWith: '',
+      cellStyles: {}
+    };
+    entries = [theses[0], spacer, antitheses[0], _objectSpread2(_objectSpread2({}, spacer), {}, {
+      segmentId: '__spacer2__'
+    })];
+  } else {
+    entries = [].concat(theses, antitheses);
+  }
   var N = entries.length;
   var segmentAngle = 2 * Math.PI / N;
   var buildRing = function buildRing(polarity, getText, getCellStyle) {

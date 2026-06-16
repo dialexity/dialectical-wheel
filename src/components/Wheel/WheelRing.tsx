@@ -41,6 +41,8 @@ export const WheelRing: React.FC<WheelRingProps> = ({
 
   const interactive = onClick || onPointerEnter;
 
+  const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
+
   const isElevated = (segment: SegmentData) =>
     segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
 
@@ -90,14 +92,14 @@ export const WheelRing: React.FC<WheelRingProps> = ({
   return (
     <g>
       {segments.map((segment, i) =>
-        isElevated(segment) ? null : (
+        isSpacer(segment) || isElevated(segment) ? null : (
           <g key={`wrap-${segment.segmentId}`} opacity={cellOpacity(segment)} style={{ transition: 'opacity 200ms ease-in' }}>
             {renderSegment(segment, i, false)}
           </g>
         )
       )}
       {segments.map((segment, i) =>
-        !isElevated(segment) ? null : (
+        isSpacer(segment) || !isElevated(segment) ? null : (
           <g key={`wrap-${segment.segmentId}`} opacity={cellOpacity(segment)} style={{ transition: 'opacity 200ms ease-in' }}>
             {renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)}
           </g>

@@ -53,6 +53,8 @@ export const Ring: React.FC<RingProps> = ({
 
   const textBias = computeTextBias(ringName, perspectiveCount);
 
+  const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
+
   const isElevated = (segment: SegmentData) =>
     segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
 
@@ -62,7 +64,7 @@ export const Ring: React.FC<RingProps> = ({
   return (
     <g>
       {segments.map((segment, i) =>
-        isElevated(segment) ? null : (
+        isSpacer(segment) || isElevated(segment) ? null : (
           <g
             key={segment.segmentId}
             opacity={cellOpacity(segment)}
@@ -86,7 +88,7 @@ export const Ring: React.FC<RingProps> = ({
         )
       )}
       {segments.map((segment, i) =>
-        !isElevated(segment) ? null : (
+        isSpacer(segment) || !isElevated(segment) ? null : (
           <g
             key={segment.segmentId}
             opacity={cellOpacity(segment)}

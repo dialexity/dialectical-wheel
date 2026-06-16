@@ -10,8 +10,13 @@ const DRAG_THRESHOLD = 3;
 const FADE_OUT_MS = 200;
 const ROTATE_MS = 300;
 
+function defaultRotation(segmentCount: number): number {
+  if (segmentCount === 0) return 0;
+  return -(360 / segmentCount / 2);
+}
+
 export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseRotationOptions) {
-  const [rotationDeg, setRotationDeg] = useState(0);
+  const [rotationDeg, setRotationDeg] = useState(() => defaultRotation(segmentIds.length));
   const [isDragging, setIsDragging] = useState(false);
   const [focusAnimatingIdx, setFocusAnimatingIdx] = useState<number | null>(null);
   const [isRotationPaused, setIsRotationPaused] = useState(false);
@@ -78,7 +83,8 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const segmentAngle = 360 / N;
     const normalized = ((-deg % 360) + 360) % 360;
     const index = Math.round((normalized - segmentAngle / 2) / segmentAngle + N) % N;
-    onFocusChanged(segmentIds[index]);
+    const id = segmentIds[index];
+    if (!id.startsWith('__')) onFocusChanged(id);
   }, [onFocusChanged, segmentIds]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
