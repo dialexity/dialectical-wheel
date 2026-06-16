@@ -176,6 +176,8 @@ var RADII = {
   cycleEnd: 250
 };
 
+var VERTICAL_ALIGN_FACTOR = 0.2;
+
 function chordWidth(r, halfAngle) {
   return 2 * r * Math.sin(halfAngle) * 0.9;
 }
@@ -189,11 +191,12 @@ var CellText = function CellText(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     padding = _ref.padding,
-    topMargin = _ref.topMargin;
+    verticalAlign = _ref.verticalAlign;
   var midAngle = (startAngle + endAngle) / 2;
   var halfAngle = (endAngle - startAngle) / 2;
-  // topMargin: negative shifts text toward outer edge (like negative CSS top margin)
-  var biasedR = (innerR + outerR) / 2 - topMargin;
+  var cellHeight = outerR - innerR;
+  var offset = verticalAlign === 'top' ? -VERTICAL_ALIGN_FACTOR * cellHeight : verticalAlign === 'bottom' ? VERTICAL_ALIGN_FACTOR * cellHeight : 0;
+  var biasedR = (innerR + outerR) / 2 - offset;
   var _polarToCartesian = polarToCartesian(biasedR, midAngle),
     _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
     cx = _polarToCartesian2[0],
@@ -288,7 +291,7 @@ var Cell = function Cell(_ref) {
         rotationRad: rotationRad,
         fontSize: fontSize,
         padding: style.padding,
-        topMargin: style.topMargin
+        verticalAlign: style.verticalAlign
       })
     })]
   });
@@ -375,6 +378,9 @@ function resolveCSSValue(value, relativeTo, fallback) {
   }
   return parseFloat(str) || fallback;
 }
+function resolveVerticalAlign(value) {
+  return value || 'middle';
+}
 function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverride) {
   var _styles$tbody;
   var wheel = styles;
@@ -403,7 +409,7 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
     color: get('color') || '#333333',
     fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
-    topMargin: resolveCSSValue(get('topMargin'), cellRadialHeight, 0),
+    verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: getBorder('color') || '#ccc'
   };
@@ -422,7 +428,7 @@ var DEFAULT_STYLES = {
     positive: {
       background: '#C6E5B3',
       color: '#2d5a2d',
-      topMargin: '-25%'
+      verticalAlign: 'top'
     },
     negative: {
       background: '#F9C6CC',

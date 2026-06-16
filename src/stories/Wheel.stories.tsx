@@ -42,7 +42,7 @@ const defaultStyles = {
   border: { width: 0.5, color: '#ccc' },
   thead: { color: '#333333', fontSize: 12 },
   tbody: {
-    positive: { background: '#C6E5B3', color: '#2d5a2d', topMargin: '-25%' },
+    positive: { background: '#C6E5B3', color: '#2d5a2d', verticalAlign: 'top' },
     negative: { background: '#F9C6CC', color: '#8b1538' },
     neutral: { background: '#ffffff', color: '#333333' },
     synthesis: { background: '#ffff7a' },
@@ -89,7 +89,7 @@ export const CustomColors: Story = {
     styles: {
       ...defaultStyles,
       tbody: {
-        positive: { background: '#D4E8D0', color: '#2D5A2D', topMargin: '-25%' },
+        positive: { background: '#D4E8D0', color: '#2D5A2D', verticalAlign: 'top' },
         negative: { background: '#E8D5E0', color: '#5C2D4F' },
         neutral: { background: '#F5F5DC', color: '#4A4A2E' },
         synthesis: { background: '#FFD700' },

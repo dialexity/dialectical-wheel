@@ -1,4 +1,4 @@
-import type { CSSValue, CellStyle, Styles, ResolvedCellStyle } from '../../../types';
+import type { CSSValue, CellStyle, Styles, ResolvedCellStyle, VerticalAlign } from '../../../types';
 
 function resolveCSSValue(value: CSSValue | undefined, relativeTo: number, fallback: number): number {
   if (value === undefined) return fallback;
@@ -11,6 +11,10 @@ function resolveCSSValue(value: CSSValue | undefined, relativeTo: number, fallba
     return parseFloat(str);
   }
   return parseFloat(str) || fallback;
+}
+
+function resolveVerticalAlign(value: VerticalAlign | undefined): VerticalAlign {
+  return value || 'middle';
 }
 
 type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
@@ -50,7 +54,7 @@ export function resolveStyle(
     color: (get('color') as string) || '#333333',
     fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
-    topMargin: resolveCSSValue(get('topMargin'), cellRadialHeight, 0),
+    verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: (getBorder('color') as string) || '#ccc',
   };
@@ -64,7 +68,7 @@ export const DEFAULT_STYLES: Styles = {
     fontSize: 12,
   },
   tbody: {
-    positive: { background: '#C6E5B3', color: '#2d5a2d', topMargin: '-25%' },
+    positive: { background: '#C6E5B3', color: '#2d5a2d', verticalAlign: 'top' },
     negative: { background: '#F9C6CC', color: '#8b1538' },
     neutral: { background: '#ffffff', color: '#333333' },
     synthesis: { background: '#ffff7a' },

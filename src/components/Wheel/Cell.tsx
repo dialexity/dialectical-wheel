@@ -59,7 +59,7 @@ export const Cell: React.FC<CellProps> = ({
             rotationRad={rotationRad}
             fontSize={fontSize}
             padding={style.padding}
-            topMargin={style.topMargin}
+            verticalAlign={style.verticalAlign}
           />
         </g>
       )}

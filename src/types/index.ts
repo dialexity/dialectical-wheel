@@ -3,13 +3,14 @@ import React from 'react';
 // --- Style types ---
 
 export type CSSValue = string | number; // number = px, string = "14px" | "80%" | "0.9em"
+export type VerticalAlign = 'top' | 'middle' | 'bottom';
 
 export interface CellStyle {
   background: string;
   color: string;
   fontSize: CSSValue;
   padding: CSSValue;
-  topMargin: CSSValue;
+  verticalAlign: VerticalAlign;
   border: { width: CSSValue; color: string };
 }
 
@@ -68,7 +69,7 @@ export interface ResolvedCellStyle {
   color: string;
   fontSize: number;
   padding: number;
-  topMargin: number;
+  verticalAlign: VerticalAlign;
   borderWidth: number;
   borderColor: string;
 }

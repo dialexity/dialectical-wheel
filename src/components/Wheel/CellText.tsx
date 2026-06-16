@@ -1,5 +1,7 @@
 import React from 'react';
 import { polarToCartesian, normalizeAngle } from './utils/geometry';
+import { VERTICAL_ALIGN_FACTOR } from './utils/constants';
+import type { VerticalAlign } from '../../types';
 
 interface CellTextProps {
   innerR: number;
@@ -11,7 +13,7 @@ interface CellTextProps {
   rotationRad: number;
   fontSize: number;
   padding: number;
-  topMargin: number;
+  verticalAlign: VerticalAlign;
 }
 
 function chordWidth(r: number, halfAngle: number): number {
@@ -19,12 +21,15 @@ function chordWidth(r: number, halfAngle: number): number {
 }
 
 export const CellText: React.FC<CellTextProps> = ({
-  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, topMargin
+  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, verticalAlign
 }) => {
   const midAngle = (startAngle + endAngle) / 2;
   const halfAngle = (endAngle - startAngle) / 2;
-  // topMargin: negative shifts text toward outer edge (like negative CSS top margin)
-  const biasedR = (innerR + outerR) / 2 - topMargin;
+  const cellHeight = outerR - innerR;
+  const offset = verticalAlign === 'top' ? -VERTICAL_ALIGN_FACTOR * cellHeight
+    : verticalAlign === 'bottom' ? VERTICAL_ALIGN_FACTOR * cellHeight
+    : 0;
+  const biasedR = (innerR + outerR) / 2 - offset;
   const [cx, cy] = polarToCartesian(biasedR, midAngle);
 
   const visualAngle = normalizeAngle(midAngle + rotationRad);
