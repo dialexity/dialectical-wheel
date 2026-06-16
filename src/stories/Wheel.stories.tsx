@@ -72,7 +72,7 @@ export const Default: Story = {
 export const WhiteOutside: Story = {
   args: {
     ...Default.args,
-    isWhiteOutside: true,
+    neutralOutside: true,
   },
 };
 

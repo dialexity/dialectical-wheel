@@ -176,7 +176,7 @@ var RADII = {
   cycleEnd: 250
 };
 
-var VERTICAL_ALIGN_FACTOR = 0.2;
+var VERTICAL_ALIGN_FACTOR = 0.15;
 
 function chordWidth(r, halfAngle) {
   return 2 * r * Math.sin(halfAngle) * 0.9;
@@ -743,8 +743,8 @@ function mergeStyles(user) {
 }
 function Wheel(_ref) {
   var perspectives = _ref.perspectives,
-    _ref$isWhiteOutside = _ref.isWhiteOutside,
-    isWhiteOutside = _ref$isWhiteOutside === void 0 ? false : _ref$isWhiteOutside,
+    _ref$neutralOutside = _ref.neutralOutside,
+    neutralOutside = _ref$neutralOutside === void 0 ? false : _ref$neutralOutside,
     userStyles = _ref.styles,
     css = _ref.css,
     onFocusChanged = _ref.onFocusChanged,
@@ -772,8 +772,8 @@ function Wheel(_ref) {
     isDragging = _useRotation.isDragging,
     svgRef = _useRotation.svgRef,
     pointerHandlers = _useRotation.pointerHandlers;
-  var outerRing = isWhiteOutside ? 'neutral' : 'negative';
-  var middleRing = isWhiteOutside ? 'negative' : 'neutral';
+  var outerRing = neutralOutside ? 'neutral' : 'negative';
+  var middleRing = neutralOutside ? 'negative' : 'neutral';
   var handleCellClick = function handleCellClick(cell) {
     if (onCellClicked) onCellClicked(cell);
   };

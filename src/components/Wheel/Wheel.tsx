@@ -29,7 +29,7 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 
 export default function Wheel({
   perspectives,
-  isWhiteOutside = false,
+  neutralOutside = false,
   styles: userStyles,
   css,
   onFocusChanged,
@@ -50,8 +50,8 @@ export default function Wheel({
     segmentIds,
   });
 
-  const outerRing: 'neutral' | 'negative' = isWhiteOutside ? 'neutral' : 'negative';
-  const middleRing: 'neutral' | 'negative' = isWhiteOutside ? 'negative' : 'neutral';
+  const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
+  const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
 
   const handleCellClick = (cell: ClickedCell) => {
     if (onCellClicked) onCellClicked(cell);

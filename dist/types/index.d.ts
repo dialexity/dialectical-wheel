@@ -62,7 +62,7 @@ export interface ResolvedCellStyle {
 }
 export interface WheelProps {
     perspectives: Perspective[];
-    isWhiteOutside?: boolean;
+    neutralOutside?: boolean;
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
     onFocusChanged?: (topSegment: string) => void;
