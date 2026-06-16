@@ -31,6 +31,7 @@ export function transformPerspectives(
 
   type Entry = {
     segmentId: string;
+    perspectiveIndex: number;
     statement: string;
     positive: string;
     negative: string;
@@ -51,6 +52,7 @@ export function transformPerspectives(
     const aAlias = extractAlias(perspective.a, `A${i + 1}`);
     theses.push({
       segmentId: tAlias,
+      perspectiveIndex: i,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
       negative: extractStatement(perspective.t_minus),
@@ -64,6 +66,7 @@ export function transformPerspectives(
     });
     antitheses.push({
       segmentId: aAlias,
+      perspectiveIndex: i,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
       negative: extractStatement(perspective.a_minus),
@@ -89,6 +92,7 @@ export function transformPerspectives(
   ): SegmentData[] =>
     entries.map((entry, i) => ({
       segmentId: entry.segmentId,
+      perspectiveIndex: entry.perspectiveIndex,
       polarity,
       fullText: getText(entry),
       pairWith: entry.pairWith,

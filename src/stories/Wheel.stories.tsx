@@ -63,9 +63,17 @@ export const Default: Story = {
   args: {
     perspectives: samplePerspectives,
     styles: defaultStyles,
-    debug: true,
+
     onFocusChanged: (segment) => console.log('Top segment:', segment),
-    onCellClicked: (cell) => console.log('Clicked cell:', cell),
+    onCellClicked: (event) => console.log('Cell clicked:', event),
+    onCellOver: (event) => console.log('Cell over:', event),
+    onCellOut: (event) => console.log('Cell out:', event),
+    onSegmentClicked: (event) => console.log('Segment clicked:', event),
+    onSegmentOver: (event) => console.log('Segment over:', event),
+    onSegmentOut: (event) => console.log('Segment out:', event),
+    onPerspectiveClicked: (event) => console.log('Perspective clicked:', event),
+    onPerspectiveOver: (event) => console.log('Perspective over:', event),
+    onPerspectiveOut: (event) => console.log('Perspective out:', event),
   },
 };
 

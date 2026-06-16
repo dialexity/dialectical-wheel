@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SegmentData, ClickedCell, ResolvedCellStyle } from '../../types';
+import type { SegmentData, CellEvent, ResolvedCellStyle } from '../../types';
 interface CellProps {
     segment: SegmentData;
     innerR: number;
@@ -7,7 +7,9 @@ interface CellProps {
     style: ResolvedCellStyle;
     rotationRad: number;
     fontSize: number;
-    onClick?: (cell: ClickedCell) => void;
+    onClick?: (event: CellEvent) => void;
+    onPointerEnter?: (event: CellEvent) => void;
+    onPointerLeave?: (event: CellEvent) => void;
     showText?: boolean;
 }
 export declare const Cell: React.FC<CellProps>;

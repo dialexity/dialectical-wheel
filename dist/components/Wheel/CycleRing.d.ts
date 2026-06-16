@@ -1,10 +1,14 @@
 import React from 'react';
-import type { SegmentData, Styles } from '../../types';
+import type { SegmentData, CellEvent, Styles } from '../../types';
 interface CycleRingProps {
     segments: SegmentData[];
-    radius: number;
+    innerR: number;
+    outerR: number;
     rotationRad: number;
     styles: Styles;
+    onClick?: (event: CellEvent) => void;
+    onPointerEnter?: (event: CellEvent) => void;
+    onPointerLeave?: (event: CellEvent) => void;
 }
 export declare const CycleRing: React.FC<CycleRingProps>;
 export {};

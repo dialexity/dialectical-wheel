@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { CycleRing } from './CycleRing';
@@ -7,7 +7,7 @@ import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
 import { DEFAULT_STYLES } from './utils/styles';
 import { RADII } from './utils/geometry';
-import type { WheelProps, Styles, CSSValue, ClickedCell } from '../../types';
+import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent } from '../../types';
 
 function mergeStyles(user?: Partial<Styles>): Styles {
   if (!user) return DEFAULT_STYLES;
@@ -33,8 +33,15 @@ export default function Wheel({
   styles: userStyles,
   css,
   onFocusChanged,
+  onCellOver,
+  onCellOut,
   onCellClicked,
-  debug = false,
+  onSegmentOver,
+  onSegmentOut,
+  onSegmentClicked,
+  onPerspectiveOver,
+  onPerspectiveOut,
+  onPerspectiveClicked,
 }: WheelProps) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
 
@@ -53,16 +60,81 @@ export default function Wheel({
   const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
   const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
 
-  const handleCellClick = (cell: ClickedCell) => {
+  const derivePerspectiveEvent = useCallback((cell: CellEvent): PerspectiveEvent => {
+    const p = perspectives[cell.perspectiveIndex];
+    const thesis = typeof p.t === 'string' ? p.t : (p.t.statement || p.t.alias || '');
+    const antithesis = typeof p.a === 'string' ? p.a : (p.a.statement || p.a.alias || '');
+    return { perspectiveIndex: cell.perspectiveIndex, thesis, antithesis };
+  }, [perspectives]);
+
+  const deriveSegmentEvent = useCallback((cell: CellEvent): SegmentEvent => ({
+    segmentId: cell.segmentId,
+    pairWith: cell.pairWith,
+    perspectiveIndex: cell.perspectiveIndex,
+  }), []);
+
+  const hoveredSegmentRef = useRef<string | null>(null);
+  const hoveredPerspectiveRef = useRef<number | null>(null);
+  const lastCellEventRef = useRef<CellEvent | null>(null);
+
+  const handleCellClick = useCallback((cell: CellEvent) => {
     if (onCellClicked) onCellClicked(cell);
-  };
+    if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
+    if (onPerspectiveClicked) onPerspectiveClicked(derivePerspectiveEvent(cell));
+  }, [onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
+
+  const handlePointerEnter = useCallback((cell: CellEvent) => {
+    if (onCellOver) onCellOver(cell);
+
+    if (hoveredSegmentRef.current !== cell.segmentId) {
+      if (hoveredSegmentRef.current !== null && onSegmentOut && lastCellEventRef.current) {
+        onSegmentOut(deriveSegmentEvent(lastCellEventRef.current));
+      }
+      hoveredSegmentRef.current = cell.segmentId;
+      if (onSegmentOver) onSegmentOver(deriveSegmentEvent(cell));
+    }
+
+    if (hoveredPerspectiveRef.current !== cell.perspectiveIndex) {
+      if (hoveredPerspectiveRef.current !== null && onPerspectiveOut && lastCellEventRef.current) {
+        onPerspectiveOut(derivePerspectiveEvent(lastCellEventRef.current));
+      }
+      hoveredPerspectiveRef.current = cell.perspectiveIndex;
+      if (onPerspectiveOver) onPerspectiveOver(derivePerspectiveEvent(cell));
+    }
+
+    lastCellEventRef.current = cell;
+  }, [onCellOver, onSegmentOver, onSegmentOut, onPerspectiveOver, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
+
+  const handlePointerLeave = useCallback((cell: CellEvent) => {
+    if (onCellOut) onCellOut(cell);
+  }, [onCellOut]);
+
+  const handleWheelPointerLeave = useCallback(() => {
+    const last = lastCellEventRef.current;
+    if (hoveredSegmentRef.current !== null && onSegmentOut && last) {
+      onSegmentOut(deriveSegmentEvent(last));
+    }
+    if (hoveredPerspectiveRef.current !== null && onPerspectiveOut && last) {
+      onPerspectiveOut(derivePerspectiveEvent(last));
+    }
+    hoveredSegmentRef.current = null;
+    hoveredPerspectiveRef.current = null;
+    lastCellEventRef.current = null;
+  }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
   return (
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
         ref={svgRef}
         viewBox="-250 -250 500 500"
-        style={{ width: '100%', height: 'auto', touchAction: 'none' }}
+        style={{
+          width: '100%',
+          height: 'auto',
+          touchAction: 'none',
+          userSelect: 'none',
+          cursor: isDragging ? 'grabbing' : 'grab',
+        }}
+        onPointerLeave={handleWheelPointerLeave}
         {...pointerHandlers}
       >
         <g
@@ -78,6 +150,8 @@ export default function Wheel({
             rotationRad={rotationRad}
             measure={measure}
             onClick={handleCellClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           />
           <Ring
             segments={ringData[middleRing]}
@@ -88,6 +162,8 @@ export default function Wheel({
             rotationRad={rotationRad}
             measure={measure}
             onClick={handleCellClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           />
           <Ring
             segments={ringData.positive}
@@ -98,21 +174,22 @@ export default function Wheel({
             rotationRad={rotationRad}
             measure={measure}
             onClick={handleCellClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           />
           <SynthesisRing styles={styles} />
           <CycleRing
             segments={ringData.invisible}
-            radius={(RADII.cycleStart + RADII.cycleEnd) / 2}
+            innerR={RADII.cycleStart}
+            outerR={RADII.cycleEnd}
             rotationRad={rotationRad}
             styles={styles}
+            onClick={handleCellClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           />
         </g>
       </svg>
-      {debug && (
-        <div style={{ marginTop: 8, padding: 8, background: '#f8f9fa', borderRadius: 4, fontSize: 12, color: '#666' }}>
-          {perspectives.length} perspectives, {segmentIds.length} segments, rotation: {rotationDeg.toFixed(1)}°
-        </div>
-      )}
     </div>
   );
 }

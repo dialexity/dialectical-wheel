@@ -250,26 +250,39 @@ var Cell = function Cell(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     onClick = _ref.onClick,
+    onPointerEnter = _ref.onPointerEnter,
+    onPointerLeave = _ref.onPointerLeave,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
   var clipId = react.useMemo(function () {
     return "dw-".concat(segment.polarity, "-").concat(segment.segmentId, "-").concat(innerR).replace(/[^a-zA-Z0-9-]/g, '_');
   }, [segment.polarity, segment.segmentId, innerR]);
   var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
+  var cellEvent = react.useMemo(function () {
+    return {
+      segmentId: segment.segmentId,
+      polarity: segment.polarity,
+      statement: segment.fullText,
+      pairWith: segment.pairWith,
+      perspectiveIndex: segment.perspectiveIndex
+    };
+  }, [segment.segmentId, segment.polarity, segment.fullText, segment.pairWith, segment.perspectiveIndex]);
   var handleClick = function handleClick() {
-    if (onClick) {
-      onClick({
-        segmentId: segment.segmentId,
-        polarity: segment.polarity,
-        statement: segment.fullText,
-        pairWith: segment.pairWith
-      });
-    }
+    if (onClick) onClick(cellEvent);
   };
+  var handlePointerEnter = function handlePointerEnter() {
+    if (onPointerEnter) onPointerEnter(cellEvent);
+  };
+  var handlePointerLeave = function handlePointerLeave() {
+    if (onPointerLeave) onPointerLeave(cellEvent);
+  };
+  var interactive = onClick || onPointerEnter;
   return jsxRuntime.jsxs("g", {
     onClick: handleClick,
+    onPointerEnter: handlePointerEnter,
+    onPointerLeave: handlePointerLeave,
     style: {
-      cursor: onClick ? 'pointer' : 'default'
+      cursor: interactive ? 'pointer' : 'default'
     },
     children: [jsxRuntime.jsx("defs", {
       children: jsxRuntime.jsx("clipPath", {
@@ -457,6 +470,8 @@ var Ring = function Ring(_ref) {
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
     onClick = _ref.onClick,
+    onPointerEnter = _ref.onPointerEnter,
+    onPointerLeave = _ref.onPointerLeave,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText;
   var cellRadialHeight = outerR - innerR;
@@ -493,6 +508,8 @@ var Ring = function Ring(_ref) {
         rotationRad: rotationRad,
         fontSize: uniformFontSize,
         onClick: onClick,
+        onPointerEnter: onPointerEnter,
+        onPointerLeave: onPointerLeave,
         showText: showText
       }, segment.segmentId);
     })
@@ -514,12 +531,29 @@ var SynthesisRing = function SynthesisRing(_ref) {
 
 var CycleRing = function CycleRing(_ref) {
   var segments = _ref.segments,
-    radius = _ref.radius,
+    innerR = _ref.innerR,
+    outerR = _ref.outerR,
     rotationRad = _ref.rotationRad,
-    styles = _ref.styles;
-  var resolved = resolveStyle(styles, 'cycle', 50);
+    styles = _ref.styles,
+    _onClick = _ref.onClick,
+    _onPointerEnter = _ref.onPointerEnter,
+    _onPointerLeave = _ref.onPointerLeave;
+  var resolved = resolveStyle(styles, 'cycle', outerR - innerR);
+  var radius = (innerR + outerR) / 2;
+  var cellEvents = react.useMemo(function () {
+    return segments.map(function (segment) {
+      return {
+        segmentId: segment.segmentId,
+        polarity: segment.polarity,
+        statement: segment.fullText,
+        pairWith: segment.pairWith,
+        perspectiveIndex: segment.perspectiveIndex
+      };
+    });
+  }, [segments]);
+  var interactive = _onClick || _onPointerEnter;
   return jsxRuntime.jsx("g", {
-    children: segments.map(function (segment) {
+    children: segments.map(function (segment, i) {
       var midAngle = (segment.startAngle + segment.endAngle) / 2;
       var _polarToCartesian = polarToCartesian(radius, midAngle),
         _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
@@ -528,20 +562,35 @@ var CycleRing = function CycleRing(_ref) {
       var visualAngle = normalizeAngle(midAngle + rotationRad);
       var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
       var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
-      return jsxRuntime.jsx("text", {
-        x: x,
-        y: y,
-        transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
-        textAnchor: "middle",
-        dominantBaseline: "central",
-        fill: resolved.color,
-        fontSize: resolved.fontSize,
-        fontWeight: "bold",
-        fontFamily: "system-ui, sans-serif",
-        style: {
-          pointerEvents: 'none'
+      var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
+      return jsxRuntime.jsxs("g", {
+        onClick: function onClick() {
+          return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
         },
-        children: segment.segmentId
+        onPointerEnter: function onPointerEnter() {
+          return _onPointerEnter === null || _onPointerEnter === void 0 ? void 0 : _onPointerEnter(cellEvents[i]);
+        },
+        onPointerLeave: function onPointerLeave() {
+          return _onPointerLeave === null || _onPointerLeave === void 0 ? void 0 : _onPointerLeave(cellEvents[i]);
+        },
+        style: {
+          cursor: interactive ? 'pointer' : 'default'
+        },
+        children: [jsxRuntime.jsx("path", {
+          d: path,
+          fill: "transparent"
+        }), jsxRuntime.jsx("text", {
+          x: x,
+          y: y,
+          transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
+          textAnchor: "middle",
+          dominantBaseline: "central",
+          fill: resolved.color,
+          fontSize: resolved.fontSize,
+          fontWeight: "bold",
+          fontFamily: "system-ui, sans-serif",
+          children: segment.segmentId
+        })]
       }, segment.segmentId);
     })
   });
@@ -660,6 +709,7 @@ function transformPerspectives(perspectives) {
     var aAlias = extractAlias(perspective.a, "A".concat(i + 1));
     theses.push({
       segmentId: tAlias,
+      perspectiveIndex: i,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
       negative: extractStatement(perspective.t_minus),
@@ -673,6 +723,7 @@ function transformPerspectives(perspectives) {
     });
     antitheses.push({
       segmentId: aAlias,
+      perspectiveIndex: i,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
       negative: extractStatement(perspective.a_minus),
@@ -692,6 +743,7 @@ function transformPerspectives(perspectives) {
     return entries.map(function (entry, i) {
       return {
         segmentId: entry.segmentId,
+        perspectiveIndex: entry.perspectiveIndex,
         polarity: polarity,
         fullText: getText(entry),
         pairWith: entry.pairWith,
@@ -752,7 +804,15 @@ function Wheel(_ref) {
     userStyles = _ref.styles,
     css = _ref.css,
     onFocusChanged = _ref.onFocusChanged,
+    onCellOver = _ref.onCellOver,
+    onCellOut = _ref.onCellOut,
     onCellClicked = _ref.onCellClicked,
+    onSegmentOver = _ref.onSegmentOver,
+    onSegmentOut = _ref.onSegmentOut,
+    onSegmentClicked = _ref.onSegmentClicked,
+    onPerspectiveOver = _ref.onPerspectiveOver,
+    onPerspectiveOut = _ref.onPerspectiveOut,
+    onPerspectiveClicked = _ref.onPerspectiveClicked,
     _ref$debug = _ref.debug,
     debug = _ref$debug === void 0 ? false : _ref$debug;
   var styles = react.useMemo(function () {
@@ -778,9 +838,64 @@ function Wheel(_ref) {
     pointerHandlers = _useRotation.pointerHandlers;
   var outerRing = neutralOutside ? 'neutral' : 'negative';
   var middleRing = neutralOutside ? 'negative' : 'neutral';
-  var handleCellClick = function handleCellClick(cell) {
+  var derivePerspectiveEvent = react.useCallback(function (cell) {
+    var p = perspectives[cell.perspectiveIndex];
+    var thesis = typeof p.t === 'string' ? p.t : p.t.statement || p.t.alias || '';
+    var antithesis = typeof p.a === 'string' ? p.a : p.a.statement || p.a.alias || '';
+    return {
+      perspectiveIndex: cell.perspectiveIndex,
+      thesis: thesis,
+      antithesis: antithesis
+    };
+  }, [perspectives]);
+  var deriveSegmentEvent = react.useCallback(function (cell) {
+    return {
+      segmentId: cell.segmentId,
+      pairWith: cell.pairWith,
+      perspectiveIndex: cell.perspectiveIndex
+    };
+  }, []);
+  var hoveredSegmentRef = react.useRef(null);
+  var hoveredPerspectiveRef = react.useRef(null);
+  var lastCellEventRef = react.useRef(null);
+  var handleCellClick = react.useCallback(function (cell) {
     if (onCellClicked) onCellClicked(cell);
-  };
+    if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
+    if (onPerspectiveClicked) onPerspectiveClicked(derivePerspectiveEvent(cell));
+  }, [onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
+  var handlePointerEnter = react.useCallback(function (cell) {
+    if (onCellOver) onCellOver(cell);
+    if (hoveredSegmentRef.current !== cell.segmentId) {
+      if (hoveredSegmentRef.current !== null && onSegmentOut && lastCellEventRef.current) {
+        onSegmentOut(deriveSegmentEvent(lastCellEventRef.current));
+      }
+      hoveredSegmentRef.current = cell.segmentId;
+      if (onSegmentOver) onSegmentOver(deriveSegmentEvent(cell));
+    }
+    if (hoveredPerspectiveRef.current !== cell.perspectiveIndex) {
+      if (hoveredPerspectiveRef.current !== null && onPerspectiveOut && lastCellEventRef.current) {
+        onPerspectiveOut(derivePerspectiveEvent(lastCellEventRef.current));
+      }
+      hoveredPerspectiveRef.current = cell.perspectiveIndex;
+      if (onPerspectiveOver) onPerspectiveOver(derivePerspectiveEvent(cell));
+    }
+    lastCellEventRef.current = cell;
+  }, [onCellOver, onSegmentOver, onSegmentOut, onPerspectiveOver, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
+  var handlePointerLeave = react.useCallback(function (cell) {
+    if (onCellOut) onCellOut(cell);
+  }, [onCellOut]);
+  var handleWheelPointerLeave = react.useCallback(function () {
+    var last = lastCellEventRef.current;
+    if (hoveredSegmentRef.current !== null && onSegmentOut && last) {
+      onSegmentOut(deriveSegmentEvent(last));
+    }
+    if (hoveredPerspectiveRef.current !== null && onPerspectiveOut && last) {
+      onPerspectiveOut(derivePerspectiveEvent(last));
+    }
+    hoveredSegmentRef.current = null;
+    hoveredPerspectiveRef.current = null;
+    lastCellEventRef.current = null;
+  }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
   return jsxRuntime.jsxs("div", {
     style: _objectSpread2({
       background: 'white',
@@ -793,7 +908,8 @@ function Wheel(_ref) {
         width: '100%',
         height: 'auto',
         touchAction: 'none'
-      }
+      },
+      onPointerLeave: handleWheelPointerLeave
     }, pointerHandlers), {}, {
       children: jsxRuntime.jsxs("g", {
         transform: "rotate(".concat(rotationDeg, ")"),
@@ -808,7 +924,9 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          onClick: handleCellClick
+          onClick: handleCellClick,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave
         }), jsxRuntime.jsx(Ring, {
           segments: ringData[middleRing],
           innerR: RADII.middleStart,
@@ -817,7 +935,9 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          onClick: handleCellClick
+          onClick: handleCellClick,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave
         }), jsxRuntime.jsx(Ring, {
           segments: ringData.positive,
           innerR: RADII.innerStart,
@@ -826,14 +946,20 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
-          onClick: handleCellClick
+          onClick: handleCellClick,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave
         }), jsxRuntime.jsx(SynthesisRing, {
           styles: styles
         }), jsxRuntime.jsx(CycleRing, {
           segments: ringData.invisible,
-          radius: (RADII.cycleStart + RADII.cycleEnd) / 2,
+          innerR: RADII.cycleStart,
+          outerR: RADII.cycleEnd,
           rotationRad: rotationRad,
-          styles: styles
+          styles: styles,
+          onClick: handleCellClick,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave
         })]
       })
     })), debug && jsxRuntime.jsxs("div", {

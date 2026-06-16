@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SegmentData, ClickedCell, Styles } from '../../types';
+import type { SegmentData, CellEvent, Styles } from '../../types';
 type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
 interface RingProps {
     segments: SegmentData[];
@@ -9,7 +9,9 @@ interface RingProps {
     styles: Styles;
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;
-    onClick?: (cell: ClickedCell) => void;
+    onClick?: (event: CellEvent) => void;
+    onPointerEnter?: (event: CellEvent) => void;
+    onPointerLeave?: (event: CellEvent) => void;
     showText?: boolean;
 }
 export declare const Ring: React.FC<RingProps>;

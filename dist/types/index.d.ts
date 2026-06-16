@@ -38,6 +38,7 @@ export interface Perspective {
 }
 export interface SegmentData {
     segmentId: string;
+    perspectiveIndex: number;
     polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
     fullText: string;
     pairWith: string;
@@ -45,12 +46,25 @@ export interface SegmentData {
     endAngle: number;
     cellStyle?: Partial<CellStyle>;
 }
-export interface ClickedCell {
+export interface CellEvent {
     segmentId: string;
     polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
     statement: string;
     pairWith: string;
+    perspectiveIndex: number;
 }
+export interface SegmentEvent {
+    segmentId: string;
+    pairWith: string;
+    perspectiveIndex: number;
+}
+export interface PerspectiveEvent {
+    perspectiveIndex: number;
+    thesis: string;
+    antithesis: string;
+}
+/** @deprecated Use CellEvent instead */
+export type ClickedCell = CellEvent;
 export interface ResolvedCellStyle {
     background: string;
     color: string;
@@ -66,7 +80,15 @@ export interface WheelProps {
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
     onFocusChanged?: (topSegment: string) => void;
-    onCellClicked?: (cell: ClickedCell | null) => void;
+    onCellOver?: (event: CellEvent) => void;
+    onCellOut?: (event: CellEvent) => void;
+    onCellClicked?: (event: CellEvent) => void;
+    onSegmentOver?: (event: SegmentEvent) => void;
+    onSegmentOut?: (event: SegmentEvent) => void;
+    onSegmentClicked?: (event: SegmentEvent) => void;
+    onPerspectiveOver?: (event: PerspectiveEvent) => void;
+    onPerspectiveOut?: (event: PerspectiveEvent) => void;
+    onPerspectiveClicked?: (event: PerspectiveEvent) => void;
     debug?: boolean;
 }
 //# sourceMappingURL=index.d.ts.map

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { describeArc } from './utils/geometry';
 import { CellText } from './CellText';
-import type { SegmentData, ClickedCell, ResolvedCellStyle } from '../../types';
+import type { SegmentData, CellEvent, ResolvedCellStyle } from '../../types';
 
 interface CellProps {
   segment: SegmentData;
@@ -10,12 +10,14 @@ interface CellProps {
   style: ResolvedCellStyle;
   rotationRad: number;
   fontSize: number;
-  onClick?: (cell: ClickedCell) => void;
+  onClick?: (event: CellEvent) => void;
+  onPointerEnter?: (event: CellEvent) => void;
+  onPointerLeave?: (event: CellEvent) => void;
   showText?: boolean;
 }
 
 export const Cell: React.FC<CellProps> = ({
-  segment, innerR, outerR, style, rotationRad, fontSize, onClick, showText = true
+  segment, innerR, outerR, style, rotationRad, fontSize, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const clipId = useMemo(
     () => `dw-${segment.polarity}-${segment.segmentId}-${innerR}`.replace(/[^a-zA-Z0-9-]/g, '_'),
@@ -23,19 +25,27 @@ export const Cell: React.FC<CellProps> = ({
   );
   const path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick({
-        segmentId: segment.segmentId,
-        polarity: segment.polarity,
-        statement: segment.fullText,
-        pairWith: segment.pairWith,
-      });
-    }
-  };
+  const cellEvent: CellEvent = useMemo(() => ({
+    segmentId: segment.segmentId,
+    polarity: segment.polarity,
+    statement: segment.fullText,
+    pairWith: segment.pairWith,
+    perspectiveIndex: segment.perspectiveIndex,
+  }), [segment.segmentId, segment.polarity, segment.fullText, segment.pairWith, segment.perspectiveIndex]);
+
+  const handleClick = () => { if (onClick) onClick(cellEvent); };
+  const handlePointerEnter = () => { if (onPointerEnter) onPointerEnter(cellEvent); };
+  const handlePointerLeave = () => { if (onPointerLeave) onPointerLeave(cellEvent); };
+
+  const interactive = onClick || onPointerEnter;
 
   return (
-    <g onClick={handleClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <g
+      onClick={handleClick}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      style={{ cursor: interactive ? 'pointer' : 'default' }}
+    >
       <defs>
         <clipPath id={clipId}>
           <path d={path} />
