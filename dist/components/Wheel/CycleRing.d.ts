@@ -6,6 +6,7 @@ interface CycleRingProps {
     outerR: number;
     rotationRad: number;
     styles: Styles;
+    transparent?: boolean;
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;

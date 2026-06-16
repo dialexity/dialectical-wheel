@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, forwardRef } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect, forwardRef } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { WheelRing } from './WheelRing';
@@ -34,7 +34,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   headerRing = 'wheel',
   selectedPerspective,
   focusedSegment,
-  neutralOutside = false,
+  neutralOutside: neutralOutsideProp = false,
   styles: userStyles,
   css,
   onFocusChanged,
@@ -70,6 +70,8 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     else if (ref) ref.current = el;
   }, [ref, svgRef]);
 
+  const neutralOutside = !!neutralOutsideProp;
+  const stitched = neutralOutsideProp === 'header';
   const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
   const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
 
@@ -89,8 +91,20 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const hoveredSegmentRef = useRef<string | null>(null);
   const hoveredPerspectiveRef = useRef<number | null>(null);
   const lastCellEventRef = useRef<CellEvent | null>(null);
+  const hoverSuppressedRef = useRef(false);
   const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
   const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (focusAnimatingIdx != null) {
+      hoverSuppressedRef.current = true;
+      hoveredSegmentRef.current = null;
+      hoveredPerspectiveRef.current = null;
+      lastCellEventRef.current = null;
+      setHoveredSegmentId(null);
+      setHoveredPerspectiveIdx(null);
+    }
+  }, [focusAnimatingIdx]);
 
   const handleCellClick = useCallback((cell: CellEvent) => {
     if (onCellClicked) onCellClicked(cell);
@@ -99,6 +113,8 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   }, [onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
 
   const handlePointerEnter = useCallback((cell: CellEvent) => {
+    if (hoverSuppressedRef.current) return;
+
     if (onCellOver) onCellOver(cell);
 
     if (hoveredSegmentRef.current !== cell.segmentId) {
@@ -126,7 +142,12 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     if (onCellOut) onCellOut(cell);
   }, [onCellOut]);
 
+  const handleSvgPointerMove = useCallback(() => {
+    hoverSuppressedRef.current = false;
+  }, []);
+
   const handleWheelPointerLeave = useCallback(() => {
+    hoverSuppressedRef.current = false;
     const last = lastCellEventRef.current;
     if (hoveredSegmentRef.current !== null && onSegmentOut && last) {
       onSegmentOut(deriveSegmentEvent(last));
@@ -155,6 +176,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
         }}
         onPointerLeave={handleWheelPointerLeave}
         {...pointerHandlers}
+        onPointerMove={(e: React.PointerEvent<SVGSVGElement>) => { handleSvgPointerMove(); pointerHandlers.onPointerMove(e); }}
       >
         <g
           transform={`rotate(${rotationDeg})`}
@@ -163,15 +185,17 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
           <Ring
             segments={ringData[outerRing]}
             innerR={radii.outerStart}
-            outerR={radii.outerEnd}
+            outerR={stitched ? radii.cycleEnd : radii.outerEnd}
             ringName={outerRing}
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
             perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
+            headerBehavior={stitched}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -186,6 +210,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             measure={measure}
             perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
             onClick={handleCellClick}
@@ -202,6 +227,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             measure={measure}
             perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
+            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
             onClick={handleCellClick}
@@ -216,6 +242,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               outerR={radii.cycleEnd}
               rotationRad={rotationRad}
               styles={styles}
+              transparent={stitched}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
@@ -231,6 +258,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               outerR={radii.cycleEnd}
               rotationRad={rotationRad}
               styles={styles}
+              transparent={stitched}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
@@ -244,6 +272,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               segments={ringData.positive}
               selectedPerspectiveIdx={selectedPerspective}
               headerRing={headerRing}
+              stitched={stitched}
               styles={styles}
               radii={radii}
             />

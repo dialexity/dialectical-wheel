@@ -16,6 +16,7 @@ export interface CellStyle {
     };
 }
 export interface Styles extends Partial<CellStyle> {
+    dimUnfocused?: number;
     thead?: Partial<CellStyle>;
     tbody?: Partial<CellStyle> & {
         positive?: Partial<CellStyle>;
@@ -85,7 +86,7 @@ export interface WheelProps {
     headerRing?: HeaderRing;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;
-    neutralOutside?: boolean;
+    neutralOutside?: boolean | 'header';
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
     onFocusChanged?: (topSegment: string) => void;

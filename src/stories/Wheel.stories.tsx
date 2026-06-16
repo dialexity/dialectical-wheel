@@ -56,6 +56,12 @@ const meta: Meta<typeof Wheel> = {
   component: Wheel,
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
+  argTypes: {
+    neutralOutside: {
+      control: { type: 'select' },
+      options: [false, true, 'header'],
+    },
+  },
 };
 
 export default meta;
@@ -84,6 +90,13 @@ export const WhiteOutside: Story = {
   args: {
     ...Default.args,
     neutralOutside: true,
+  },
+};
+
+export const NeutralHeader: Story = {
+  args: {
+    ...Default.args,
+    neutralOutside: 'header',
   },
 };
 

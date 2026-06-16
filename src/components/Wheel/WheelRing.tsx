@@ -9,6 +9,7 @@ interface WheelRingProps {
   outerR: number;
   rotationRad: number;
   styles: Styles;
+  transparent?: boolean;
   hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
@@ -18,7 +19,7 @@ interface WheelRingProps {
 }
 
 export const WheelRing: React.FC<WheelRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, transparent, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -65,8 +66,8 @@ export const WheelRing: React.FC<WheelRingProps> = ({
       >
         <path
           d={path}
-          fill={style.background}
-          stroke={isHovered ? style.hoverBorderColor : style.borderColor}
+          fill={transparent ? 'none' : style.background}
+          stroke={transparent ? 'none' : (isHovered ? style.hoverBorderColor : style.borderColor)}
           strokeWidth={style.borderWidth}
         />
         <text
@@ -86,8 +87,15 @@ export const WheelRing: React.FC<WheelRingProps> = ({
     );
   };
 
-  const cellOpacity = (segment: SegmentData) =>
-    focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
+  const dimUnfocused = styles.dimUnfocused ?? 0.5;
+
+  const cellOpacity = (segment: SegmentData) => {
+    if (focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx) return 0;
+    if (selectedPerspectiveIdx != null
+      && segment.perspectiveIndex !== selectedPerspectiveIdx
+      && segment.perspectiveIndex !== hoveredPerspectiveIdx) return 1 - dimUnfocused;
+    return 1;
+  };
 
   return (
     <g>

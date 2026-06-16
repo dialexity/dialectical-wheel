@@ -1,25 +1,21 @@
 import React from 'react';
 import type { SegmentData, CellEvent, Styles } from '../../types';
-type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
-interface RingProps {
+interface StitchedRingProps {
     segments: SegmentData[];
+    outerSegments: SegmentData[];
     innerR: number;
     outerR: number;
-    ringName: RingName;
-    styles: Styles;
+    outerRingName: 'neutral' | 'negative';
+    outerRingRadialHeight: number;
     rotationRad: number;
-    measure: (text: string, fontSize: number) => number;
-    perspectiveCount: number;
-    hoveredSegmentId?: string | null;
+    styles: Styles;
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;
     onPointerLeave?: (event: CellEvent) => void;
-    showText?: boolean;
-    headerBehavior?: boolean;
 }
-export declare const Ring: React.FC<RingProps>;
+export declare const StitchedRing: React.FC<StitchedRingProps>;
 export {};
-//# sourceMappingURL=Ring.d.ts.map
+//# sourceMappingURL=StitchedRing.d.ts.map

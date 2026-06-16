@@ -2,7 +2,7 @@
 
 ## Build & Dev
 - `npx rollup -c` — build library (src → dist)
-- `npm run storybook` — dev server with hot reload (Storybook v9, no --open flag)
+- Storybook is already running (user manages it manually) — do NOT launch it
 - Zero runtime dependencies; React is peer dep only
 
 ## Architecture
@@ -15,6 +15,7 @@
 - Segment/Perspective over/out only fire when identity changes (ref-tracked), not on every cell boundary
 - Header ring: `headerRing` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
 - WheelRing = all segment labels (T1,A1..); CycleRing = thesis-only labels (T1,T2..)
+- `neutralOutside` accepts `false | true | 'header'` — 'header' merges neutral ring with cycle ring into one taller cell (outerR extends to cycleEnd), no borders by default (only on hover), labels overlay transparently controlled by `headerRing`
 - Hover highlights full perspective (both thesis+antithesis segments) across all rings
 - SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
 - SynthesisRing has no events
@@ -23,6 +24,7 @@
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
+- Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor
 - `isRotationPaused` suppresses CSS transition on `<g>` during fade-out so rotation doesn't animate early
 - `focusAnimatingIdx` drives opacity on non-focused perspective cells across all rings
 - Wheel uses `forwardRef<SVGSVGElement>` — internal svgRef merged with forwarded ref via callback ref
@@ -37,6 +39,7 @@
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
 - `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
+- Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR
 
 ## Types
@@ -46,3 +49,5 @@
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
 - `ClickedCell` is deprecated alias for `CellEvent`
 - `SegmentData` carries `perspectiveIndex` for event derivation
+- `Styles.dimUnfocused` (0–1, default 0.5) — how much to dim unselected perspectives when one is selected; hovered perspectives undim
+- Ring's `headerBehavior` prop makes borders transparent by default (only visible on hover) — used by `neutralOutside='header'`

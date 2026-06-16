@@ -8,12 +8,13 @@ interface SelectionOverlayProps {
   segments: SegmentData[];
   selectedPerspectiveIdx: number;
   headerRing: HeaderRing;
+  stitched?: boolean;
   styles: Styles;
   radii: Radii;
 }
 
 export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
-  segments, selectedPerspectiveIdx, headerRing, styles, radii
+  segments, selectedPerspectiveIdx, headerRing, stitched, styles, radii
 }) => {
   const selected = segments.filter(s => s.perspectiveIndex === selectedPerspectiveIdx);
   if (selected.length === 0) return null;
@@ -24,7 +25,7 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
     <g style={{ pointerEvents: 'none' }}>
       {selected.map(seg => {
         const isThesis = !seg.segmentId.startsWith('A');
-        const includeHeader = headerRing === 'wheel' || (headerRing === 'cycle' && isThesis);
+        const includeHeader = stitched || headerRing === 'wheel' || (headerRing === 'cycle' && isThesis);
         const outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
         const path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);
 

@@ -16,12 +16,14 @@ interface RingProps {
   measure: (text: string, fontSize: number) => number;
   perspectiveCount: number;
   hoveredSegmentId?: string | null;
+  hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
   showText?: boolean;
+  headerBehavior?: boolean;
 }
 
 function computeTextBias(ringName: RingName, perspectiveCount: number): number {
@@ -31,14 +33,18 @@ function computeTextBias(ringName: RingName, perspectiveCount: number): number {
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true
+  segments, innerR, outerR, ringName, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
 
   const resolvedStyles = useMemo((): ResolvedCellStyle[] =>
-    segments.map(seg => resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle)),
-    [segments, styles, ringName, cellRadialHeight]
+    segments.map(seg => {
+      const s = resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle);
+      if (headerBehavior) return { ...s, borderColor: 'transparent' };
+      return s;
+    }),
+    [segments, styles, ringName, cellRadialHeight, headerBehavior]
   );
 
   const baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
@@ -56,10 +62,17 @@ export const Ring: React.FC<RingProps> = ({
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
   const isElevated = (segment: SegmentData) =>
-    segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
+    segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
 
-  const cellOpacity = (segment: SegmentData) =>
-    focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx ? 0 : 1;
+  const dimUnfocused = styles.dimUnfocused ?? 0.5;
+
+  const cellOpacity = (segment: SegmentData) => {
+    if (focusAnimatingIdx != null && segment.perspectiveIndex !== focusAnimatingIdx) return 0;
+    if (selectedPerspectiveIdx != null
+      && segment.perspectiveIndex !== selectedPerspectiveIdx
+      && segment.perspectiveIndex !== hoveredPerspectiveIdx) return 1 - dimUnfocused;
+    return 1;
+  };
 
   return (
     <g>
@@ -102,7 +115,7 @@ export const Ring: React.FC<RingProps> = ({
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
               textBias={textBias}
-              hovered={segment.segmentId === hoveredSegmentId}
+              hovered={segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === hoveredPerspectiveIdx}
               onClick={onClick}
               onPointerEnter={onPointerEnter}
               onPointerLeave={onPointerLeave}

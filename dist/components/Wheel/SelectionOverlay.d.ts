@@ -5,6 +5,7 @@ interface SelectionOverlayProps {
     segments: SegmentData[];
     selectedPerspectiveIdx: number;
     headerRing: HeaderRing;
+    stitched?: boolean;
     styles: Styles;
     radii: Radii;
 }

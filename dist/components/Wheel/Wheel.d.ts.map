@@ -1,1 +1,1 @@
-{"version":3,"file":"Wheel.d.ts","sourceRoot":"","sources":["../../../src/components/Wheel/Wheel.tsx"],"names":[],"mappings":"AAWA,OAAO,KAAK,EAAE,UAAU,EAA+D,MAAM,aAAa,CAAC;AAoB3G,QAAA,MAAM,KAAK,sGA+NT,CAAC;AAEH,eAAe,KAAK,CAAC"}
+{"version":3,"file":"Wheel.d.ts","sourceRoot":"","sources":["../../../src/components/Wheel/Wheel.tsx"],"names":[],"mappings":"AAWA,OAAO,KAAK,EAAE,UAAU,EAA+D,MAAM,aAAa,CAAC;AAoB3G,QAAA,MAAM,KAAK,sGA4PT,CAAC;AAEH,eAAe,KAAK,CAAC"}
