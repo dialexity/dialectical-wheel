@@ -164,7 +164,7 @@ function describeArc(innerR, outerR, startAngle, endAngle) {
 function normalizeAngle(angle) {
   return (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 }
-var RADII = {
+var RADII_MULTI = {
   synthesis: 30,
   innerStart: 30,
   innerEnd: 100,
@@ -175,11 +175,24 @@ var RADII = {
   cycleStart: 200,
   cycleEnd: 250
 };
+var RADII_SINGLE = {
+  synthesis: 30,
+  innerStart: 30,
+  innerEnd: 87,
+  middleStart: 87,
+  middleEnd: 143,
+  outerStart: 143,
+  outerEnd: 200,
+  cycleStart: 200,
+  cycleEnd: 250
+};
+function getRadii(perspectiveCount) {
+  return perspectiveCount <= 1 ? RADII_SINGLE : RADII_MULTI;
+}
 
-var VERTICAL_ALIGN_FACTOR = 0.15;
-
-function chordWidth(r, halfAngle) {
-  return 2 * r * Math.sin(halfAngle) * 0.9;
+function chordWidth(r, halfAngle, cellHeight) {
+  var chord = 2 * r * Math.sin(halfAngle) * 0.9;
+  return Math.min(chord, cellHeight * 1.4);
 }
 var CellText = function CellText(_ref) {
   var innerR = _ref.innerR,
@@ -191,12 +204,11 @@ var CellText = function CellText(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     padding = _ref.padding,
-    verticalAlign = _ref.verticalAlign;
+    textBias = _ref.textBias;
   var midAngle = (startAngle + endAngle) / 2;
   var halfAngle = (endAngle - startAngle) / 2;
   var cellHeight = outerR - innerR;
-  var offset = verticalAlign === 'top' ? -VERTICAL_ALIGN_FACTOR * cellHeight : verticalAlign === 'bottom' ? VERTICAL_ALIGN_FACTOR * cellHeight : 0;
-  var biasedR = (innerR + outerR) / 2 - offset;
+  var biasedR = (innerR + outerR) / 2 + textBias * cellHeight;
   var _polarToCartesian = polarToCartesian(biasedR, midAngle),
     _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
     cx = _polarToCartesian2[0],
@@ -205,7 +217,7 @@ var CellText = function CellText(_ref) {
   var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
   var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
   var boxHeight = outerR - innerR - padding * 2;
-  var boxWidth = chordWidth(biasedR, halfAngle);
+  var boxWidth = chordWidth(biasedR, halfAngle, cellHeight);
   return jsx("foreignObject", {
     x: cx - boxWidth / 2,
     y: cy - boxHeight / 2,
@@ -245,6 +257,7 @@ var Cell = function Cell(_ref) {
     style = _ref.style,
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
+    textBias = _ref.textBias,
     hovered = _ref.hovered,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
@@ -305,14 +318,15 @@ var Cell = function Cell(_ref) {
         rotationRad: rotationRad,
         fontSize: fontSize,
         padding: style.padding,
-        verticalAlign: style.verticalAlign
+        textBias: textBias
       })
     })]
   });
 };
 
-function chordAt(r, halfAngle) {
-  return 2 * r * Math.sin(halfAngle) * 0.9;
+function chordAt(r, halfAngle, cellHeight) {
+  var chord = 2 * r * Math.sin(halfAngle) * 0.9;
+  return Math.min(chord, cellHeight * 1.4);
 }
 function tryFit(text, fontSize, params) {
   var innerR = params.innerR,
@@ -322,14 +336,15 @@ function tryFit(text, fontSize, params) {
     measure = params.measure;
   var lineHeight = fontSize * 1.3;
   var halfAngle = cellAngle / 2;
-  var pad = (outerR - innerR) * paddingFrac;
+  var cellHeight = outerR - innerR;
+  var pad = cellHeight * paddingFrac;
   var topR = outerR - pad;
   var botR = innerR + pad;
   var usableHeight = topR - botR;
   var maxLines = Math.floor(usableHeight / lineHeight);
   if (maxLines < 1) return null;
-  var wrapR = innerR + (outerR - innerR) * 0.6;
-  var wrapWidth = chordAt(wrapR, halfAngle);
+  var wrapR = innerR + cellHeight * 0.6;
+  var wrapWidth = chordAt(wrapR, halfAngle, cellHeight);
   var words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [''];
   var lines = [];
@@ -392,9 +407,6 @@ function resolveCSSValue(value, relativeTo, fallback) {
   }
   return parseFloat(str) || fallback;
 }
-function resolveVerticalAlign(value) {
-  return value || 'middle';
-}
 function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverride) {
   var _styles$tbody;
   var wheel = styles;
@@ -431,7 +443,6 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
     color: get('color') || '#333333',
     fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
-    verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: getBorder('color') || '#ddd',
     hoverBorderColor: get('hoverBorderColor') || '#999',
@@ -456,8 +467,7 @@ var DEFAULT_STYLES = {
   tbody: {
     positive: {
       background: '#C6E5B3',
-      color: '#2d5a2d',
-      verticalAlign: 'top'
+      color: '#2d5a2d'
     },
     negative: {
       background: '#F9C6CC',
@@ -473,6 +483,11 @@ var DEFAULT_STYLES = {
   }
 };
 
+function computeTextBias(ringName, perspectiveCount) {
+  if (ringName === 'positive' && perspectiveCount === 3) return 0.10;
+  if (ringName === 'positive' && perspectiveCount >= 4) return 0.15;
+  return 0;
+}
 var Ring = function Ring(_ref) {
   var segments = _ref.segments,
     innerR = _ref.innerR,
@@ -481,6 +496,7 @@ var Ring = function Ring(_ref) {
     styles = _ref.styles,
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
+    perspectiveCount = _ref.perspectiveCount,
     hoveredSegmentId = _ref.hoveredSegmentId,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     focusAnimatingIdx = _ref.focusAnimatingIdx,
@@ -513,6 +529,7 @@ var Ring = function Ring(_ref) {
       measure: measure
     });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
+  var textBias = computeTextBias(ringName, perspectiveCount);
   var isElevated = function isElevated(segment) {
     return segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
@@ -533,6 +550,7 @@ var Ring = function Ring(_ref) {
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
+          textBias: textBias,
           hovered: false,
           onClick: onClick,
           onPointerEnter: onPointerEnter,
@@ -553,6 +571,7 @@ var Ring = function Ring(_ref) {
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
+          textBias: textBias,
           hovered: segment.segmentId === hoveredSegmentId,
           onClick: onClick,
           onPointerEnter: onPointerEnter,
@@ -565,12 +584,13 @@ var Ring = function Ring(_ref) {
 };
 
 var SynthesisRing = function SynthesisRing(_ref) {
-  var styles = _ref.styles;
-  var resolved = resolveStyle(styles, 'synthesis', RADII.innerEnd - RADII.innerStart);
+  var styles = _ref.styles,
+    radii = _ref.radii;
+  var resolved = resolveStyle(styles, 'synthesis', radii.innerEnd - radii.innerStart);
   return jsx("circle", {
     cx: 0,
     cy: 0,
-    r: RADII.synthesis,
+    r: radii.synthesis,
     fill: resolved.background,
     stroke: resolved.borderColor,
     strokeWidth: resolved.borderWidth
@@ -788,12 +808,13 @@ var SelectionOverlay = function SelectionOverlay(_ref) {
   var segments = _ref.segments,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     headerRing = _ref.headerRing,
-    styles = _ref.styles;
+    styles = _ref.styles,
+    radii = _ref.radii;
   var selected = segments.filter(function (s) {
     return s.perspectiveIndex === selectedPerspectiveIdx;
   });
   if (selected.length === 0) return null;
-  var style = resolveStyle(styles, 'neutral', RADII.outerEnd - RADII.innerStart);
+  var style = resolveStyle(styles, 'neutral', radii.outerEnd - radii.innerStart);
   return jsx("g", {
     style: {
       pointerEvents: 'none'
@@ -801,8 +822,8 @@ var SelectionOverlay = function SelectionOverlay(_ref) {
     children: selected.map(function (seg) {
       var isThesis = !seg.segmentId.startsWith('A');
       var includeHeader = headerRing === 'wheel' || headerRing === 'cycle' && isThesis;
-      var outerR = includeHeader ? RADII.cycleEnd : RADII.outerEnd;
-      var path = describeArc(RADII.innerStart, outerR, seg.startAngle, seg.endAngle);
+      var outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
+      var path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);
       return jsx("path", {
         d: path,
         fill: "none",
@@ -1101,6 +1122,9 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var styles = useMemo(function () {
     return mergeStyles(userStyles);
   }, [userStyles]);
+  var radii = useMemo(function () {
+    return getRadii(perspectives.length);
+  }, [perspectives.length]);
   var measure = useTextMeasure();
   var ringData = useMemo(function () {
     return transformPerspectives(perspectives);
@@ -1222,12 +1246,13 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
         },
         children: [jsx(Ring, {
           segments: ringData[outerRing],
-          innerR: RADII.outerStart,
-          outerR: RADII.outerEnd,
+          innerR: radii.outerStart,
+          outerR: radii.outerEnd,
           ringName: outerRing,
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          perspectiveCount: perspectives.length,
           hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
@@ -1236,12 +1261,13 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onPointerLeave: handlePointerLeave
         }), jsx(Ring, {
           segments: ringData[middleRing],
-          innerR: RADII.middleStart,
-          outerR: RADII.middleEnd,
+          innerR: radii.middleStart,
+          outerR: radii.middleEnd,
           ringName: middleRing,
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          perspectiveCount: perspectives.length,
           hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
@@ -1250,12 +1276,13 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onPointerLeave: handlePointerLeave
         }), jsx(Ring, {
           segments: ringData.positive,
-          innerR: RADII.innerStart,
-          outerR: RADII.innerEnd,
+          innerR: radii.innerStart,
+          outerR: radii.innerEnd,
           ringName: "positive",
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          perspectiveCount: perspectives.length,
           hoveredSegmentId: hoveredSegmentId,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
@@ -1263,11 +1290,12 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
         }), jsx(SynthesisRing, {
-          styles: styles
+          styles: styles,
+          radii: radii
         }), headerRing === 'wheel' && jsx(WheelRing, {
           segments: ringData.invisible,
-          innerR: RADII.cycleStart,
-          outerR: RADII.cycleEnd,
+          innerR: radii.cycleStart,
+          outerR: radii.cycleEnd,
           rotationRad: rotationRad,
           styles: styles,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
@@ -1278,8 +1306,8 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onPointerLeave: handlePointerLeave
         }), headerRing === 'cycle' && jsx(CycleRing, {
           segments: ringData.invisible,
-          innerR: RADII.cycleStart,
-          outerR: RADII.cycleEnd,
+          innerR: radii.cycleStart,
+          outerR: radii.cycleEnd,
           rotationRad: rotationRad,
           styles: styles,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
@@ -1292,7 +1320,8 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           segments: ringData.positive,
           selectedPerspectiveIdx: selectedPerspective,
           headerRing: headerRing,
-          styles: styles
+          styles: styles,
+          radii: radii
         })]
       })
     }))

@@ -22,7 +22,19 @@ export function normalizeAngle(angle: number): number {
   return ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 }
 
-export const RADII = {
+export interface Radii {
+  synthesis: number;
+  innerStart: number;
+  innerEnd: number;
+  middleStart: number;
+  middleEnd: number;
+  outerStart: number;
+  outerEnd: number;
+  cycleStart: number;
+  cycleEnd: number;
+}
+
+const RADII_MULTI: Radii = {
   synthesis: 30,
   innerStart: 30,
   innerEnd: 100,
@@ -32,4 +44,22 @@ export const RADII = {
   outerEnd: 200,
   cycleStart: 200,
   cycleEnd: 250,
-} as const;
+};
+
+const RADII_SINGLE: Radii = {
+  synthesis: 30,
+  innerStart: 30,
+  innerEnd: 87,
+  middleStart: 87,
+  middleEnd: 143,
+  outerStart: 143,
+  outerEnd: 200,
+  cycleStart: 200,
+  cycleEnd: 250,
+};
+
+export function getRadii(perspectiveCount: number): Radii {
+  return perspectiveCount <= 1 ? RADII_SINGLE : RADII_MULTI;
+}
+
+export const RADII = RADII_MULTI;

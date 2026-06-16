@@ -14,6 +14,7 @@ interface RingProps {
   styles: Styles;
   rotationRad: number;
   measure: (text: string, fontSize: number) => number;
+  perspectiveCount: number;
   hoveredSegmentId?: string | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
@@ -23,8 +24,14 @@ interface RingProps {
   showText?: boolean;
 }
 
+function computeTextBias(ringName: RingName, perspectiveCount: number): number {
+  if (ringName === 'positive' && perspectiveCount === 3) return 0.10;
+  if (ringName === 'positive' && perspectiveCount >= 4) return 0.15;
+  return 0;
+}
+
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, styles, rotationRad, measure, hoveredSegmentId, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true
+  segments, innerR, outerR, ringName, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
@@ -43,6 +50,8 @@ export const Ring: React.FC<RingProps> = ({
     if (texts.length === 0) return baseFontSize;
     return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize, padding: basePadding, measure });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
+
+  const textBias = computeTextBias(ringName, perspectiveCount);
 
   const isElevated = (segment: SegmentData) =>
     segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
@@ -66,6 +75,7 @@ export const Ring: React.FC<RingProps> = ({
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
+              textBias={textBias}
               hovered={false}
               onClick={onClick}
               onPointerEnter={onPointerEnter}
@@ -89,6 +99,7 @@ export const Ring: React.FC<RingProps> = ({
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
+              textBias={textBias}
               hovered={segment.segmentId === hoveredSegmentId}
               onClick={onClick}
               onPointerEnter={onPointerEnter}

@@ -44,7 +44,7 @@ const defaultStyles = {
   border: { width: 0.5, color: '#ccc' },
   thead: { color: '#333333', fontSize: 12 },
   tbody: {
-    positive: { background: '#C6E5B3', color: '#2d5a2d', verticalAlign: 'top' },
+    positive: { background: '#C6E5B3', color: '#2d5a2d' },
     negative: { background: '#F9C6CC', color: '#8b1538' },
     neutral: { background: '#ffffff', color: '#333333' },
     synthesis: { background: '#ffff7a' },
@@ -100,7 +100,7 @@ export const CustomColors: Story = {
     styles: {
       ...defaultStyles,
       tbody: {
-        positive: { background: '#D4E8D0', color: '#2D5A2D', verticalAlign: 'top' },
+        positive: { background: '#D4E8D0', color: '#2D5A2D' },
         negative: { background: '#E8D5E0', color: '#5C2D4F' },
         neutral: { background: '#F5F5DC', color: '#4A4A2E' },
         synthesis: { background: '#FFD700' },
@@ -185,6 +185,56 @@ export const Export: Story = {
     perspectives: samplePerspectives,
     styles: defaultStyles,
   },
+};
+
+const shortPerspective = (i: number) => ({
+  t_minus: `T${i} risk`,
+  t: `Thesis ${i}`,
+  t_plus: `T${i} gain`,
+  a_plus: `A${i} gain`,
+  a: `Antithesis ${i}`,
+  a_minus: `A${i} risk`,
+});
+
+const longPerspective = (i: number) => ({
+  t_minus: `Forced isolated learning with no knowledge transfer or collaborative growth opportunity`,
+  t: `Individual work builds self-reliance and independent thinking capacity`,
+  t_plus: `Autonomous mastery with reflective metacognitive awareness and deep expertise`,
+  a_plus: `Interdependent learning networks with shared accountability and mutual support`,
+  a: `Collaborative projects develop social and communication skills effectively`,
+  a_minus: `Forced groupthink without individual voice recognition or personal achievement`,
+});
+
+export const OnePerspectiveShort: Story = {
+  args: { perspectives: [shortPerspective(1)], styles: defaultStyles },
+};
+
+export const OnePerspectiveLong: Story = {
+  args: { perspectives: [longPerspective(1)], styles: defaultStyles },
+};
+
+export const TwoPerspectivesShort: Story = {
+  args: { perspectives: [shortPerspective(1), shortPerspective(2)], styles: defaultStyles },
+};
+
+export const TwoPerspectivesLong: Story = {
+  args: { perspectives: [longPerspective(1), longPerspective(2)], styles: defaultStyles },
+};
+
+export const ThreePerspectivesShort: Story = {
+  args: { perspectives: [shortPerspective(1), shortPerspective(2), shortPerspective(3)], styles: defaultStyles },
+};
+
+export const ThreePerspectivesLong: Story = {
+  args: { perspectives: [longPerspective(1), longPerspective(2), longPerspective(3)], styles: defaultStyles },
+};
+
+export const FourPerspectivesShort: Story = {
+  args: { perspectives: [shortPerspective(1), shortPerspective(2), shortPerspective(3), shortPerspective(4)], styles: defaultStyles },
+};
+
+export const FourPerspectivesLong: Story = {
+  args: { perspectives: [longPerspective(1), longPerspective(2), longPerspective(3), longPerspective(4)], styles: defaultStyles },
 };
 
 export const FocusedSegment: Story = {

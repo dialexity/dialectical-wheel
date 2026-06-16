@@ -13,23 +13,25 @@ interface LayoutParams {
   measure: (text: string, fontSize: number) => number;
 }
 
-function chordAt(r: number, halfAngle: number): number {
-  return 2 * r * Math.sin(halfAngle) * 0.9;
+function chordAt(r: number, halfAngle: number, cellHeight: number): number {
+  const chord = 2 * r * Math.sin(halfAngle) * 0.9;
+  return Math.min(chord, cellHeight * 1.4);
 }
 
 function tryFit(text: string, fontSize: number, params: LayoutParams): string[] | null {
   const { innerR, outerR, cellAngle, padding: paddingFrac, measure } = params;
   const lineHeight = fontSize * 1.3;
   const halfAngle = cellAngle / 2;
-  const pad = (outerR - innerR) * paddingFrac;
+  const cellHeight = outerR - innerR;
+  const pad = cellHeight * paddingFrac;
   const topR = outerR - pad;
   const botR = innerR + pad;
   const usableHeight = topR - botR;
   const maxLines = Math.floor(usableHeight / lineHeight);
   if (maxLines < 1) return null;
 
-  const wrapR = innerR + (outerR - innerR) * 0.6;
-  const wrapWidth = chordAt(wrapR, halfAngle);
+  const wrapR = innerR + cellHeight * 0.6;
+  const wrapWidth = chordAt(wrapR, halfAngle, cellHeight);
 
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [''];
@@ -82,11 +84,12 @@ function wrapAtSize(text: string, fontSize: number, params: LayoutParams): TextL
   const { innerR, outerR, cellAngle, padding: paddingFrac, measure } = params;
   const lineHeight = fontSize * 1.3;
   const halfAngle = cellAngle / 2;
-  const pad = (outerR - innerR) * paddingFrac;
+  const cellHeight = outerR - innerR;
+  const pad = cellHeight * paddingFrac;
   const usableHeight = (outerR - pad) - (innerR + pad);
   const maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
-  const wrapR = innerR + (outerR - innerR) * 0.6;
-  const wrapWidth = chordAt(wrapR, halfAngle);
+  const wrapR = innerR + cellHeight * 0.6;
+  const wrapWidth = chordAt(wrapR, halfAngle, cellHeight);
 
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return { lines: [''], fontSize, lineHeight };

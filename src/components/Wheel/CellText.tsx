@@ -1,7 +1,5 @@
 import React from 'react';
 import { polarToCartesian, normalizeAngle } from './utils/geometry';
-import { VERTICAL_ALIGN_FACTOR } from './utils/constants';
-import type { VerticalAlign } from '../../types';
 
 interface CellTextProps {
   innerR: number;
@@ -13,23 +11,21 @@ interface CellTextProps {
   rotationRad: number;
   fontSize: number;
   padding: number;
-  verticalAlign: VerticalAlign;
+  textBias: number;
 }
 
-function chordWidth(r: number, halfAngle: number): number {
-  return 2 * r * Math.sin(halfAngle) * 0.9;
+function chordWidth(r: number, halfAngle: number, cellHeight: number): number {
+  const chord = 2 * r * Math.sin(halfAngle) * 0.9;
+  return Math.min(chord, cellHeight * 1.4);
 }
 
 export const CellText: React.FC<CellTextProps> = ({
-  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, verticalAlign
+  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, textBias
 }) => {
   const midAngle = (startAngle + endAngle) / 2;
   const halfAngle = (endAngle - startAngle) / 2;
   const cellHeight = outerR - innerR;
-  const offset = verticalAlign === 'top' ? -VERTICAL_ALIGN_FACTOR * cellHeight
-    : verticalAlign === 'bottom' ? VERTICAL_ALIGN_FACTOR * cellHeight
-    : 0;
-  const biasedR = (innerR + outerR) / 2 - offset;
+  const biasedR = (innerR + outerR) / 2 + textBias * cellHeight;
   const [cx, cy] = polarToCartesian(biasedR, midAngle);
 
   const visualAngle = normalizeAngle(midAngle + rotationRad);
@@ -37,7 +33,7 @@ export const CellText: React.FC<CellTextProps> = ({
   const textRotDeg = (midAngle * 180) / Math.PI + (needsFlip ? 180 : 0);
 
   const boxHeight = (outerR - innerR) - padding * 2;
-  const boxWidth = chordWidth(biasedR, halfAngle);
+  const boxWidth = chordWidth(biasedR, halfAngle, cellHeight);
 
   return (
     <foreignObject

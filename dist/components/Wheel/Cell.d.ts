@@ -7,6 +7,7 @@ interface CellProps {
     style: ResolvedCellStyle;
     rotationRad: number;
     fontSize: number;
+    textBias: number;
     hovered?: boolean;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;

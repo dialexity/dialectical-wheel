@@ -9,6 +9,7 @@ interface RingProps {
     styles: Styles;
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;
+    perspectiveCount: number;
     hoveredSegmentId?: string | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;

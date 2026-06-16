@@ -9,7 +9,6 @@ interface UseRotationOptions {
 const DRAG_THRESHOLD = 3;
 const FADE_OUT_MS = 200;
 const ROTATE_MS = 300;
-const FADE_IN_MS = 200;
 
 export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(0);

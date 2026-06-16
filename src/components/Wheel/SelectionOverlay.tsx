@@ -1,5 +1,6 @@
 import React from 'react';
-import { describeArc, RADII } from './utils/geometry';
+import { describeArc } from './utils/geometry';
+import type { Radii } from './utils/geometry';
 import { resolveStyle } from './utils/styles';
 import type { SegmentData, Styles, HeaderRing } from '../../types';
 
@@ -8,23 +9,24 @@ interface SelectionOverlayProps {
   selectedPerspectiveIdx: number;
   headerRing: HeaderRing;
   styles: Styles;
+  radii: Radii;
 }
 
 export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
-  segments, selectedPerspectiveIdx, headerRing, styles
+  segments, selectedPerspectiveIdx, headerRing, styles, radii
 }) => {
   const selected = segments.filter(s => s.perspectiveIndex === selectedPerspectiveIdx);
   if (selected.length === 0) return null;
 
-  const style = resolveStyle(styles, 'neutral', RADII.outerEnd - RADII.innerStart);
+  const style = resolveStyle(styles, 'neutral', radii.outerEnd - radii.innerStart);
 
   return (
     <g style={{ pointerEvents: 'none' }}>
       {selected.map(seg => {
         const isThesis = !seg.segmentId.startsWith('A');
         const includeHeader = headerRing === 'wheel' || (headerRing === 'cycle' && isThesis);
-        const outerR = includeHeader ? RADII.cycleEnd : RADII.outerEnd;
-        const path = describeArc(RADII.innerStart, outerR, seg.startAngle, seg.endAngle);
+        const outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
+        const path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);
 
         return (
           <path

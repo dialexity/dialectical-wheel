@@ -1,5 +1,4 @@
 import React from 'react';
-import type { VerticalAlign } from '../../types';
 interface CellTextProps {
     innerR: number;
     outerR: number;
@@ -10,7 +9,7 @@ interface CellTextProps {
     rotationRad: number;
     fontSize: number;
     padding: number;
-    verticalAlign: VerticalAlign;
+    textBias: number;
 }
 export declare const CellText: React.FC<CellTextProps>;
 export {};

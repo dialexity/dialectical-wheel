@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useState, forwardRef } from 'react';
+import { useMemo, useCallback, useRef, useState, forwardRef } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { WheelRing } from './WheelRing';
@@ -8,7 +8,7 @@ import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
 import { DEFAULT_STYLES } from './utils/styles';
-import { RADII } from './utils/geometry';
+import { getRadii } from './utils/geometry';
 import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent } from '../../types';
 
 function mergeStyles(user?: Partial<Styles>): Styles {
@@ -49,6 +49,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   onPerspectiveClicked,
 }, ref) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
+  const radii = useMemo(() => getRadii(perspectives.length), [perspectives.length]);
 
   const measure = useTextMeasure();
   const ringData = useMemo(
@@ -161,12 +162,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
         >
           <Ring
             segments={ringData[outerRing]}
-            innerR={RADII.outerStart}
-            outerR={RADII.outerEnd}
+            innerR={radii.outerStart}
+            outerR={radii.outerEnd}
             ringName={outerRing}
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
@@ -176,12 +178,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
           />
           <Ring
             segments={ringData[middleRing]}
-            innerR={RADII.middleStart}
-            outerR={RADII.middleEnd}
+            innerR={radii.middleStart}
+            outerR={radii.middleEnd}
             ringName={middleRing}
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
@@ -191,12 +194,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
           />
           <Ring
             segments={ringData.positive}
-            innerR={RADII.innerStart}
-            outerR={RADII.innerEnd}
+            innerR={radii.innerStart}
+            outerR={radii.innerEnd}
             ringName="positive"
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
+            perspectiveCount={perspectives.length}
             hoveredSegmentId={hoveredSegmentId}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
@@ -204,12 +208,12 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
           />
-          <SynthesisRing styles={styles} />
+          <SynthesisRing styles={styles} radii={radii} />
           {headerRing === 'wheel' && (
             <WheelRing
               segments={ringData.invisible}
-              innerR={RADII.cycleStart}
-              outerR={RADII.cycleEnd}
+              innerR={radii.cycleStart}
+              outerR={radii.cycleEnd}
               rotationRad={rotationRad}
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
@@ -223,8 +227,8 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
           {headerRing === 'cycle' && (
             <CycleRing
               segments={ringData.invisible}
-              innerR={RADII.cycleStart}
-              outerR={RADII.cycleEnd}
+              innerR={radii.cycleStart}
+              outerR={radii.cycleEnd}
               rotationRad={rotationRad}
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
@@ -241,6 +245,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               selectedPerspectiveIdx={selectedPerspective}
               headerRing={headerRing}
               styles={styles}
+              radii={radii}
             />
           )}
         </g>

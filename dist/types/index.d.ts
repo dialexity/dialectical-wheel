@@ -1,12 +1,10 @@
 import React from 'react';
 export type CSSValue = string | number;
-export type VerticalAlign = 'top' | 'middle' | 'bottom';
 export interface CellStyle {
     background: string;
     color: string;
     fontSize: CSSValue;
     padding: CSSValue;
-    verticalAlign: VerticalAlign;
     border: {
         width: CSSValue;
         color: string;
@@ -75,7 +73,6 @@ export interface ResolvedCellStyle {
     color: string;
     fontSize: number;
     padding: number;
-    verticalAlign: VerticalAlign;
     borderWidth: number;
     borderColor: string;
     hoverBorderColor: string;

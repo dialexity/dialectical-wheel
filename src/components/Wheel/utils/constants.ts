@@ -1,1 +1,0 @@
-export const VERTICAL_ALIGN_FACTOR = 0.15;
