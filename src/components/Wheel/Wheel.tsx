@@ -92,12 +92,14 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const hoveredPerspectiveRef = useRef<number | null>(null);
   const lastCellEventRef = useRef<CellEvent | null>(null);
   const hoverSuppressedRef = useRef(false);
+  const suppressPointerPos = useRef<{ x: number; y: number } | null>(null);
   const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
   const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
+      suppressPointerPos.current = null;
       hoveredSegmentRef.current = null;
       hoveredPerspectiveRef.current = null;
       lastCellEventRef.current = null;
@@ -142,8 +144,19 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     if (onCellOut) onCellOut(cell);
   }, [onCellOut]);
 
-  const handleSvgPointerMove = useCallback(() => {
-    hoverSuppressedRef.current = false;
+  const handleSvgPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!hoverSuppressedRef.current) return;
+    const pos = suppressPointerPos.current;
+    if (pos == null) {
+      suppressPointerPos.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    const dx = e.clientX - pos.x;
+    const dy = e.clientY - pos.y;
+    if (dx * dx + dy * dy > 9) {
+      hoverSuppressedRef.current = false;
+      suppressPointerPos.current = null;
+    }
   }, []);
 
   const handleWheelPointerLeave = useCallback(() => {
@@ -176,7 +189,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
         }}
         onPointerLeave={handleWheelPointerLeave}
         {...pointerHandlers}
-        onPointerMove={(e: React.PointerEvent<SVGSVGElement>) => { handleSvgPointerMove(); pointerHandlers.onPointerMove(e); }}
+        onPointerMove={(e: React.PointerEvent<SVGSVGElement>) => { handleSvgPointerMove(e); pointerHandlers.onPointerMove(e); }}
       >
         <g
           transform={`rotate(${rotationDeg})`}

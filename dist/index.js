@@ -1230,6 +1230,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var hoveredPerspectiveRef = react.useRef(null);
   var lastCellEventRef = react.useRef(null);
   var hoverSuppressedRef = react.useRef(false);
+  var suppressPointerPos = react.useRef(null);
   var _useState = react.useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     hoveredSegmentId = _useState2[0],
@@ -1241,6 +1242,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   react.useEffect(function () {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
+      suppressPointerPos.current = null;
       hoveredSegmentRef.current = null;
       hoveredPerspectiveRef.current = null;
       lastCellEventRef.current = null;
@@ -1277,8 +1279,22 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var handlePointerLeave = react.useCallback(function (cell) {
     if (onCellOut) onCellOut(cell);
   }, [onCellOut]);
-  var handleSvgPointerMove = react.useCallback(function () {
-    hoverSuppressedRef.current = false;
+  var handleSvgPointerMove = react.useCallback(function (e) {
+    if (!hoverSuppressedRef.current) return;
+    var pos = suppressPointerPos.current;
+    if (pos == null) {
+      suppressPointerPos.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+      return;
+    }
+    var dx = e.clientX - pos.x;
+    var dy = e.clientY - pos.y;
+    if (dx * dx + dy * dy > 9) {
+      hoverSuppressedRef.current = false;
+      suppressPointerPos.current = null;
+    }
   }, []);
   var handleWheelPointerLeave = react.useCallback(function () {
     hoverSuppressedRef.current = false;
@@ -1313,7 +1329,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
       onPointerLeave: handleWheelPointerLeave
     }, pointerHandlers), {}, {
       onPointerMove: function onPointerMove(e) {
-        handleSvgPointerMove();
+        handleSvgPointerMove(e);
         pointerHandlers.onPointerMove(e);
       },
       children: jsxRuntime.jsxs("g", {

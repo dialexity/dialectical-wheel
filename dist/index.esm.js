@@ -1226,6 +1226,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var hoveredPerspectiveRef = useRef(null);
   var lastCellEventRef = useRef(null);
   var hoverSuppressedRef = useRef(false);
+  var suppressPointerPos = useRef(null);
   var _useState = useState(null),
     _useState2 = _slicedToArray(_useState, 2),
     hoveredSegmentId = _useState2[0],
@@ -1237,6 +1238,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   useEffect(function () {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
+      suppressPointerPos.current = null;
       hoveredSegmentRef.current = null;
       hoveredPerspectiveRef.current = null;
       lastCellEventRef.current = null;
@@ -1273,8 +1275,22 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var handlePointerLeave = useCallback(function (cell) {
     if (onCellOut) onCellOut(cell);
   }, [onCellOut]);
-  var handleSvgPointerMove = useCallback(function () {
-    hoverSuppressedRef.current = false;
+  var handleSvgPointerMove = useCallback(function (e) {
+    if (!hoverSuppressedRef.current) return;
+    var pos = suppressPointerPos.current;
+    if (pos == null) {
+      suppressPointerPos.current = {
+        x: e.clientX,
+        y: e.clientY
+      };
+      return;
+    }
+    var dx = e.clientX - pos.x;
+    var dy = e.clientY - pos.y;
+    if (dx * dx + dy * dy > 9) {
+      hoverSuppressedRef.current = false;
+      suppressPointerPos.current = null;
+    }
   }, []);
   var handleWheelPointerLeave = useCallback(function () {
     hoverSuppressedRef.current = false;
@@ -1309,7 +1325,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
       onPointerLeave: handleWheelPointerLeave
     }, pointerHandlers), {}, {
       onPointerMove: function onPointerMove(e) {
-        handleSvgPointerMove();
+        handleSvgPointerMove(e);
         pointerHandlers.onPointerMove(e);
       },
       children: jsxs("g", {
