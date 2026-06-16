@@ -14,12 +14,12 @@ const samplePerspectives = [
     "a_minus": { "alias": "A-", "statement": "Compromise core ideals", "explanation": "" }
   },
   {
-    "t_minus": { "alias": "A4-", "statement": "Jeopardize safety", "explanation": "" },
-    "t": { "alias": "A4", "statement": "Pursue mission goals", "explanation": "" },
-    "t_plus": { "alias": "A4+", "statement": "Uphold ideals", "explanation": "" },
-    "a_plus": { "alias": "T4+", "statement": "Promote survival", "explanation": "" },
-    "a": { "alias": "T4", "statement": "Ensure group safety", "explanation": "" },
-    "a_minus": { "alias": "T4-", "statement": "Foster cowardice", "explanation": "" }
+    "t_minus": { "alias": "T4-", "statement": "Jeopardize safety", "explanation": "" },
+    "t": { "alias": "T4", "statement": "Pursue mission goals", "explanation": "" },
+    "t_plus": { "alias": "T4+", "statement": "Uphold ideals", "explanation": "" },
+    "a_plus": { "alias": "A4+", "statement": "Promote survival", "explanation": "" },
+    "a": { "alias": "A4", "statement": "Ensure group safety", "explanation": "" },
+    "a_minus": { "alias": "A4-", "statement": "Foster cowardice", "explanation": "" }
   },
   {
     "t_minus": { "alias": "T2-", "statement": "Endanger lives", "explanation": "" },
@@ -254,24 +254,28 @@ export const FocusedSegment: Story = {
   render: (args) => {
     const [focused, setFocused] = useState<string | null>(null);
     const [selected, setSelected] = useState<number | null>(null);
-    const segments = ['T', 'A4', 'T2', 'T3', 'A', 'T4', 'A2', 'A3'];
+    const segments = args.perspectives!.flatMap((p, i) => {
+      const tAlias = typeof p.t === 'string' ? `T${i + 1}` : (p.t.alias || `T${i + 1}`);
+      const aAlias = typeof p.a === 'string' ? `A${i + 1}` : (p.a.alias || `A${i + 1}`);
+      return [{ id: tAlias, pi: i }, { id: aAlias, pi: i }];
+    });
     return (
       <div>
         <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {segments.map(id => (
+          {segments.map(seg => (
             <button
-              key={id}
-              onClick={() => setFocused(id)}
+              key={seg.id}
+              onClick={() => { setFocused(seg.id); setSelected(seg.pi); }}
               style={{
                 padding: '4px 8px',
-                background: focused === id ? '#333' : '#eee',
-                color: focused === id ? '#fff' : '#333',
+                background: focused === seg.id ? '#333' : '#eee',
+                color: focused === seg.id ? '#fff' : '#333',
                 border: 'none',
                 borderRadius: 4,
                 cursor: 'pointer',
               }}
             >
-              {id}
+              {seg.id}
             </button>
           ))}
           <button

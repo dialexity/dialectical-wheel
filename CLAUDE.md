@@ -21,8 +21,11 @@
 - SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
+- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority if both set
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
+- If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
+- Equidistant tie-break: T prefers top (−180°), A prefers bottom (+180°)
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
 - Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor
 - `isRotationPaused` suppresses CSS transition on `<g>` during fade-out so rotation doesn't animate early
@@ -38,6 +41,7 @@
 - Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
+- `rotationDegRef` mirrors `rotationDeg` state so the focus effect can read current rotation without depending on it
 - `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
 - Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR

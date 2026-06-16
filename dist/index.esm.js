@@ -893,6 +893,8 @@ function useRotation(_ref) {
     _useState2 = _slicedToArray(_useState, 2),
     rotationDeg = _useState2[0],
     setRotationDeg = _useState2[1];
+  var rotationDegRef = useRef(rotationDeg);
+  rotationDegRef.current = rotationDeg;
   var _useState3 = useState(false),
     _useState4 = _slicedToArray(_useState3, 2),
     isDragging = _useState4[0],
@@ -924,6 +926,12 @@ function useRotation(_ref) {
     var midAngle = idx * segmentAngle + segmentAngle / 2;
     var isAntithesis = idx >= N / 2;
     var targetPosition = isAntithesis ? 180 : 0;
+    var currentVisualAngle = (midAngle + rotationDegRef.current + 360) % 360;
+    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+      targetPosition = 0;
+    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+      targetPosition = 180;
+    }
     var targetRaw = targetPosition - midAngle;
     var perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
     clearTimers();
@@ -935,6 +943,7 @@ function useRotation(_ref) {
       setIsRotationPaused(false);
       setRotationDeg(function (current) {
         var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+        if (delta === 180) delta = isAntithesis ? 180 : -180;
         return current + delta;
       });
     }, FADE_OUT_MS);
@@ -1185,10 +1194,15 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
       return s.segmentId;
     });
   }, [ringData]);
+  var effectiveFocusedSegment = useMemo(function () {
+    if (focusedSegment != null) return focusedSegment;
+    if (selectedPerspective != null && segmentIds.length > 0) return segmentIds[selectedPerspective];
+    return null;
+  }, [focusedSegment, selectedPerspective, segmentIds]);
   var _useRotation = useRotation({
       onFocusChanged: onFocusChanged,
       segmentIds: segmentIds,
-      focusedSegment: focusedSegment
+      focusedSegment: effectiveFocusedSegment
     }),
     rotationDeg = _useRotation.rotationDeg,
     rotationRad = _useRotation.rotationRad,

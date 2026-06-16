@@ -17,6 +17,8 @@ function defaultRotation(segmentCount: number): number {
 
 export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(() => defaultRotation(segmentIds.length));
+  const rotationDegRef = useRef(rotationDeg);
+  rotationDegRef.current = rotationDeg;
   const [isDragging, setIsDragging] = useState(false);
   const [focusAnimatingIdx, setFocusAnimatingIdx] = useState<number | null>(null);
   const [isRotationPaused, setIsRotationPaused] = useState(false);
@@ -38,7 +40,15 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const segmentAngle = 360 / N;
     const midAngle = idx * segmentAngle + segmentAngle / 2;
     const isAntithesis = idx >= N / 2;
-    const targetPosition = isAntithesis ? 180 : 0;
+
+    let targetPosition = isAntithesis ? 180 : 0;
+    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+      targetPosition = 0;
+    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+      targetPosition = 180;
+    }
+
     const targetRaw = targetPosition - midAngle;
 
     const perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
@@ -53,7 +63,8 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const t1 = setTimeout(() => {
       setIsRotationPaused(false);
       setRotationDeg(current => {
-        const delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+        let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+        if (delta === 180) delta = isAntithesis ? 180 : -180;
         return current + delta;
       });
     }, FADE_OUT_MS);

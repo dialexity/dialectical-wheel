@@ -58,10 +58,17 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   );
 
   const segmentIds = useMemo(() => ringData.neutral.map(s => s.segmentId), [ringData]);
+
+  const effectiveFocusedSegment = useMemo(() => {
+    if (focusedSegment != null) return focusedSegment;
+    if (selectedPerspective != null && segmentIds.length > 0) return segmentIds[selectedPerspective];
+    return null;
+  }, [focusedSegment, selectedPerspective, segmentIds]);
+
   const { rotationDeg, rotationRad, isDragging, isRotationPaused, focusAnimatingIdx, svgRef, pointerHandlers } = useRotation({
     onFocusChanged,
     segmentIds,
-    focusedSegment,
+    focusedSegment: effectiveFocusedSegment,
   });
 
   const setSvgRef = useCallback((el: SVGSVGElement | null) => {
