@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import React from 'react';
+import React, { useState } from 'react';
 import { Wheel } from '../components';
+import type { PerspectiveEvent } from '../types';
 
 const samplePerspectives = [
   {
@@ -60,20 +61,21 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  render: (args) => {
+    const [selected, setSelected] = useState<number | null>(null);
+    return (
+      <Wheel
+        {...args}
+        selectedPerspective={selected}
+        onPerspectiveClicked={(e: PerspectiveEvent) => {
+          setSelected(e.perspectiveIndex === selected ? null : e.perspectiveIndex);
+        }}
+      />
+    );
+  },
   args: {
     perspectives: samplePerspectives,
     styles: defaultStyles,
-
-    onFocusChanged: (segment) => console.log('Top segment:', segment),
-    onCellClicked: (event) => console.log('Cell clicked:', event),
-    onCellOver: (event) => console.log('Cell over:', event),
-    onCellOut: (event) => console.log('Cell out:', event),
-    onSegmentClicked: (event) => console.log('Segment clicked:', event),
-    onSegmentOver: (event) => console.log('Segment over:', event),
-    onSegmentOut: (event) => console.log('Segment out:', event),
-    onPerspectiveClicked: (event) => console.log('Perspective clicked:', event),
-    onPerspectiveOver: (event) => console.log('Perspective over:', event),
-    onPerspectiveOut: (event) => console.log('Perspective out:', event),
   },
 };
 

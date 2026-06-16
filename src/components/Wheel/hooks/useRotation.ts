@@ -5,10 +5,13 @@ interface UseRotationOptions {
   segmentIds: string[];
 }
 
+const DRAG_THRESHOLD = 3; // pixels before we consider it a drag
+
 export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) {
   const [rotationDeg, setRotationDeg] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef<{ angle: number; rotation: number } | null>(null);
+  const dragStart = useRef<{ angle: number; rotation: number; x: number; y: number } | null>(null);
+  const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
   const getAngleFromEvent = useCallback((e: React.PointerEvent): number => {
@@ -30,30 +33,42 @@ export function useRotation({ onFocusChanged, segmentIds }: UseRotationOptions) 
   }, [onFocusChanged, segmentIds]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
     const angle = getAngleFromEvent(e);
-    dragStart.current = { angle, rotation: rotationDeg };
-    setIsDragging(true);
+    dragStart.current = { angle, rotation: rotationDeg, x: e.clientX, y: e.clientY };
+    didDrag.current = false;
   }, [getAngleFromEvent, rotationDeg]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragStart.current) return;
+
+    if (!didDrag.current) {
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+      didDrag.current = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setIsDragging(true);
+    }
+
     const angle = getAngleFromEvent(e);
     const delta = (angle - dragStart.current.angle) * (180 / Math.PI);
     setRotationDeg(dragStart.current.rotation + delta);
   }, [getAngleFromEvent]);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    if (dragStart.current) {
+    if (!dragStart.current) return;
+
+    if (didDrag.current) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
       const angle = getAngleFromEvent(e);
       const delta = (angle - dragStart.current.angle) * (180 / Math.PI);
       const finalDeg = dragStart.current.rotation + delta;
       setRotationDeg(finalDeg);
       reportTopSegment(finalDeg);
+      setIsDragging(false);
     }
+
     dragStart.current = null;
-    setIsDragging(false);
   }, [getAngleFromEvent, reportTopSegment]);
 
   const rotationRad = (rotationDeg * Math.PI) / 180;

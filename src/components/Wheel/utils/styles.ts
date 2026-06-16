@@ -49,6 +49,14 @@ export function resolveStyle(
     return undefined;
   };
 
+  const getSelectedBorder = (prop: 'width' | 'color'): string | CSSValue | undefined => {
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const b = layers[i]?.selectedBorder;
+      if (b && b[prop] !== undefined) return b[prop];
+    }
+    return undefined;
+  };
+
   return {
     background: (get('background') as string) || '#ffffff',
     color: (get('color') as string) || '#333333',
@@ -56,14 +64,16 @@ export function resolveStyle(
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
     verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
-    borderColor: (getBorder('color') as string) || '#ccc',
-    hoverBorderColor: (get('hoverBorderColor') as string) || '#333333',
+    borderColor: (getBorder('color') as string) || '#ddd',
+    hoverBorderColor: (get('hoverBorderColor') as string) || '#999',
+    selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 1),
+    selectedBorderColor: (getSelectedBorder('color') as string) || '#666',
   };
 }
 
 export const DEFAULT_STYLES: Styles = {
   fontSize: 12,
-  border: { width: 0.5, color: '#ccc' },
+  border: { width: 0.5, color: '#ddd' },
   thead: {
     color: '#333333',
     fontSize: 12,

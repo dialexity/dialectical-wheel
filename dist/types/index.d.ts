@@ -11,6 +11,11 @@ export interface CellStyle {
         width: CSSValue;
         color: string;
     };
+    hoverBorderColor: string;
+    selectedBorder: {
+        width: CSSValue;
+        color: string;
+    };
 }
 export interface Styles extends Partial<CellStyle> {
     thead?: Partial<CellStyle>;
@@ -73,9 +78,15 @@ export interface ResolvedCellStyle {
     verticalAlign: VerticalAlign;
     borderWidth: number;
     borderColor: string;
+    hoverBorderColor: string;
+    selectedBorderWidth: number;
+    selectedBorderColor: string;
 }
+export type HeaderRing = 'wheel' | 'cycle' | 'none';
 export interface WheelProps {
     perspectives: Perspective[];
+    headerRing?: HeaderRing;
+    selectedPerspective?: number | null;
     neutralOutside?: boolean;
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
@@ -89,6 +100,5 @@ export interface WheelProps {
     onPerspectiveOver?: (event: PerspectiveEvent) => void;
     onPerspectiveOut?: (event: PerspectiveEvent) => void;
     onPerspectiveClicked?: (event: PerspectiveEvent) => void;
-    debug?: boolean;
 }
 //# sourceMappingURL=index.d.ts.map

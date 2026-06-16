@@ -3,6 +3,7 @@ import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { WheelRing } from './WheelRing';
 import { CycleRing } from './CycleRing';
+import { SelectionOverlay } from './SelectionOverlay';
 import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
@@ -31,6 +32,7 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 export default function Wheel({
   perspectives,
   headerRing = 'wheel',
+  selectedPerspective,
   neutralOutside = false,
   styles: userStyles,
   css,
@@ -78,6 +80,7 @@ export default function Wheel({
   const hoveredSegmentRef = useRef<string | null>(null);
   const hoveredPerspectiveRef = useRef<number | null>(null);
   const lastCellEventRef = useRef<CellEvent | null>(null);
+  const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
   const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
 
   const handleCellClick = useCallback((cell: CellEvent) => {
@@ -94,6 +97,7 @@ export default function Wheel({
         onSegmentOut(deriveSegmentEvent(lastCellEventRef.current));
       }
       hoveredSegmentRef.current = cell.segmentId;
+      setHoveredSegmentId(cell.segmentId);
       if (onSegmentOver) onSegmentOver(deriveSegmentEvent(cell));
     }
 
@@ -124,6 +128,7 @@ export default function Wheel({
     hoveredSegmentRef.current = null;
     hoveredPerspectiveRef.current = null;
     lastCellEventRef.current = null;
+    setHoveredSegmentId(null);
     setHoveredPerspectiveIdx(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
@@ -154,7 +159,8 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
-            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+            hoveredSegmentId={hoveredSegmentId}
+            selectedPerspectiveIdx={selectedPerspective}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -167,7 +173,8 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
-            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+            hoveredSegmentId={hoveredSegmentId}
+            selectedPerspectiveIdx={selectedPerspective}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -180,7 +187,8 @@ export default function Wheel({
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
-            hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+            hoveredSegmentId={hoveredSegmentId}
+            selectedPerspectiveIdx={selectedPerspective}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -194,6 +202,7 @@ export default function Wheel({
               rotationRad={rotationRad}
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+              selectedPerspectiveIdx={selectedPerspective}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
@@ -207,9 +216,18 @@ export default function Wheel({
               rotationRad={rotationRad}
               styles={styles}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+              selectedPerspectiveIdx={selectedPerspective}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
+            />
+          )}
+          {selectedPerspective != null && (
+            <SelectionOverlay
+              segments={ringData.positive}
+              selectedPerspectiveIdx={selectedPerspective}
+              headerRing={headerRing}
+              styles={styles}
             />
           )}
         </g>

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SegmentData, CellEvent, Styles } from '../../types';
-interface CycleRingProps {
+interface WheelRingProps {
     segments: SegmentData[];
     innerR: number;
     outerR: number;
@@ -12,6 +12,6 @@ interface CycleRingProps {
     onPointerEnter?: (event: CellEvent) => void;
     onPointerLeave?: (event: CellEvent) => void;
 }
-export declare const CycleRing: React.FC<CycleRingProps>;
+export declare const WheelRing: React.FC<WheelRingProps>;
 export {};
-//# sourceMappingURL=CycleRing.d.ts.map
+//# sourceMappingURL=WheelRing.d.ts.map

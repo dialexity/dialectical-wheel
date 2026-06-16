@@ -10,13 +10,14 @@ interface CycleRingProps {
   rotationRad: number;
   styles: Styles;
   hoveredPerspectiveIdx?: number | null;
+  selectedPerspectiveIdx?: number | null;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
 }
 
 export const CycleRing: React.FC<CycleRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, hoveredPerspectiveIdx, selectedPerspectiveIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -43,6 +44,9 @@ export const CycleRing: React.FC<CycleRingProps> = ({
   );
 
   const interactive = onClick || onPointerEnter;
+
+  const isElevated = (segment: SegmentData) =>
+    segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
 
   const renderSegment = (segment: SegmentData, i: number, isHovered: boolean) => {
     const style = resolvedStyles[i];
@@ -87,10 +91,13 @@ export const CycleRing: React.FC<CycleRingProps> = ({
   return (
     <g>
       {thesisSegments.map((segment, i) =>
-        segment.perspectiveIndex === hoveredPerspectiveIdx ? null : renderSegment(segment, i, false)
+        isElevated(segment) ? null : renderSegment(segment, i, false)
       )}
-      {hoveredPerspectiveIdx != null && thesisSegments.map((segment, i) =>
-        segment.perspectiveIndex !== hoveredPerspectiveIdx ? null : renderSegment(segment, i, true)
+      {thesisSegments.map((segment, i) =>
+        !isElevated(segment) ? null : renderSegment(
+          segment, i,
+          segment.perspectiveIndex === hoveredPerspectiveIdx,
+        )
       )}
     </g>
   );

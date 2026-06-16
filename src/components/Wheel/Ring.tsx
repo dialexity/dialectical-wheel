@@ -14,7 +14,8 @@ interface RingProps {
   styles: Styles;
   rotationRad: number;
   measure: (text: string, fontSize: number) => number;
-  hoveredPerspectiveIdx?: number | null;
+  hoveredSegmentId?: string | null;
+  selectedPerspectiveIdx?: number | null;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
@@ -22,7 +23,7 @@ interface RingProps {
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, styles, rotationRad, measure, hoveredPerspectiveIdx, onClick, onPointerEnter, onPointerLeave, showText = true
+  segments, innerR, outerR, ringName, styles, rotationRad, measure, hoveredSegmentId, selectedPerspectiveIdx, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
@@ -42,10 +43,13 @@ export const Ring: React.FC<RingProps> = ({
     return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize, padding: basePadding, measure });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
 
+  const isElevated = (segment: SegmentData) =>
+    segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === selectedPerspectiveIdx;
+
   return (
     <g>
       {segments.map((segment, i) =>
-        segment.perspectiveIndex === hoveredPerspectiveIdx ? null : (
+        isElevated(segment) ? null : (
           <Cell
             key={segment.segmentId}
             segment={segment}
@@ -62,8 +66,8 @@ export const Ring: React.FC<RingProps> = ({
           />
         )
       )}
-      {hoveredPerspectiveIdx != null && segments.map((segment, i) =>
-        segment.perspectiveIndex !== hoveredPerspectiveIdx ? null : (
+      {segments.map((segment, i) =>
+        !isElevated(segment) ? null : (
           <Cell
             key={segment.segmentId}
             segment={segment}
@@ -72,7 +76,7 @@ export const Ring: React.FC<RingProps> = ({
             style={resolvedStyles[i]}
             rotationRad={rotationRad}
             fontSize={uniformFontSize}
-            hovered={true}
+            hovered={segment.segmentId === hoveredSegmentId}
             onClick={onClick}
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}

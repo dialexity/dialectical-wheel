@@ -249,6 +249,8 @@ var Cell = function Cell(_ref) {
     style = _ref.style,
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
+    hovered = _ref.hovered,
+    selected = _ref.selected,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
     onPointerLeave = _ref.onPointerLeave,
@@ -294,8 +296,8 @@ var Cell = function Cell(_ref) {
     }), jsxRuntime.jsx("path", {
       d: path,
       fill: style.background,
-      stroke: style.borderColor,
-      strokeWidth: style.borderWidth
+      stroke: selected ? style.selectedBorderColor : hovered ? style.hoverBorderColor : style.borderColor,
+      strokeWidth: selected ? style.selectedBorderWidth : style.borderWidth
     }), showText && segment.fullText && jsxRuntime.jsx("g", {
       clipPath: "url(#".concat(clipId, ")"),
       children: jsxRuntime.jsx(CellText, {
@@ -421,6 +423,14 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
     }
     return undefined;
   };
+  var getSelectedBorder = function getSelectedBorder(prop) {
+    for (var i = layers.length - 1; i >= 0; i--) {
+      var _layers$i3;
+      var b = (_layers$i3 = layers[i]) === null || _layers$i3 === void 0 ? void 0 : _layers$i3.selectedBorder;
+      if (b && b[prop] !== undefined) return b[prop];
+    }
+    return undefined;
+  };
   return {
     background: get('background') || '#ffffff',
     color: get('color') || '#333333',
@@ -428,7 +438,10 @@ function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverr
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
     verticalAlign: resolveVerticalAlign(get('verticalAlign')),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
-    borderColor: getBorder('color') || '#ccc'
+    borderColor: getBorder('color') || '#ccc',
+    hoverBorderColor: get('hoverBorderColor') || '#333333',
+    selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 2),
+    selectedBorderColor: getSelectedBorder('color') || '#0066cc'
   };
 }
 var DEFAULT_STYLES = {
@@ -439,7 +452,11 @@ var DEFAULT_STYLES = {
   },
   thead: {
     color: '#333333',
-    fontSize: 12
+    fontSize: 12,
+    border: {
+      width: 0.5,
+      color: 'transparent'
+    }
   },
   tbody: {
     positive: {
@@ -469,6 +486,8 @@ var Ring = function Ring(_ref) {
     styles = _ref.styles,
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
+    hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
+    selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
     onPointerLeave = _ref.onPointerLeave,
@@ -498,21 +517,41 @@ var Ring = function Ring(_ref) {
       measure: measure
     });
   }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
-  return jsxRuntime.jsx("g", {
-    children: segments.map(function (segment, i) {
-      return jsxRuntime.jsx(Cell, {
+  var isElevated = function isElevated(segment) {
+    return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
+  };
+  return jsxRuntime.jsxs("g", {
+    children: [segments.map(function (segment, i) {
+      return isElevated(segment) ? null : jsxRuntime.jsx(Cell, {
         segment: segment,
         innerR: innerR,
         outerR: outerR,
         style: resolvedStyles[i],
         rotationRad: rotationRad,
         fontSize: uniformFontSize,
+        hovered: false,
+        selected: false,
         onClick: onClick,
         onPointerEnter: onPointerEnter,
         onPointerLeave: onPointerLeave,
         showText: showText
       }, segment.segmentId);
-    })
+    }), segments.map(function (segment, i) {
+      return !isElevated(segment) ? null : jsxRuntime.jsx(Cell, {
+        segment: segment,
+        innerR: innerR,
+        outerR: outerR,
+        style: resolvedStyles[i],
+        rotationRad: rotationRad,
+        fontSize: uniformFontSize,
+        hovered: segment.perspectiveIndex === hoveredPerspectiveIdx,
+        selected: segment.perspectiveIndex === selectedPerspectiveIdx,
+        onClick: onClick,
+        onPointerEnter: onPointerEnter,
+        onPointerLeave: onPointerLeave,
+        showText: showText
+      }, segment.segmentId);
+    })]
   });
 };
 
@@ -529,17 +568,24 @@ var SynthesisRing = function SynthesisRing(_ref) {
   });
 };
 
-var CycleRing = function CycleRing(_ref) {
+var WheelRing = function WheelRing(_ref) {
   var segments = _ref.segments,
     innerR = _ref.innerR,
     outerR = _ref.outerR,
     rotationRad = _ref.rotationRad,
     styles = _ref.styles,
+    hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
+    selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     _onClick = _ref.onClick,
     _onPointerEnter = _ref.onPointerEnter,
     _onPointerLeave = _ref.onPointerLeave;
-  var resolved = resolveStyle(styles, 'cycle', outerR - innerR);
+  var cellRadialHeight = outerR - innerR;
   var radius = (innerR + outerR) / 2;
+  var resolvedStyles = react.useMemo(function () {
+    return segments.map(function (seg) {
+      return resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle);
+    });
+  }, [segments, styles, cellRadialHeight]);
   var cellEvents = react.useMemo(function () {
     return segments.map(function (segment) {
       return {
@@ -552,47 +598,148 @@ var CycleRing = function CycleRing(_ref) {
     });
   }, [segments]);
   var interactive = _onClick || _onPointerEnter;
-  return jsxRuntime.jsx("g", {
-    children: segments.map(function (segment, i) {
-      var midAngle = (segment.startAngle + segment.endAngle) / 2;
-      var _polarToCartesian = polarToCartesian(radius, midAngle),
-        _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
-        x = _polarToCartesian2[0],
-        y = _polarToCartesian2[1];
-      var visualAngle = normalizeAngle(midAngle + rotationRad);
-      var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
-      var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
-      var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
-      return jsxRuntime.jsxs("g", {
-        onClick: function onClick() {
-          return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
-        },
-        onPointerEnter: function onPointerEnter() {
-          return _onPointerEnter === null || _onPointerEnter === void 0 ? void 0 : _onPointerEnter(cellEvents[i]);
-        },
-        onPointerLeave: function onPointerLeave() {
-          return _onPointerLeave === null || _onPointerLeave === void 0 ? void 0 : _onPointerLeave(cellEvents[i]);
-        },
-        style: {
-          cursor: interactive ? 'pointer' : 'default'
-        },
-        children: [jsxRuntime.jsx("path", {
-          d: path,
-          fill: "transparent"
-        }), jsxRuntime.jsx("text", {
-          x: x,
-          y: y,
-          transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
-          textAnchor: "middle",
-          dominantBaseline: "central",
-          fill: resolved.color,
-          fontSize: resolved.fontSize,
-          fontWeight: "bold",
-          fontFamily: "system-ui, sans-serif",
-          children: segment.segmentId
-        })]
-      }, segment.segmentId);
-    })
+  var isElevated = function isElevated(segment) {
+    return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
+  };
+  var renderSegment = function renderSegment(segment, i, isHovered, isSelected) {
+    var style = resolvedStyles[i];
+    var midAngle = (segment.startAngle + segment.endAngle) / 2;
+    var _polarToCartesian = polarToCartesian(radius, midAngle),
+      _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
+      x = _polarToCartesian2[0],
+      y = _polarToCartesian2[1];
+    var visualAngle = normalizeAngle(midAngle + rotationRad);
+    var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
+    var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
+    var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
+    return jsxRuntime.jsxs("g", {
+      onClick: function onClick() {
+        return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
+      },
+      onPointerEnter: function onPointerEnter() {
+        return _onPointerEnter === null || _onPointerEnter === void 0 ? void 0 : _onPointerEnter(cellEvents[i]);
+      },
+      onPointerLeave: function onPointerLeave() {
+        return _onPointerLeave === null || _onPointerLeave === void 0 ? void 0 : _onPointerLeave(cellEvents[i]);
+      },
+      style: {
+        cursor: interactive ? 'pointer' : 'default'
+      },
+      children: [jsxRuntime.jsx("path", {
+        d: path,
+        fill: style.background,
+        stroke: isSelected ? style.selectedBorderColor : isHovered ? style.hoverBorderColor : style.borderColor,
+        strokeWidth: isSelected ? style.selectedBorderWidth : style.borderWidth
+      }), jsxRuntime.jsx("text", {
+        x: x,
+        y: y,
+        transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
+        textAnchor: "middle",
+        dominantBaseline: "central",
+        fill: style.color,
+        fontSize: style.fontSize,
+        fontWeight: "bold",
+        fontFamily: "system-ui, sans-serif",
+        children: segment.segmentId
+      })]
+    }, segment.segmentId);
+  };
+  return jsxRuntime.jsxs("g", {
+    children: [segments.map(function (segment, i) {
+      return isElevated(segment) ? null : renderSegment(segment, i, false, false);
+    }), segments.map(function (segment, i) {
+      return !isElevated(segment) ? null : renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx, segment.perspectiveIndex === selectedPerspectiveIdx);
+    })]
+  });
+};
+
+var CycleRing = function CycleRing(_ref) {
+  var segments = _ref.segments,
+    innerR = _ref.innerR,
+    outerR = _ref.outerR,
+    rotationRad = _ref.rotationRad,
+    styles = _ref.styles,
+    hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
+    selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
+    _onClick = _ref.onClick,
+    _onPointerEnter = _ref.onPointerEnter,
+    _onPointerLeave = _ref.onPointerLeave;
+  var cellRadialHeight = outerR - innerR;
+  var radius = (innerR + outerR) / 2;
+  var thesisSegments = react.useMemo(function () {
+    return segments.filter(function (s) {
+      return !s.segmentId.startsWith('A');
+    });
+  }, [segments]);
+  var resolvedStyles = react.useMemo(function () {
+    return thesisSegments.map(function (seg) {
+      return resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle);
+    });
+  }, [thesisSegments, styles, cellRadialHeight]);
+  var cellEvents = react.useMemo(function () {
+    return thesisSegments.map(function (segment) {
+      return {
+        segmentId: segment.segmentId,
+        polarity: segment.polarity,
+        statement: segment.fullText,
+        pairWith: segment.pairWith,
+        perspectiveIndex: segment.perspectiveIndex
+      };
+    });
+  }, [thesisSegments]);
+  var interactive = _onClick || _onPointerEnter;
+  var isElevated = function isElevated(segment) {
+    return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
+  };
+  var renderSegment = function renderSegment(segment, i, isHovered, isSelected) {
+    var style = resolvedStyles[i];
+    var midAngle = (segment.startAngle + segment.endAngle) / 2;
+    var _polarToCartesian = polarToCartesian(radius, midAngle),
+      _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
+      x = _polarToCartesian2[0],
+      y = _polarToCartesian2[1];
+    var visualAngle = normalizeAngle(midAngle + rotationRad);
+    var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
+    var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
+    var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
+    return jsxRuntime.jsxs("g", {
+      onClick: function onClick() {
+        return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
+      },
+      onPointerEnter: function onPointerEnter() {
+        return _onPointerEnter === null || _onPointerEnter === void 0 ? void 0 : _onPointerEnter(cellEvents[i]);
+      },
+      onPointerLeave: function onPointerLeave() {
+        return _onPointerLeave === null || _onPointerLeave === void 0 ? void 0 : _onPointerLeave(cellEvents[i]);
+      },
+      style: {
+        cursor: interactive ? 'pointer' : 'default'
+      },
+      children: [jsxRuntime.jsx("path", {
+        d: path,
+        fill: style.background,
+        stroke: isSelected ? style.selectedBorderColor : isHovered ? style.hoverBorderColor : style.borderColor,
+        strokeWidth: isSelected ? style.selectedBorderWidth : style.borderWidth
+      }), jsxRuntime.jsx("text", {
+        x: x,
+        y: y,
+        transform: "rotate(".concat(textRotDeg, ", ").concat(x, ", ").concat(y, ")"),
+        textAnchor: "middle",
+        dominantBaseline: "central",
+        fill: style.color,
+        fontSize: style.fontSize,
+        fontWeight: "bold",
+        fontFamily: "system-ui, sans-serif",
+        children: segment.segmentId
+      })]
+    }, segment.segmentId);
+  };
+  return jsxRuntime.jsxs("g", {
+    children: [thesisSegments.map(function (segment, i) {
+      return isElevated(segment) ? null : renderSegment(segment, i, false, false);
+    }), thesisSegments.map(function (segment, i) {
+      return !isElevated(segment) ? null : renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx, segment.perspectiveIndex === selectedPerspectiveIdx);
+    })]
   });
 };
 
@@ -799,6 +946,9 @@ function mergeStyles(user) {
 }
 function Wheel(_ref) {
   var perspectives = _ref.perspectives,
+    _ref$headerRing = _ref.headerRing,
+    headerRing = _ref$headerRing === void 0 ? 'wheel' : _ref$headerRing,
+    selectedPerspective = _ref.selectedPerspective,
     _ref$neutralOutside = _ref.neutralOutside,
     neutralOutside = _ref$neutralOutside === void 0 ? false : _ref$neutralOutside,
     userStyles = _ref.styles,
@@ -812,9 +962,7 @@ function Wheel(_ref) {
     onSegmentClicked = _ref.onSegmentClicked,
     onPerspectiveOver = _ref.onPerspectiveOver,
     onPerspectiveOut = _ref.onPerspectiveOut,
-    onPerspectiveClicked = _ref.onPerspectiveClicked,
-    _ref$debug = _ref.debug,
-    debug = _ref$debug === void 0 ? false : _ref$debug;
+    onPerspectiveClicked = _ref.onPerspectiveClicked;
   var styles = react.useMemo(function () {
     return mergeStyles(userStyles);
   }, [userStyles]);
@@ -858,6 +1006,10 @@ function Wheel(_ref) {
   var hoveredSegmentRef = react.useRef(null);
   var hoveredPerspectiveRef = react.useRef(null);
   var lastCellEventRef = react.useRef(null);
+  var _useState = react.useState(null),
+    _useState2 = _slicedToArray(_useState, 2),
+    hoveredPerspectiveIdx = _useState2[0],
+    setHoveredPerspectiveIdx = _useState2[1];
   var handleCellClick = react.useCallback(function (cell) {
     if (onCellClicked) onCellClicked(cell);
     if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
@@ -877,6 +1029,7 @@ function Wheel(_ref) {
         onPerspectiveOut(derivePerspectiveEvent(lastCellEventRef.current));
       }
       hoveredPerspectiveRef.current = cell.perspectiveIndex;
+      setHoveredPerspectiveIdx(cell.perspectiveIndex);
       if (onPerspectiveOver) onPerspectiveOver(derivePerspectiveEvent(cell));
     }
     lastCellEventRef.current = cell;
@@ -895,19 +1048,22 @@ function Wheel(_ref) {
     hoveredSegmentRef.current = null;
     hoveredPerspectiveRef.current = null;
     lastCellEventRef.current = null;
+    setHoveredPerspectiveIdx(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
-  return jsxRuntime.jsxs("div", {
+  return jsxRuntime.jsx("div", {
     style: _objectSpread2({
       background: 'white',
       borderRadius: 8
     }, css),
-    children: [jsxRuntime.jsx("svg", _objectSpread2(_objectSpread2({
+    children: jsxRuntime.jsx("svg", _objectSpread2(_objectSpread2({
       ref: svgRef,
       viewBox: "-250 -250 500 500",
       style: {
         width: '100%',
         height: 'auto',
-        touchAction: 'none'
+        touchAction: 'none',
+        userSelect: 'none',
+        cursor: isDragging ? 'grabbing' : 'grab'
       },
       onPointerLeave: handleWheelPointerLeave
     }, pointerHandlers), {}, {
@@ -924,6 +1080,8 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          selectedPerspectiveIdx: selectedPerspective,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -935,6 +1093,8 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          selectedPerspectiveIdx: selectedPerspective,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -946,33 +1106,38 @@ function Wheel(_ref) {
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
+          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          selectedPerspectiveIdx: selectedPerspective,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
         }), jsxRuntime.jsx(SynthesisRing, {
           styles: styles
-        }), jsxRuntime.jsx(CycleRing, {
+        }), headerRing === 'wheel' && jsxRuntime.jsx(WheelRing, {
           segments: ringData.invisible,
           innerR: RADII.cycleStart,
           outerR: RADII.cycleEnd,
           rotationRad: rotationRad,
           styles: styles,
+          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          selectedPerspectiveIdx: selectedPerspective,
+          onClick: handleCellClick,
+          onPointerEnter: handlePointerEnter,
+          onPointerLeave: handlePointerLeave
+        }), headerRing === 'cycle' && jsxRuntime.jsx(CycleRing, {
+          segments: ringData.invisible,
+          innerR: RADII.cycleStart,
+          outerR: RADII.cycleEnd,
+          rotationRad: rotationRad,
+          styles: styles,
+          hoveredPerspectiveIdx: hoveredPerspectiveIdx,
+          selectedPerspectiveIdx: selectedPerspective,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
         })]
       })
-    })), debug && jsxRuntime.jsxs("div", {
-      style: {
-        marginTop: 8,
-        padding: 8,
-        background: '#f8f9fa',
-        borderRadius: 4,
-        fontSize: 12,
-        color: '#666'
-      },
-      children: [perspectives.length, " perspectives, ", segmentIds.length, " segments, rotation: ", rotationDeg.toFixed(1), "\xB0"]
-    })]
+    }))
   });
 }
 
