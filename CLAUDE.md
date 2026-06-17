@@ -56,7 +56,7 @@
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
-- `HeaderRing = 'wheel' | 'cycle' | 'none'` — controls outermost ring visibility
+- `HeaderRing = 'wheel' | 'cycle' | 'none'` — type for the `header` prop (previously named `headerRing`)
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
 - `ClickedCell` is deprecated alias for `CellEvent`
