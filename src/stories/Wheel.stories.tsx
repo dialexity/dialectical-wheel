@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState, useRef } from 'react';
 import { Wheel } from '../components';
 import { exportWheelSVG, exportWheelPNG, downloadBlob } from '../export';
-import type { PerspectiveEvent, SegmentEvent } from '../types';
+import type { SegmentEvent } from '../types';
 
 const samplePerspectives = [
   {
@@ -68,21 +68,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  render: (args) => {
-    const [selected, setSelected] = useState<number | null>(null);
-    return (
-      <Wheel
-        {...args}
-        selectedPerspective={selected}
-        onPerspectiveClicked={(e: PerspectiveEvent) => {
-          setSelected(e.perspectiveIndex === selected ? null : e.perspectiveIndex);
-        }}
-      />
-    );
-  },
   args: {
     perspectives: samplePerspectives,
     styles: defaultStyles,
+    interactive: true,
   },
 };
 

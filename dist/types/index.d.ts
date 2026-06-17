@@ -84,6 +84,7 @@ export type HeaderRing = 'wheel' | 'cycle' | 'none';
 export interface WheelProps {
     perspectives: Perspective[];
     headerRing?: HeaderRing;
+    interactive?: boolean;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;
     neutralOutside?: boolean | 'header';

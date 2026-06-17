@@ -32,8 +32,9 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
   headerRing = 'wheel',
-  selectedPerspective,
-  focusedSegment,
+  interactive = false,
+  selectedPerspective: selectedPerspectiveProp,
+  focusedSegment: focusedSegmentProp,
   neutralOutside: neutralOutsideProp = false,
   styles: userStyles,
   css,
@@ -58,6 +59,22 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   );
 
   const segmentIds = useMemo(() => ringData.neutral.map(s => s.segmentId), [ringData]);
+
+  const [internalSelected, setInternalSelected] = useState<number | null>(selectedPerspectiveProp ?? null);
+  const [internalFocused, setInternalFocused] = useState<string | null>(focusedSegmentProp ?? null);
+
+  useEffect(() => {
+    if (!interactive) return;
+    if (selectedPerspectiveProp !== undefined) setInternalSelected(selectedPerspectiveProp);
+  }, [interactive, selectedPerspectiveProp]);
+
+  useEffect(() => {
+    if (!interactive) return;
+    if (focusedSegmentProp !== undefined) setInternalFocused(focusedSegmentProp);
+  }, [interactive, focusedSegmentProp]);
+
+  const selectedPerspective = interactive ? internalSelected : (selectedPerspectiveProp ?? null);
+  const focusedSegment = interactive ? internalFocused : (focusedSegmentProp ?? null);
 
   const effectiveFocusedSegment = useMemo(() => {
     if (focusedSegment != null) return focusedSegment;
@@ -116,10 +133,15 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   }, [focusAnimatingIdx]);
 
   const handleCellClick = useCallback((cell: CellEvent) => {
+    if (interactive) {
+      const toggle = internalSelected === cell.perspectiveIndex ? null : cell.perspectiveIndex;
+      setInternalSelected(toggle);
+      setInternalFocused(toggle != null ? cell.segmentId : null);
+    }
     if (onCellClicked) onCellClicked(cell);
     if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
     if (onPerspectiveClicked) onPerspectiveClicked(derivePerspectiveEvent(cell));
-  }, [onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
+  }, [interactive, internalSelected, onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
 
   const handlePointerEnter = useCallback((cell: CellEvent) => {
     if (hoverSuppressedRef.current) return;

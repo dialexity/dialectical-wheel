@@ -1167,8 +1167,10 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var perspectives = _ref.perspectives,
     _ref$headerRing = _ref.headerRing,
     headerRing = _ref$headerRing === void 0 ? 'wheel' : _ref$headerRing,
-    selectedPerspective = _ref.selectedPerspective,
-    focusedSegment = _ref.focusedSegment,
+    _ref$interactive = _ref.interactive,
+    interactive = _ref$interactive === void 0 ? false : _ref$interactive,
+    selectedPerspectiveProp = _ref.selectedPerspective,
+    focusedSegmentProp = _ref.focusedSegment,
     _ref$neutralOutside = _ref.neutralOutside,
     neutralOutsideProp = _ref$neutralOutside === void 0 ? false : _ref$neutralOutside,
     userStyles = _ref.styles,
@@ -1198,6 +1200,24 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
       return s.segmentId;
     });
   }, [ringData]);
+  var _useState = react.useState(selectedPerspectiveProp !== null && selectedPerspectiveProp !== void 0 ? selectedPerspectiveProp : null),
+    _useState2 = _slicedToArray(_useState, 2),
+    internalSelected = _useState2[0],
+    setInternalSelected = _useState2[1];
+  var _useState3 = react.useState(focusedSegmentProp !== null && focusedSegmentProp !== void 0 ? focusedSegmentProp : null),
+    _useState4 = _slicedToArray(_useState3, 2),
+    internalFocused = _useState4[0],
+    setInternalFocused = _useState4[1];
+  react.useEffect(function () {
+    if (!interactive) return;
+    if (selectedPerspectiveProp !== undefined) setInternalSelected(selectedPerspectiveProp);
+  }, [interactive, selectedPerspectiveProp]);
+  react.useEffect(function () {
+    if (!interactive) return;
+    if (focusedSegmentProp !== undefined) setInternalFocused(focusedSegmentProp);
+  }, [interactive, focusedSegmentProp]);
+  var selectedPerspective = interactive ? internalSelected : selectedPerspectiveProp !== null && selectedPerspectiveProp !== void 0 ? selectedPerspectiveProp : null;
+  var focusedSegment = interactive ? internalFocused : focusedSegmentProp !== null && focusedSegmentProp !== void 0 ? focusedSegmentProp : null;
   var effectiveFocusedSegment = react.useMemo(function () {
     if (focusedSegment != null) return focusedSegment;
     if (selectedPerspective != null && segmentIds.length > 0) return segmentIds[selectedPerspective];
@@ -1245,14 +1265,14 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var lastCellEventRef = react.useRef(null);
   var hoverSuppressedRef = react.useRef(false);
   var suppressPointerPos = react.useRef(null);
-  var _useState = react.useState(null),
-    _useState2 = _slicedToArray(_useState, 2),
-    hoveredSegmentId = _useState2[0],
-    setHoveredSegmentId = _useState2[1];
-  var _useState3 = react.useState(null),
-    _useState4 = _slicedToArray(_useState3, 2),
-    hoveredPerspectiveIdx = _useState4[0],
-    setHoveredPerspectiveIdx = _useState4[1];
+  var _useState5 = react.useState(null),
+    _useState6 = _slicedToArray(_useState5, 2),
+    hoveredSegmentId = _useState6[0],
+    setHoveredSegmentId = _useState6[1];
+  var _useState7 = react.useState(null),
+    _useState8 = _slicedToArray(_useState7, 2),
+    hoveredPerspectiveIdx = _useState8[0],
+    setHoveredPerspectiveIdx = _useState8[1];
   react.useEffect(function () {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
@@ -1265,10 +1285,15 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     }
   }, [focusAnimatingIdx]);
   var handleCellClick = react.useCallback(function (cell) {
+    if (interactive) {
+      var toggle = internalSelected === cell.perspectiveIndex ? null : cell.perspectiveIndex;
+      setInternalSelected(toggle);
+      setInternalFocused(toggle != null ? cell.segmentId : null);
+    }
     if (onCellClicked) onCellClicked(cell);
     if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
     if (onPerspectiveClicked) onPerspectiveClicked(derivePerspectiveEvent(cell));
-  }, [onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
+  }, [interactive, internalSelected, onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
   var handlePointerEnter = react.useCallback(function (cell) {
     if (hoverSuppressedRef.current) return;
     if (onCellOver) onCellOver(cell);

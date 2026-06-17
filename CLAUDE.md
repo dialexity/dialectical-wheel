@@ -22,6 +22,7 @@
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
 - `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority if both set
+- `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands), clicks always toggle; without it, fully controlled (no internal state)
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
 - If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
