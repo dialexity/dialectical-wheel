@@ -14,6 +14,11 @@ export interface CellStyle {
         width: CSSValue;
         color: string;
     };
+    arrow: {
+        color: string;
+        width: CSSValue;
+    };
+    hoverArrowColor: string;
 }
 export type RowScope = Partial<CellStyle> & {
     thesis?: Partial<CellStyle> & {
@@ -100,6 +105,9 @@ export interface ResolvedCellStyle {
     hoverBorderColor: string;
     selectedBorderWidth: number;
     selectedBorderColor: string;
+    arrowColor: string;
+    arrowHoverColor: string;
+    arrowWidth: number;
 }
 export type HeaderRing = 'wheel' | 'cycle' | 'none';
 export type WheelDirection = 'left' | 'right';

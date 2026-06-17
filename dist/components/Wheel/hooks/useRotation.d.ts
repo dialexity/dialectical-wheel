@@ -9,6 +9,8 @@ export declare function useRotation({ onFocusChanged, segmentIds, focusedSegment
     isDragging: boolean;
     isRotationPaused: boolean;
     focusAnimatingIdx: number | null;
+    isSegmentAtFocusTarget: (segmentId: string) => boolean;
+    refocusWithoutFade: (segmentId: string) => void;
     svgRef: import("react").MutableRefObject<SVGSVGElement | null>;
     pointerHandlers: {
         onPointerDown: (e: React.PointerEvent) => void;

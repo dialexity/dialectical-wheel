@@ -137,6 +137,44 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     dragStart.current = null;
   }, [getAngleFromEvent, reportTopSegment]);
 
+  const isSegmentAtFocusTarget = useCallback((segmentId: string): boolean => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return false;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const isAntithesis = idx >= N / 2;
+    const targetPosition = isAntithesis ? 180 : 0;
+    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    const diff = Math.abs(((currentVisualAngle - targetPosition + 540) % 360) - 180);
+    return diff < 1;
+  }, [segmentIds]);
+
+  const refocusWithoutFade = useCallback((segmentId: string) => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const isAntithesis = idx >= N / 2;
+
+    let targetPosition = isAntithesis ? 180 : 0;
+    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+      targetPosition = 0;
+    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+      targetPosition = 180;
+    }
+
+    const targetRaw = targetPosition - midAngle;
+    clearTimers();
+    setRotationDeg(current => {
+      let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180) delta = isAntithesis ? 180 : -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+
   const rotationRad = (rotationDeg * Math.PI) / 180;
 
   return {
@@ -145,6 +183,8 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     isDragging,
     isRotationPaused,
     focusAnimatingIdx,
+    isSegmentAtFocusTarget,
+    refocusWithoutFade,
     svgRef,
     pointerHandlers: { onPointerDown, onPointerMove, onPointerUp },
   };

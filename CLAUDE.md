@@ -23,7 +23,9 @@
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
 - `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority if both set
-- `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands), clicks always toggle; without it, fully controlled (no internal state)
+- `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
+- Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
+- `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
 - If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
@@ -53,7 +55,7 @@
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
 - `rotationDegRef` mirrors `rotationDeg` state so the focus effect can read current rotation without depending on it
 - `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
-- Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks
+- Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks. The `focusAnimatingIdx` effect handles this for phased animation; imperative rotation (e.g. `refocusWithoutFade`) must suppress manually.
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR
 - `styles.tbody.synthesis` is deprecated but still works as fallback in resolveStyle when `tfoot` is undefined — don't remove without migration
 - `RowScope` uses TypeScript intersection with `{ [n: number]: ... }` — numeric keys alongside named props; pure interfaces can't express this
