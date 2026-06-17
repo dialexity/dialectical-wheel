@@ -2,7 +2,7 @@ import React from 'react';
 import { describeArc } from './utils/geometry';
 import type { Radii } from './utils/geometry';
 import { resolveStyle } from './utils/styles';
-import type { SegmentData, Styles, HeaderRing } from '../../types';
+import type { SegmentData, Styles, StyleContext, HeaderRing } from '../../types';
 
 interface SelectionOverlayProps {
   segments: SegmentData[];
@@ -19,7 +19,13 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   const selected = segments.filter(s => s.perspectiveIndex === selectedPerspectiveIdx);
   if (selected.length === 0) return null;
 
-  const style = resolveStyle(styles, 'neutral', radii.outerEnd - radii.innerStart);
+  const ctx: StyleContext = {
+    rowGroup: 'tbody',
+    ring: 'neutral',
+    colType: 'thesis',
+    perspectiveIndex: selectedPerspectiveIdx,
+  };
+  const style = resolveStyle(styles, ctx, radii.outerEnd - radii.innerStart);
 
   return (
     <g style={{ pointerEvents: 'none' }}>

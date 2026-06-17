@@ -1,4 +1,4 @@
-import type { CSSValue, CellStyle, Styles, ResolvedCellStyle } from '../../../types';
+import type { CSSValue, CellStyle, Styles, StyleContext, RowScope, ResolvedCellStyle } from '../../../types';
 
 function resolveCSSValue(value: CSSValue | undefined, relativeTo: number, fallback: number): number {
   if (value === undefined) return fallback;
@@ -13,21 +13,58 @@ function resolveCSSValue(value: CSSValue | undefined, relativeTo: number, fallba
   return parseFloat(str) || fallback;
 }
 
-type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
-
 export function resolveStyle(
   styles: Styles,
-  ring: RingName | 'cycle',
+  ctx: StyleContext,
   cellRadialHeight: number,
   cellOverride?: Partial<CellStyle>,
-  segmentOverride?: Partial<CellStyle>,
 ): ResolvedCellStyle {
-  const wheel = styles as Partial<CellStyle>;
-  const section = ring === 'cycle' ? styles.thead : styles.tbody;
-  const ringLevel = ring !== 'cycle' ? (styles.tbody as any)?.[ring] as Partial<CellStyle> | undefined : undefined;
+  const layers: (Partial<CellStyle> | undefined)[] = [];
 
-  // Cascade: wheel -> section (thead/tbody) -> ring -> segment -> cell
-  const layers: (Partial<CellStyle> | undefined)[] = [wheel, section, ringLevel, segmentOverride, cellOverride];
+  // 1. Table level
+  layers.push(styles as Partial<CellStyle>);
+
+  // 2. Row-group level
+  const group = styles[ctx.rowGroup];
+  layers.push(group as Partial<CellStyle> | undefined);
+
+  // 3. Row level (ring within row-group)
+  let row: RowScope | undefined;
+  if (ctx.rowGroup === 'tbody' && ctx.ring !== 'cycle' && ctx.ring !== 'synthesis') {
+    row = (group as Styles['tbody'])?.[ctx.ring as 'positive' | 'negative' | 'neutral'];
+    layers.push(row as Partial<CellStyle> | undefined);
+  } else if (ctx.rowGroup === 'thead' && ctx.ring === 'neutral') {
+    row = (group as Styles['thead'])?.neutral;
+    layers.push(row as Partial<CellStyle> | undefined);
+  } else if (ctx.rowGroup === 'tfoot') {
+    // tfoot IS the row — no sub-ring. Backward compat: fall back to tbody.synthesis
+    if (!group && (styles.tbody as any)?.synthesis) {
+      layers.push((styles.tbody as any).synthesis as Partial<CellStyle>);
+    }
+    row = group as RowScope | undefined;
+  }
+
+  // 4. Row + col-type (e.g. tbody.positive.thesis)
+  if (row) {
+    const colScope = row[ctx.colType];
+    layers.push(colScope as Partial<CellStyle> | undefined);
+  }
+
+  // 5. Row + nth (e.g. tbody.positive[2])
+  if (row && ctx.perspectiveIndex >= 0) {
+    layers.push(row[ctx.perspectiveIndex] as Partial<CellStyle> | undefined);
+  }
+
+  // 6. Row + col-type + nth (e.g. tbody.positive.thesis[2])
+  if (row && ctx.perspectiveIndex >= 0) {
+    const colScope = row[ctx.colType];
+    if (colScope) {
+      layers.push(colScope[ctx.perspectiveIndex] as Partial<CellStyle> | undefined);
+    }
+  }
+
+  // 7. Cell inline (from data object — highest priority)
+  layers.push(cellOverride);
 
   const get = <K extends keyof CellStyle>(key: K): CellStyle[K] | undefined => {
     for (let i = layers.length - 1; i >= 0; i--) {
@@ -78,6 +115,6 @@ export const DEFAULT_STYLES: Styles = {
     positive: { background: '#C6E5B3', color: '#2d5a2d' },
     negative: { background: '#F9C6CC', color: '#8b1538' },
     neutral: { background: '#ffffff', color: '#333333' },
-    synthesis: { background: '#ffff7a' },
   },
+  tfoot: { background: '#ffff7a' },
 };

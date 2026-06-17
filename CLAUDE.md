@@ -2,6 +2,7 @@
 
 ## Build & Dev
 - `npx rollup -c` — build library (src → dist)
+- `npx tsc --noEmit` — type check without emitting (faster than full build for iteration)
 - Storybook is already running (user manages it manually) — do NOT launch it
 - Zero runtime dependencies; React is peer dep only
 
@@ -33,6 +34,10 @@
 - `focusAnimatingIdx` drives opacity on non-focused perspective cells across all rings
 - Wheel uses `forwardRef<SVGSVGElement>` — internal svgRef merged with forwarded ref via callback ref
 - `src/export.ts` provides `exportWheelSVG`, `exportWheelPNG`, `downloadBlob` — tree-shakeable utils, not methods on the component
+- Styling follows CSS table model: thead (header), tbody (body rings), tfoot (synthesis) × thesis/antithesis columns
+- `resolveStyle` in utils/styles.ts is the single resolution point — all rings/components call it with a `StyleContext`
+- Ring.tsx takes `rowGroup` prop to tell resolveStyle which section it belongs to
+- SynthesisRing renders per-segment wedges when tfoot styles differ per perspective, otherwise a single circle
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
@@ -46,6 +51,8 @@
 - `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
 - Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR
+- `styles.tbody.synthesis` is deprecated but still works as fallback in resolveStyle when `tfoot` is undefined — don't remove without migration
+- `RowScope` uses TypeScript intersection with `{ [n: number]: ... }` — numeric keys alongside named props; pure interfaces can't express this
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
@@ -53,6 +60,11 @@
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
 - `ClickedCell` is deprecated alias for `CellEvent`
-- `SegmentData` carries `perspectiveIndex` for event derivation
+- `SegmentData` carries `perspectiveIndex` and `colType` ('thesis'|'antithesis') for style resolution
 - `Styles.dimUnfocused` (0–1, default 0.5) — how much to dim unselected perspectives when one is selected; hovered perspectives undim
 - Ring's `headerBehavior` prop makes borders transparent by default (only visible on hover) — used by `neutralOutside='header'`
+- `RowScope` = intersection type allowing `Partial<CellStyle>` + `thesis`/`antithesis` + numeric index for nth-perspective
+- `StyleContext` = { rowGroup, ring, colType, perspectiveIndex } passed to resolveStyle
+- `resolveStyle` builds 7-layer cascade: table → row-group → row → row+colType → row+nth → row+colType+nth → inline
+- `styles.tfoot` replaces deprecated `styles.tbody.synthesis` (backward compat fallback exists)
+- `styles.thead.neutral` activates only when `neutralOutside='header'`

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Cell } from './Cell';
 import { computeUniformFontSize } from './utils/textLayout';
 import { resolveStyle } from './utils/styles';
-import type { SegmentData, CellEvent, Styles, ResolvedCellStyle } from '../../types';
+import type { SegmentData, CellEvent, Styles, StyleContext, ResolvedCellStyle } from '../../types';
 
 type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
 
@@ -11,6 +11,7 @@ interface RingProps {
   innerR: number;
   outerR: number;
   ringName: RingName;
+  rowGroup: 'thead' | 'tbody' | 'tfoot';
   styles: Styles;
   rotationRad: number;
   measure: (text: string, fontSize: number) => number;
@@ -33,18 +34,24 @@ function computeTextBias(ringName: RingName, perspectiveCount: number): number {
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
+  segments, innerR, outerR, ringName, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
 
   const resolvedStyles = useMemo((): ResolvedCellStyle[] =>
     segments.map(seg => {
-      const s = resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle);
+      const ctx: StyleContext = {
+        rowGroup,
+        ring: ringName,
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex,
+      };
+      const s = resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
       if (headerBehavior) return { ...s, borderColor: 'transparent' };
       return s;
     }),
-    [segments, styles, ringName, cellRadialHeight, headerBehavior]
+    [segments, styles, ringName, rowGroup, cellRadialHeight, headerBehavior]
   );
 
   const baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;

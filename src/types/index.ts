@@ -14,15 +14,29 @@ export interface CellStyle {
   selectedBorder: { width: CSSValue; color: string };
 }
 
+export type RowScope = Partial<CellStyle> & {
+  thesis?: Partial<CellStyle> & { [n: number]: Partial<CellStyle> | undefined };
+  antithesis?: Partial<CellStyle> & { [n: number]: Partial<CellStyle> | undefined };
+} & { [n: number]: Partial<CellStyle> | undefined };
+
 export interface Styles extends Partial<CellStyle> {
   dimUnfocused?: number;
-  thead?: Partial<CellStyle>;
+  thead?: RowScope & { neutral?: RowScope };
   tbody?: Partial<CellStyle> & {
-    positive?: Partial<CellStyle>;
-    negative?: Partial<CellStyle>;
-    neutral?: Partial<CellStyle>;
+    positive?: RowScope;
+    negative?: RowScope;
+    neutral?: RowScope;
+    /** @deprecated Use tfoot instead */
     synthesis?: Partial<CellStyle>;
   };
+  tfoot?: RowScope;
+}
+
+export interface StyleContext {
+  rowGroup: 'thead' | 'tbody' | 'tfoot';
+  ring: 'positive' | 'negative' | 'neutral' | 'synthesis' | 'cycle';
+  colType: 'thesis' | 'antithesis';
+  perspectiveIndex: number;
 }
 
 // --- Data types ---
@@ -50,6 +64,7 @@ export interface SegmentData {
   segmentId: string;
   perspectiveIndex: number;
   polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
+  colType: 'thesis' | 'antithesis';
   fullText: string;
   pairWith: string;
   startAngle: number;

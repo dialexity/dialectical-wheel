@@ -407,13 +407,47 @@ function resolveCSSValue(value, relativeTo, fallback) {
   }
   return parseFloat(str) || fallback;
 }
-function resolveStyle(styles, ring, cellRadialHeight, cellOverride, segmentOverride) {
-  var _styles$tbody;
-  var wheel = styles;
-  var section = ring === 'cycle' ? styles.thead : styles.tbody;
-  var ringLevel = ring !== 'cycle' ? (_styles$tbody = styles.tbody) === null || _styles$tbody === void 0 ? void 0 : _styles$tbody[ring] : undefined;
-  // Cascade: wheel -> section (thead/tbody) -> ring -> segment -> cell
-  var layers = [wheel, section, ringLevel, segmentOverride, cellOverride];
+function resolveStyle(styles, ctx, cellRadialHeight, cellOverride) {
+  var layers = [];
+  // 1. Table level
+  layers.push(styles);
+  // 2. Row-group level
+  var group = styles[ctx.rowGroup];
+  layers.push(group);
+  // 3. Row level (ring within row-group)
+  var row;
+  if (ctx.rowGroup === 'tbody' && ctx.ring !== 'cycle' && ctx.ring !== 'synthesis') {
+    row = group === null || group === void 0 ? void 0 : group[ctx.ring];
+    layers.push(row);
+  } else if (ctx.rowGroup === 'thead' && ctx.ring === 'neutral') {
+    row = group === null || group === void 0 ? void 0 : group.neutral;
+    layers.push(row);
+  } else if (ctx.rowGroup === 'tfoot') {
+    var _styles$tbody;
+    // tfoot IS the row — no sub-ring. Backward compat: fall back to tbody.synthesis
+    if (!group && (_styles$tbody = styles.tbody) !== null && _styles$tbody !== void 0 && _styles$tbody.synthesis) {
+      layers.push(styles.tbody.synthesis);
+    }
+    row = group;
+  }
+  // 4. Row + col-type (e.g. tbody.positive.thesis)
+  if (row) {
+    var colScope = row[ctx.colType];
+    layers.push(colScope);
+  }
+  // 5. Row + nth (e.g. tbody.positive[2])
+  if (row && ctx.perspectiveIndex >= 0) {
+    layers.push(row[ctx.perspectiveIndex]);
+  }
+  // 6. Row + col-type + nth (e.g. tbody.positive.thesis[2])
+  if (row && ctx.perspectiveIndex >= 0) {
+    var _colScope = row[ctx.colType];
+    if (_colScope) {
+      layers.push(_colScope[ctx.perspectiveIndex]);
+    }
+  }
+  // 7. Cell inline (from data object — highest priority)
+  layers.push(cellOverride);
   var get = function get(key) {
     for (var i = layers.length - 1; i >= 0; i--) {
       var _layers$i;
@@ -476,10 +510,10 @@ var DEFAULT_STYLES = {
     neutral: {
       background: '#ffffff',
       color: '#333333'
-    },
-    synthesis: {
-      background: '#ffff7a'
     }
+  },
+  tfoot: {
+    background: '#ffff7a'
   }
 };
 
@@ -494,6 +528,7 @@ var Ring = function Ring(_ref) {
     innerR = _ref.innerR,
     outerR = _ref.outerR,
     ringName = _ref.ringName,
+    rowGroup = _ref.rowGroup,
     styles = _ref.styles,
     rotationRad = _ref.rotationRad,
     measure = _ref.measure,
@@ -512,13 +547,19 @@ var Ring = function Ring(_ref) {
   var cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
   var resolvedStyles = useMemo(function () {
     return segments.map(function (seg) {
-      var s = resolveStyle(styles, ringName, cellRadialHeight, seg.cellStyle);
+      var ctx = {
+        rowGroup: rowGroup,
+        ring: ringName,
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex
+      };
+      var s = resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
       if (headerBehavior) return _objectSpread2(_objectSpread2({}, s), {}, {
         borderColor: 'transparent'
       });
       return s;
     });
-  }, [segments, styles, ringName, cellRadialHeight, headerBehavior]);
+  }, [segments, styles, ringName, rowGroup, cellRadialHeight, headerBehavior]);
   var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
   var uniformFontSize = useMemo(function () {
@@ -598,15 +639,52 @@ var Ring = function Ring(_ref) {
 
 var SynthesisRing = function SynthesisRing(_ref) {
   var styles = _ref.styles,
-    radii = _ref.radii;
-  var resolved = resolveStyle(styles, 'synthesis', radii.innerEnd - radii.innerStart);
-  return jsx("circle", {
-    cx: 0,
-    cy: 0,
-    r: radii.synthesis,
-    fill: resolved.background,
-    stroke: resolved.borderColor,
-    strokeWidth: resolved.borderWidth
+    radii = _ref.radii,
+    segments = _ref.segments;
+  var cellRadialHeight = radii.innerEnd - radii.innerStart;
+  var resolvedStyles = useMemo(function () {
+    return segments.map(function (seg) {
+      var ctx = {
+        rowGroup: 'tfoot',
+        ring: 'synthesis',
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex
+      };
+      return resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
+    });
+  }, [segments, styles, cellRadialHeight]);
+  var allSameBackground = resolvedStyles.length > 0 && resolvedStyles.every(function (s) {
+    return s.background === resolvedStyles[0].background;
+  });
+  if (segments.length === 0 || allSameBackground) {
+    var _resolvedStyles$;
+    var resolved = (_resolvedStyles$ = resolvedStyles[0]) !== null && _resolvedStyles$ !== void 0 ? _resolvedStyles$ : resolveStyle(styles, {
+      rowGroup: 'tfoot',
+      ring: 'synthesis',
+      colType: 'thesis',
+      perspectiveIndex: 0
+    }, cellRadialHeight);
+    return jsx("circle", {
+      cx: 0,
+      cy: 0,
+      r: radii.synthesis,
+      fill: resolved.background,
+      stroke: resolved.borderColor,
+      strokeWidth: resolved.borderWidth
+    });
+  }
+  return jsx("g", {
+    children: segments.map(function (seg, i) {
+      if (seg.perspectiveIndex === -1) return null;
+      var s = resolvedStyles[i];
+      var path = describeArc(0, radii.synthesis, seg.startAngle, seg.endAngle);
+      return jsx("path", {
+        d: path,
+        fill: s.background,
+        stroke: s.borderColor,
+        strokeWidth: s.borderWidth
+      }, seg.segmentId);
+    })
   });
 };
 
@@ -628,7 +706,13 @@ var WheelRing = function WheelRing(_ref) {
   var radius = (innerR + outerR) / 2;
   var resolvedStyles = useMemo(function () {
     return segments.map(function (seg) {
-      return resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle);
+      var ctx = {
+        rowGroup: 'thead',
+        ring: 'cycle',
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex
+      };
+      return resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
     });
   }, [segments, styles, cellRadialHeight]);
   var cellEvents = useMemo(function () {
@@ -742,7 +826,13 @@ var CycleRing = function CycleRing(_ref) {
   }, [segments]);
   var resolvedStyles = useMemo(function () {
     return thesisSegments.map(function (seg) {
-      return resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle);
+      var ctx = {
+        rowGroup: 'thead',
+        ring: 'cycle',
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex
+      };
+      return resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
     });
   }, [thesisSegments, styles, cellRadialHeight]);
   var cellEvents = useMemo(function () {
@@ -841,7 +931,13 @@ var SelectionOverlay = function SelectionOverlay(_ref) {
     return s.perspectiveIndex === selectedPerspectiveIdx;
   });
   if (selected.length === 0) return null;
-  var style = resolveStyle(styles, 'neutral', radii.outerEnd - radii.innerStart);
+  var ctx = {
+    rowGroup: 'tbody',
+    ring: 'neutral',
+    colType: 'thesis',
+    perspectiveIndex: selectedPerspectiveIdx
+  };
+  var style = resolveStyle(styles, ctx, radii.outerEnd - radii.innerStart);
   return jsx("g", {
     style: {
       pointerEvents: 'none'
@@ -1055,6 +1151,7 @@ function transformPerspectives(perspectives) {
     theses.push({
       segmentId: tAlias,
       perspectiveIndex: i,
+      isThesis: true,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
       negative: extractStatement(perspective.t_minus),
@@ -1069,6 +1166,7 @@ function transformPerspectives(perspectives) {
     antitheses.push({
       segmentId: aAlias,
       perspectiveIndex: i,
+      isThesis: false,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
       negative: extractStatement(perspective.a_minus),
@@ -1087,6 +1185,7 @@ function transformPerspectives(perspectives) {
     var spacer = {
       segmentId: '__spacer__',
       perspectiveIndex: -1,
+      isThesis: true,
       statement: '',
       positive: '',
       negative: '',
@@ -1107,6 +1206,7 @@ function transformPerspectives(perspectives) {
         segmentId: entry.segmentId,
         perspectiveIndex: entry.perspectiveIndex,
         polarity: polarity,
+        colType: entry.isThesis ? 'thesis' : 'antithesis',
         fullText: getText(entry),
         pairWith: entry.pairWith,
         startAngle: i * segmentAngle,
@@ -1145,18 +1245,27 @@ function mergeCellStyles(segment, cell) {
   return _objectSpread2(_objectSpread2({}, segment), cell);
 }
 
+function mergeRowScope(defaults, user) {
+  if (!defaults && !user) return undefined;
+  if (!defaults) return user;
+  if (!user) return defaults;
+  var merged = _objectSpread2(_objectSpread2({}, defaults), user);
+  if (defaults.thesis || user.thesis) merged.thesis = _objectSpread2(_objectSpread2({}, defaults.thesis), user.thesis);
+  if (defaults.antithesis || user.antithesis) merged.antithesis = _objectSpread2(_objectSpread2({}, defaults.antithesis), user.antithesis);
+  return merged;
+}
 function mergeStyles(user) {
-  var _DEFAULT_STYLES$tbody, _user$tbody, _DEFAULT_STYLES$tbody2, _user$tbody2, _DEFAULT_STYLES$tbody3, _user$tbody3, _DEFAULT_STYLES$tbody4, _user$tbody4;
+  var _DEFAULT_STYLES$tbody, _user$tbody, _DEFAULT_STYLES$tbody2, _user$tbody2, _DEFAULT_STYLES$tbody3, _user$tbody3;
   if (!user) return DEFAULT_STYLES;
   return _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES), user), {}, {
     border: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.border), user.border),
-    thead: _objectSpread2(_objectSpread2({}, DEFAULT_STYLES.thead), user.thead),
+    thead: mergeRowScope(DEFAULT_STYLES.thead, user.thead),
     tbody: _objectSpread2(_objectSpread2(_objectSpread2({}, DEFAULT_STYLES.tbody), user.tbody), {}, {
-      positive: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody === void 0 ? void 0 : _DEFAULT_STYLES$tbody.positive), (_user$tbody = user.tbody) === null || _user$tbody === void 0 ? void 0 : _user$tbody.positive),
-      negative: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody2 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody2 === void 0 ? void 0 : _DEFAULT_STYLES$tbody2.negative), (_user$tbody2 = user.tbody) === null || _user$tbody2 === void 0 ? void 0 : _user$tbody2.negative),
-      neutral: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody3 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody3 === void 0 ? void 0 : _DEFAULT_STYLES$tbody3.neutral), (_user$tbody3 = user.tbody) === null || _user$tbody3 === void 0 ? void 0 : _user$tbody3.neutral),
-      synthesis: _objectSpread2(_objectSpread2({}, (_DEFAULT_STYLES$tbody4 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody4 === void 0 ? void 0 : _DEFAULT_STYLES$tbody4.synthesis), (_user$tbody4 = user.tbody) === null || _user$tbody4 === void 0 ? void 0 : _user$tbody4.synthesis)
-    })
+      positive: mergeRowScope((_DEFAULT_STYLES$tbody = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody === void 0 ? void 0 : _DEFAULT_STYLES$tbody.positive, (_user$tbody = user.tbody) === null || _user$tbody === void 0 ? void 0 : _user$tbody.positive),
+      negative: mergeRowScope((_DEFAULT_STYLES$tbody2 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody2 === void 0 ? void 0 : _DEFAULT_STYLES$tbody2.negative, (_user$tbody2 = user.tbody) === null || _user$tbody2 === void 0 ? void 0 : _user$tbody2.negative),
+      neutral: mergeRowScope((_DEFAULT_STYLES$tbody3 = DEFAULT_STYLES.tbody) === null || _DEFAULT_STYLES$tbody3 === void 0 ? void 0 : _DEFAULT_STYLES$tbody3.neutral, (_user$tbody3 = user.tbody) === null || _user$tbody3 === void 0 ? void 0 : _user$tbody3.neutral)
+    }),
+    tfoot: mergeRowScope(DEFAULT_STYLES.tfoot, user.tfoot)
   });
 }
 var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
@@ -1377,6 +1486,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.outerStart,
           outerR: stitched ? radii.cycleEnd : radii.outerEnd,
           ringName: outerRing,
+          rowGroup: stitched ? 'thead' : 'tbody',
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
@@ -1394,6 +1504,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.middleStart,
           outerR: radii.middleEnd,
           ringName: middleRing,
+          rowGroup: "tbody",
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
@@ -1410,6 +1521,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.innerStart,
           outerR: radii.innerEnd,
           ringName: "positive",
+          rowGroup: "tbody",
           styles: styles,
           rotationRad: rotationRad,
           measure: measure,
@@ -1423,7 +1535,8 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onPointerLeave: handlePointerLeave
         }), jsx(SynthesisRing, {
           styles: styles,
-          radii: radii
+          radii: radii,
+          segments: ringData.positive
         }), headerRing === 'wheel' && jsx(WheelRing, {
           segments: ringData.invisible,
           innerR: radii.cycleStart,

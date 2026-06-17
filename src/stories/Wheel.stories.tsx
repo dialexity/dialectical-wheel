@@ -47,8 +47,8 @@ const defaultStyles = {
     positive: { background: '#C6E5B3', color: '#2d5a2d' },
     negative: { background: '#F9C6CC', color: '#8b1538' },
     neutral: { background: '#ffffff', color: '#333333' },
-    synthesis: { background: '#ffff7a' },
   },
+  tfoot: { background: '#ffff7a' },
 };
 
 const meta: Meta<typeof Wheel> = {
@@ -105,8 +105,8 @@ export const CustomColors: Story = {
         positive: { background: '#D4E8D0', color: '#2D5A2D' },
         negative: { background: '#E8D5E0', color: '#5C2D4F' },
         neutral: { background: '#F5F5DC', color: '#4A4A2E' },
-        synthesis: { background: '#FFD700' },
       },
+      tfoot: { background: '#FFD700' },
     },
   },
 };
@@ -289,5 +289,54 @@ export const FocusedSegment: Story = {
   args: {
     perspectives: samplePerspectives,
     styles: defaultStyles,
+  },
+};
+
+export const PerCellStyling: Story = {
+  args: {
+    perspectives: samplePerspectives,
+    styles: {
+      ...defaultStyles,
+      tbody: {
+        ...defaultStyles.tbody,
+        positive: {
+          ...defaultStyles.tbody.positive,
+          thesis: { background: '#A8D99C' },
+          0: { background: '#8BC34A', color: '#1b3d1b' },
+        },
+        negative: {
+          ...defaultStyles.tbody.negative,
+          antithesis: { background: '#F4A6B0' },
+          1: { background: '#E57373', color: '#fff' },
+        },
+      },
+      tfoot: {
+        background: '#ffff7a',
+        0: { background: '#FFD54F' },
+        1: { background: '#FF8A65' },
+        2: { background: '#81C784' },
+        3: { background: '#64B5F6' },
+      },
+    },
+    interactive: true,
+  },
+};
+
+export const PerCellNeutralHeader: Story = {
+  args: {
+    perspectives: samplePerspectives,
+    neutralOutside: 'header',
+    styles: {
+      ...defaultStyles,
+      thead: {
+        ...defaultStyles.thead,
+        neutral: {
+          background: '#E8EAF6',
+          color: '#1A237E',
+          thesis: { background: '#C5CAE9' },
+        },
+      },
+    },
+    interactive: true,
   },
 };

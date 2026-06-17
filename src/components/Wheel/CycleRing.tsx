@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { polarToCartesian, normalizeAngle, describeArc } from './utils/geometry';
 import { resolveStyle } from './utils/styles';
-import type { SegmentData, CellEvent, Styles } from '../../types';
+import type { SegmentData, CellEvent, Styles, StyleContext } from '../../types';
 
 interface CycleRingProps {
   segments: SegmentData[];
@@ -30,7 +30,15 @@ export const CycleRing: React.FC<CycleRingProps> = ({
   );
 
   const resolvedStyles = useMemo(() =>
-    thesisSegments.map(seg => resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle)),
+    thesisSegments.map(seg => {
+      const ctx: StyleContext = {
+        rowGroup: 'thead',
+        ring: 'cycle',
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex,
+      };
+      return resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
+    }),
     [thesisSegments, styles, cellRadialHeight]
   );
 

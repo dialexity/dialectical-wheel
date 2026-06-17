@@ -32,6 +32,7 @@ export function transformPerspectives(
   type Entry = {
     segmentId: string;
     perspectiveIndex: number;
+    isThesis: boolean;
     statement: string;
     positive: string;
     negative: string;
@@ -53,6 +54,7 @@ export function transformPerspectives(
     theses.push({
       segmentId: tAlias,
       perspectiveIndex: i,
+      isThesis: true,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
       negative: extractStatement(perspective.t_minus),
@@ -67,6 +69,7 @@ export function transformPerspectives(
     antitheses.push({
       segmentId: aAlias,
       perspectiveIndex: i,
+      isThesis: false,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
       negative: extractStatement(perspective.a_minus),
@@ -86,6 +89,7 @@ export function transformPerspectives(
     const spacer: Entry = {
       segmentId: '__spacer__',
       perspectiveIndex: -1,
+      isThesis: true,
       statement: '',
       positive: '',
       negative: '',
@@ -109,6 +113,7 @@ export function transformPerspectives(
       segmentId: entry.segmentId,
       perspectiveIndex: entry.perspectiveIndex,
       polarity,
+      colType: entry.isThesis ? 'thesis' as const : 'antithesis' as const,
       fullText: getText(entry),
       pairWith: entry.pairWith,
       startAngle: i * segmentAngle,

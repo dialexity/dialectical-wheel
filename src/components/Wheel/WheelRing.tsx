@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { polarToCartesian, normalizeAngle, describeArc } from './utils/geometry';
 import { resolveStyle } from './utils/styles';
-import type { SegmentData, CellEvent, Styles } from '../../types';
+import type { SegmentData, CellEvent, Styles, StyleContext } from '../../types';
 
 interface WheelRingProps {
   segments: SegmentData[];
@@ -25,7 +25,15 @@ export const WheelRing: React.FC<WheelRingProps> = ({
   const radius = (innerR + outerR) / 2;
 
   const resolvedStyles = useMemo(() =>
-    segments.map(seg => resolveStyle(styles, 'cycle', cellRadialHeight, seg.cellStyle)),
+    segments.map(seg => {
+      const ctx: StyleContext = {
+        rowGroup: 'thead',
+        ring: 'cycle',
+        colType: seg.colType,
+        perspectiveIndex: seg.perspectiveIndex,
+      };
+      return resolveStyle(styles, ctx, cellRadialHeight, seg.cellStyle);
+    }),
     [segments, styles, cellRadialHeight]
   );
 

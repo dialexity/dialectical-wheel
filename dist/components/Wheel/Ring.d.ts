@@ -6,6 +6,7 @@ interface RingProps {
     innerR: number;
     outerR: number;
     ringName: RingName;
+    rowGroup: 'thead' | 'tbody' | 'tfoot';
     styles: Styles;
     rotationRad: number;
     measure: (text: string, fontSize: number) => number;

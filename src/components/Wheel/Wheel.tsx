@@ -9,7 +9,17 @@ import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
 import { DEFAULT_STYLES } from './utils/styles';
 import { getRadii } from './utils/geometry';
-import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent } from '../../types';
+import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, RowScope } from '../../types';
+
+function mergeRowScope(defaults?: RowScope, user?: RowScope): RowScope | undefined {
+  if (!defaults && !user) return undefined;
+  if (!defaults) return user;
+  if (!user) return defaults;
+  const merged: any = { ...defaults, ...user };
+  if (defaults.thesis || user.thesis) merged.thesis = { ...defaults.thesis, ...user.thesis };
+  if (defaults.antithesis || user.antithesis) merged.antithesis = { ...defaults.antithesis, ...user.antithesis };
+  return merged;
+}
 
 function mergeStyles(user?: Partial<Styles>): Styles {
   if (!user) return DEFAULT_STYLES;
@@ -17,15 +27,15 @@ function mergeStyles(user?: Partial<Styles>): Styles {
     ...DEFAULT_STYLES,
     ...user,
     border: { ...DEFAULT_STYLES.border, ...user.border } as { width: CSSValue; color: string },
-    thead: { ...DEFAULT_STYLES.thead, ...user.thead },
+    thead: mergeRowScope(DEFAULT_STYLES.thead as RowScope, user.thead as RowScope),
     tbody: {
       ...DEFAULT_STYLES.tbody,
       ...user.tbody,
-      positive: { ...DEFAULT_STYLES.tbody?.positive, ...user.tbody?.positive },
-      negative: { ...DEFAULT_STYLES.tbody?.negative, ...user.tbody?.negative },
-      neutral: { ...DEFAULT_STYLES.tbody?.neutral, ...user.tbody?.neutral },
-      synthesis: { ...DEFAULT_STYLES.tbody?.synthesis, ...user.tbody?.synthesis },
+      positive: mergeRowScope(DEFAULT_STYLES.tbody?.positive, user.tbody?.positive),
+      negative: mergeRowScope(DEFAULT_STYLES.tbody?.negative, user.tbody?.negative),
+      neutral: mergeRowScope(DEFAULT_STYLES.tbody?.neutral, user.tbody?.neutral),
     },
+    tfoot: mergeRowScope(DEFAULT_STYLES.tfoot as RowScope, user.tfoot as RowScope),
   };
 }
 
@@ -229,6 +239,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             innerR={radii.outerStart}
             outerR={stitched ? radii.cycleEnd : radii.outerEnd}
             ringName={outerRing}
+            rowGroup={stitched ? 'thead' : 'tbody'}
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
@@ -247,6 +258,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             innerR={radii.middleStart}
             outerR={radii.middleEnd}
             ringName={middleRing}
+            rowGroup="tbody"
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
@@ -264,6 +276,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             innerR={radii.innerStart}
             outerR={radii.innerEnd}
             ringName="positive"
+            rowGroup="tbody"
             styles={styles}
             rotationRad={rotationRad}
             measure={measure}
@@ -276,7 +289,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
           />
-          <SynthesisRing styles={styles} radii={radii} />
+          <SynthesisRing styles={styles} radii={radii} segments={ringData.positive} />
           {headerRing === 'wheel' && (
             <WheelRing
               segments={ringData.invisible}
