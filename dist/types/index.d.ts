@@ -104,7 +104,7 @@ export interface ResolvedCellStyle {
 export type HeaderRing = 'wheel' | 'cycle' | 'none';
 export interface WheelProps {
     perspectives: Perspective[];
-    headerRing?: HeaderRing;
+    header?: HeaderRing;
     interactive?: boolean;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;

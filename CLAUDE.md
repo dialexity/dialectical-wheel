@@ -14,9 +14,9 @@
 - Canvas measureText (with 1.05x factor) used only for font size search, not rendering
 - Bubbling event model: Cell → Segment → Perspective (like td → tr → table)
 - Segment/Perspective over/out only fire when identity changes (ref-tracked), not on every cell boundary
-- Header ring: `headerRing` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
+- Header ring: `header` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
 - WheelRing = all segment labels (T1,A1..); CycleRing = thesis-only labels (T1,T2..)
-- `neutralOutside` accepts `false | true | 'header'` — 'header' merges neutral ring with cycle ring into one taller cell (outerR extends to cycleEnd), no borders by default (only on hover), labels overlay transparently controlled by `headerRing`
+- `neutralOutside` accepts `false | true | 'header'` — 'header' merges neutral ring with cycle ring into one taller cell (outerR extends to cycleEnd), no borders by default (only on hover), labels overlay transparently controlled by `header`
 - Hover highlights full perspective (both thesis+antithesis segments) across all rings
 - SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
 - SynthesisRing has no events

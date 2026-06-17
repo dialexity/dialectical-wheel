@@ -4,7 +4,7 @@ import type { SegmentData, Styles, HeaderRing } from '../../types';
 interface SelectionOverlayProps {
     segments: SegmentData[];
     selectedPerspectiveIdx: number;
-    headerRing: HeaderRing;
+    header: HeaderRing;
     stitched?: boolean;
     styles: Styles;
     radii: Radii;

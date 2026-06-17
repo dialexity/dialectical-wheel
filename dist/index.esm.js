@@ -923,7 +923,7 @@ var CycleRing = function CycleRing(_ref) {
 var SelectionOverlay = function SelectionOverlay(_ref) {
   var segments = _ref.segments,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
-    headerRing = _ref.headerRing,
+    header = _ref.header,
     stitched = _ref.stitched,
     styles = _ref.styles,
     radii = _ref.radii;
@@ -944,7 +944,7 @@ var SelectionOverlay = function SelectionOverlay(_ref) {
     },
     children: selected.map(function (seg) {
       var isThesis = !seg.segmentId.startsWith('A');
-      var includeHeader = stitched || headerRing === 'wheel' || headerRing === 'cycle' && isThesis;
+      var includeHeader = stitched || header === 'wheel' || header === 'cycle' && isThesis;
       var outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
       var path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);
       return jsx("path", {
@@ -1270,8 +1270,8 @@ function mergeStyles(user) {
 }
 var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var perspectives = _ref.perspectives,
-    _ref$headerRing = _ref.headerRing,
-    headerRing = _ref$headerRing === void 0 ? 'wheel' : _ref$headerRing,
+    _ref$header = _ref.header,
+    header = _ref$header === void 0 ? 'wheel' : _ref$header,
     _ref$interactive = _ref.interactive,
     interactive = _ref$interactive === void 0 ? false : _ref$interactive,
     selectedPerspectiveProp = _ref.selectedPerspective,
@@ -1537,7 +1537,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           styles: styles,
           radii: radii,
           segments: ringData.positive
-        }), headerRing === 'wheel' && jsx(WheelRing, {
+        }), header === 'wheel' && jsx(WheelRing, {
           segments: ringData.invisible,
           innerR: radii.cycleStart,
           outerR: radii.cycleEnd,
@@ -1550,7 +1550,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
-        }), headerRing === 'cycle' && jsx(CycleRing, {
+        }), header === 'cycle' && jsx(CycleRing, {
           segments: ringData.invisible,
           innerR: radii.cycleStart,
           outerR: radii.cycleEnd,
@@ -1566,7 +1566,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
         }), selectedPerspective != null && jsx(SelectionOverlay, {
           segments: ringData.positive,
           selectedPerspectiveIdx: selectedPerspective,
-          headerRing: headerRing,
+          header: header,
           stitched: stitched,
           styles: styles,
           radii: radii

@@ -41,7 +41,7 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 
 const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
-  headerRing = 'wheel',
+  header = 'wheel',
   interactive = false,
   selectedPerspective: selectedPerspectiveProp,
   focusedSegment: focusedSegmentProp,
@@ -290,7 +290,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             onPointerLeave={handlePointerLeave}
           />
           <SynthesisRing styles={styles} radii={radii} segments={ringData.positive} />
-          {headerRing === 'wheel' && (
+          {header === 'wheel' && (
             <WheelRing
               segments={ringData.invisible}
               innerR={radii.cycleStart}
@@ -306,7 +306,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               onPointerLeave={handlePointerLeave}
             />
           )}
-          {headerRing === 'cycle' && (
+          {header === 'cycle' && (
             <CycleRing
               segments={ringData.invisible}
               innerR={radii.cycleStart}
@@ -326,7 +326,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             <SelectionOverlay
               segments={ringData.positive}
               selectedPerspectiveIdx={selectedPerspective}
-              headerRing={headerRing}
+              header={header}
               stitched={stitched}
               styles={styles}
               radii={radii}
