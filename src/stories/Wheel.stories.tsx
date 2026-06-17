@@ -61,6 +61,10 @@ const meta: Meta<typeof Wheel> = {
       control: { type: 'select' },
       options: [false, true, 'header'],
     },
+    direction: {
+      control: { type: 'select' },
+      options: [undefined, 'left', 'right'],
+    },
   },
 };
 
@@ -319,6 +323,53 @@ export const PerCellStyling: Story = {
       },
     },
     interactive: true,
+  },
+};
+
+export const DirectionRight: Story = {
+  args: {
+    ...Default.args,
+    direction: 'right',
+  },
+};
+
+export const DirectionLeft: Story = {
+  args: {
+    ...Default.args,
+    direction: 'left',
+  },
+};
+
+export const DirectionCycleHeader: Story = {
+  args: {
+    ...Default.args,
+    header: 'cycle',
+    direction: 'right',
+  },
+};
+
+export const DirectionStyled: Story = {
+  args: {
+    ...Default.args,
+    direction: 'right',
+    styles: {
+      ...defaultStyles,
+      thead: {
+        ...defaultStyles.thead,
+        arrow: { color: '#e63946', width: 1.5 },
+        hoverArrowColor: '#d00000',
+      },
+    },
+  },
+};
+
+export const DirectionHidden: Story = {
+  args: {
+    ...Default.args,
+    styles: {
+      ...defaultStyles,
+      arrow: { color: 'transparent', width: 1 },
+    },
   },
 };
 

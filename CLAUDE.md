@@ -38,6 +38,10 @@
 - `resolveStyle` in utils/styles.ts is the single resolution point — all rings/components call it with a `StyleContext`
 - Ring.tsx takes `rowGroup` prop to tell resolveStyle which section it belongs to
 - SynthesisRing renders per-segment wedges when tfoot styles differ per perspective, otherwise a single circle
+- Direction arrows render inside each header ring cell's `<g>` — inherit dimming, elevation, opacity transitions
+- Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
+- CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
+- Arrow visibility: `arrow.color !== 'transparent'` — no separate opacity flag; cascading color controls show/hide
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
@@ -53,10 +57,14 @@
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR
 - `styles.tbody.synthesis` is deprecated but still works as fallback in resolveStyle when `tfoot` is undefined — don't remove without migration
 - `RowScope` uses TypeScript intersection with `{ [n: number]: ... }` — numeric keys alongside named props; pure interfaces can't express this
+- Arrow tangent at angle θ: tangentX = cos(θ), tangentY = sin(θ) (because polarToCartesian uses sin/−cos mapping); radialX = sin(θ), radialY = −cos(θ)
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
 - `HeaderRing = 'wheel' | 'cycle' | 'none'` — type for the `header` prop (previously named `headerRing`)
+- `WheelDirection = 'left' | 'right'` — type for the `direction` prop (default 'right'); models reading direction ('right' = clockwise, 'left' = counterclockwise); does not affect data order
+- `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to table-level border color (visible by default), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
+- `CellStyle.hoverArrowColor` — arrow color on hover, defaults to hoverBorderColor
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
 - `ClickedCell` is deprecated alias for `CellEvent`

@@ -90,16 +90,31 @@ export function resolveStyle(
     return undefined;
   };
 
+  const getArrow = (prop: 'width' | 'color'): string | CSSValue | undefined => {
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const a = layers[i]?.arrow;
+      if (a && a[prop] !== undefined) return a[prop];
+    }
+    return undefined;
+  };
+
+  const resolvedBorderColor = (getBorder('color') as string) || '#ddd';
+  const resolvedHoverBorderColor = (get('hoverBorderColor') as string) || '#999';
+  const tableBorderColor = (styles as Partial<CellStyle>).border?.color || '#ddd';
+
   return {
     background: (get('background') as string) || '#ffffff',
     color: (get('color') as string) || '#333333',
     fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
     padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
-    borderColor: (getBorder('color') as string) || '#ddd',
-    hoverBorderColor: (get('hoverBorderColor') as string) || '#999',
+    borderColor: resolvedBorderColor,
+    hoverBorderColor: resolvedHoverBorderColor,
     selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 1),
     selectedBorderColor: (getSelectedBorder('color') as string) || '#666',
+    arrowColor: (getArrow('color') as string) || tableBorderColor,
+    arrowHoverColor: (get('hoverArrowColor') as string) || resolvedHoverBorderColor,
+    arrowWidth: resolveCSSValue(getArrow('width'), cellRadialHeight, cellRadialHeight * 0.03),
   };
 }
 

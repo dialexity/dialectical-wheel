@@ -12,6 +12,8 @@ export interface CellStyle {
   border: { width: CSSValue; color: string };
   hoverBorderColor: string;
   selectedBorder: { width: CSSValue; color: string };
+  arrow: { color: string; width: CSSValue };
+  hoverArrowColor: string;
 }
 
 export type RowScope = Partial<CellStyle> & {
@@ -107,15 +109,20 @@ export interface ResolvedCellStyle {
   hoverBorderColor: string;
   selectedBorderWidth: number;
   selectedBorderColor: string;
+  arrowColor: string;
+  arrowHoverColor: string;
+  arrowWidth: number;
 }
 
 // --- Props ---
 
 export type HeaderRing = 'wheel' | 'cycle' | 'none';
+export type WheelDirection = 'left' | 'right';
 
 export interface WheelProps {
   perspectives: Perspective[];
   header?: HeaderRing;
+  direction?: WheelDirection;
   interactive?: boolean;
   selectedPerspective?: number | null;
   focusedSegment?: string | null;

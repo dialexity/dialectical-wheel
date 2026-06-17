@@ -102,9 +102,11 @@ export interface ResolvedCellStyle {
     selectedBorderColor: string;
 }
 export type HeaderRing = 'wheel' | 'cycle' | 'none';
+export type WheelDirection = 'left' | 'right';
 export interface WheelProps {
     perspectives: Perspective[];
     header?: HeaderRing;
+    direction?: WheelDirection;
     interactive?: boolean;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;

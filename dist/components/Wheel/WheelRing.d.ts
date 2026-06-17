@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SegmentData, CellEvent, Styles } from '../../types';
+import type { SegmentData, CellEvent, Styles, WheelDirection } from '../../types';
 interface WheelRingProps {
     segments: SegmentData[];
     innerR: number;
@@ -7,6 +7,7 @@ interface WheelRingProps {
     rotationRad: number;
     styles: Styles;
     transparent?: boolean;
+    direction?: WheelDirection;
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;

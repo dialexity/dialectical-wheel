@@ -700,6 +700,7 @@ var WheelRing = function WheelRing(_ref) {
     rotationRad = _ref.rotationRad,
     styles = _ref.styles,
     transparent = _ref.transparent,
+    direction = _ref.direction,
     hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     focusAnimatingIdx = _ref.focusAnimatingIdx,
@@ -786,6 +787,21 @@ var WheelRing = function WheelRing(_ref) {
     if (selectedPerspectiveIdx != null && segment.perspectiveIndex !== selectedPerspectiveIdx && segment.perspectiveIndex !== hoveredPerspectiveIdx) return 1 - dimUnfocused;
     return 1;
   };
+  var arrowAngles = react.useMemo(function () {
+    if (!direction) return [];
+    var nonSpacer = segments.filter(function (s) {
+      return s.perspectiveIndex !== -1;
+    });
+    if (nonSpacer.length < 2) return [];
+    var angles = [];
+    for (var i = 0; i < nonSpacer.length; i++) {
+      var next = (i + 1) % nonSpacer.length;
+      var boundary = (nonSpacer[i].endAngle + nonSpacer[next].startAngle) / 2;
+      angles.push(boundary);
+    }
+    return angles;
+  }, [segments, direction]);
+  var arrowSize = (outerR - innerR) * 0.22;
   return jsxRuntime.jsxs("g", {
     children: [segments.map(function (segment, i) {
       return isSpacer(segment) || isElevated(segment) ? null : jsxRuntime.jsx("g", {
@@ -803,6 +819,19 @@ var WheelRing = function WheelRing(_ref) {
         },
         children: renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)
       }, "wrap-".concat(segment.segmentId));
+    }), direction && arrowAngles.map(function (angle, i) {
+      var _resolvedStyles$0$col, _resolvedStyles$;
+      var _polarToCartesian3 = polarToCartesian(radius, angle),
+        _polarToCartesian4 = _slicedToArray(_polarToCartesian3, 2),
+        x = _polarToCartesian4[0],
+        y = _polarToCartesian4[1];
+      var tangentDeg = angle * 180 / Math.PI + (direction === 'left' ? -90 : 90);
+      return jsxRuntime.jsx("polygon", {
+        points: "0,".concat(-arrowSize, " ").concat(arrowSize * 0.6, ",").concat(arrowSize * 0.5, " ").concat(-arrowSize * 0.6, ",").concat(arrowSize * 0.5),
+        transform: "translate(".concat(x, ",").concat(y, ") rotate(").concat(tangentDeg, ")"),
+        fill: (_resolvedStyles$0$col = (_resolvedStyles$ = resolvedStyles[0]) === null || _resolvedStyles$ === void 0 ? void 0 : _resolvedStyles$.color) !== null && _resolvedStyles$0$col !== void 0 ? _resolvedStyles$0$col : '#666',
+        opacity: 0.6
+      }, "arrow-".concat(i));
     })]
   });
 };
@@ -815,6 +844,7 @@ var CycleRing = function CycleRing(_ref) {
     rotationRad = _ref.rotationRad,
     styles = _ref.styles,
     transparent = _ref.transparent,
+    direction = _ref.direction,
     hoveredPerspectiveIdx = _ref.hoveredPerspectiveIdx,
     selectedPerspectiveIdx = _ref.selectedPerspectiveIdx,
     focusAnimatingIdx = _ref.focusAnimatingIdx,
@@ -903,6 +933,18 @@ var CycleRing = function CycleRing(_ref) {
     if (selectedPerspectiveIdx != null && segment.perspectiveIndex !== selectedPerspectiveIdx && segment.perspectiveIndex !== hoveredPerspectiveIdx) return 1 - dimUnfocused;
     return 1;
   };
+  var arrowAngles = react.useMemo(function () {
+    if (!direction) return [];
+    if (thesisSegments.length < 2) return [];
+    var angles = [];
+    for (var i = 0; i < thesisSegments.length; i++) {
+      var next = (i + 1) % thesisSegments.length;
+      var boundary = (thesisSegments[i].endAngle + thesisSegments[next].startAngle) / 2;
+      angles.push(boundary);
+    }
+    return angles;
+  }, [thesisSegments, direction]);
+  var arrowSize = (outerR - innerR) * 0.22;
   return jsxRuntime.jsxs("g", {
     children: [thesisSegments.map(function (segment, i) {
       return isElevated(segment) ? null : jsxRuntime.jsx("g", {
@@ -920,6 +962,19 @@ var CycleRing = function CycleRing(_ref) {
         },
         children: renderSegment(segment, i, segment.perspectiveIndex === hoveredPerspectiveIdx)
       }, "wrap-".concat(segment.segmentId));
+    }), direction && arrowAngles.map(function (angle, i) {
+      var _resolvedStyles$0$col, _resolvedStyles$;
+      var _polarToCartesian3 = polarToCartesian(radius, angle),
+        _polarToCartesian4 = _slicedToArray(_polarToCartesian3, 2),
+        x = _polarToCartesian4[0],
+        y = _polarToCartesian4[1];
+      var tangentDeg = angle * 180 / Math.PI + (direction === 'left' ? -90 : 90);
+      return jsxRuntime.jsx("polygon", {
+        points: "0,".concat(-arrowSize, " ").concat(arrowSize * 0.6, ",").concat(arrowSize * 0.5, " ").concat(-arrowSize * 0.6, ",").concat(arrowSize * 0.5),
+        transform: "translate(".concat(x, ",").concat(y, ") rotate(").concat(tangentDeg, ")"),
+        fill: (_resolvedStyles$0$col = (_resolvedStyles$ = resolvedStyles[0]) === null || _resolvedStyles$ === void 0 ? void 0 : _resolvedStyles$.color) !== null && _resolvedStyles$0$col !== void 0 ? _resolvedStyles$0$col : '#666',
+        opacity: 0.6
+      }, "arrow-".concat(i));
     })]
   });
 };
@@ -1276,6 +1331,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var perspectives = _ref.perspectives,
     _ref$header = _ref.header,
     header = _ref$header === void 0 ? 'wheel' : _ref$header,
+    direction = _ref.direction,
     _ref$interactive = _ref.interactive,
     interactive = _ref$interactive === void 0 ? false : _ref$interactive,
     selectedPerspectiveProp = _ref.selectedPerspective,
@@ -1548,6 +1604,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
           rotationRad: rotationRad,
           styles: styles,
           transparent: stitched,
+          direction: direction,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
@@ -1561,6 +1618,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
           rotationRad: rotationRad,
           styles: styles,
           transparent: stitched,
+          direction: direction,
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,

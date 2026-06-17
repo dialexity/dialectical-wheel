@@ -42,6 +42,7 @@ function mergeStyles(user?: Partial<Styles>): Styles {
 const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
   header = 'wheel',
+  direction = 'right',
   interactive = false,
   selectedPerspective: selectedPerspectiveProp,
   focusedSegment: focusedSegmentProp,
@@ -298,6 +299,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               rotationRad={rotationRad}
               styles={styles}
               transparent={stitched}
+              direction={direction}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
@@ -314,6 +316,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               rotationRad={rotationRad}
               styles={styles}
               transparent={stitched}
+              direction={direction}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
