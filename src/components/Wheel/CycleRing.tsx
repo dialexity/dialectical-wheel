@@ -11,6 +11,7 @@ interface CycleRingProps {
   styles: Styles;
   transparent?: boolean;
   direction?: WheelDirection;
+  showArrows?: boolean;
   hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
@@ -20,7 +21,7 @@ interface CycleRingProps {
 }
 
 export const CycleRing: React.FC<CycleRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, transparent, direction, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, transparent, direction, showArrows = true, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -115,7 +116,7 @@ export const CycleRing: React.FC<CycleRingProps> = ({
         >
           {segment.segmentId}
         </text>
-        {style.arrowColor !== 'transparent' && (
+        {showArrows && style.arrowColor !== 'transparent' && (
           <g>
             <path
               d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
@@ -148,10 +149,10 @@ export const CycleRing: React.FC<CycleRingProps> = ({
     return 1;
   };
 
-  const showArrows = resolvedStyles[0]?.arrowColor !== 'transparent';
+  const hasVisibleArrows = showArrows && resolvedStyles[0]?.arrowColor !== 'transparent';
 
   const connectingArc = useMemo(() => {
-    if (!showArrows || thesisSegments.length < 2) return null;
+    if (!hasVisibleArrows || thesisSegments.length < 2) return null;
     const last = thesisSegments[thesisSegments.length - 1];
     const first = thesisSegments[0];
     const cellSpan = last.endAngle - last.startAngle;
@@ -177,7 +178,7 @@ export const CycleRing: React.FC<CycleRingProps> = ({
       d: `M${s1x},${s1y} A${radius},${radius} 0 ${largeArc} ${cw ? 1 : 0} ${s2x},${s2y}`,
       head: `M${tx},${ty} L${s2x},${s2y} L${tx2},${ty2}`,
     };
-  }, [showArrows, thesisSegments, radius, direction, arrowSize]);
+  }, [hasVisibleArrows, thesisSegments, radius, direction, arrowSize]);
 
   return (
     <g>

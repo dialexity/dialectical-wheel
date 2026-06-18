@@ -11,6 +11,7 @@ interface WheelRingProps {
   styles: Styles;
   transparent?: boolean;
   direction?: WheelDirection;
+  showArrows?: boolean;
   hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
@@ -20,7 +21,7 @@ interface WheelRingProps {
 }
 
 export const WheelRing: React.FC<WheelRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, transparent, direction, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, transparent, direction, showArrows = true, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -112,7 +113,7 @@ export const WheelRing: React.FC<WheelRingProps> = ({
         >
           {segment.segmentId}
         </text>
-        {style.arrowColor !== 'transparent' && (
+        {showArrows && style.arrowColor !== 'transparent' && (
           <g>
             <path
               d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}

@@ -43,6 +43,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
   header = 'wheel',
   direction = 'right',
+  showArrows = true,
   interactive = false,
   selectedPerspective: selectedPerspectiveProp,
   focusedSegment: focusedSegmentProp,
@@ -315,6 +316,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               styles={styles}
               transparent={stitched}
               direction={direction}
+              showArrows={showArrows}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
@@ -332,6 +334,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               styles={styles}
               transparent={stitched}
               direction={direction}
+              showArrows={showArrows}
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}

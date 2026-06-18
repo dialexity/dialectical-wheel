@@ -65,6 +65,7 @@
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
 - `HeaderRing = 'wheel' | 'cycle' | 'none'` — type for the `header` prop (previously named `headerRing`)
 - `WheelDirection = 'left' | 'right'` — type for the `direction` prop (default 'right'); models reading direction ('right' = clockwise, 'left' = counterclockwise); does not affect data order
+- `showArrows` prop (default `true`) — prop-level kill switch for all arrows; independent of style system (colors stay intact for when re-enabled)
 - `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to table-level border color (visible by default), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
 - `CellStyle.hoverArrowColor` — arrow color on hover, defaults to hoverBorderColor
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
