@@ -8,6 +8,7 @@ interface CycleRingProps {
     styles: Styles;
     transparent?: boolean;
     direction?: WheelDirection;
+    showArrows?: boolean;
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;

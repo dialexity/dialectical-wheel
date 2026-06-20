@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useRef, useState, useEffect, forwardRef } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
+import { InwardSpiralArrows } from './InwardSpiralArrows';
 import { WheelRing } from './WheelRing';
 import { CycleRing } from './CycleRing';
 import { SelectionOverlay } from './SelectionOverlay';
@@ -44,6 +45,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   header = 'wheel',
   direction = 'right',
   showArrows = true,
+  showInwardSpiral = false,
   interactive = false,
   selectedPerspective: selectedPerspectiveProp,
   focusedSegment: focusedSegmentProp,
@@ -307,6 +309,18 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             onPointerLeave={handlePointerLeave}
           />
           <SynthesisRing styles={styles} radii={radii} segments={ringData.positive} />
+          {showInwardSpiral && (
+            <InwardSpiralArrows
+              segments={{ negative: ringData.negative, positive: ringData.positive }}
+              radii={radii}
+              neutralOutside={neutralOutside}
+              direction={direction}
+              styles={styles}
+              hoveredPerspectiveIdx={hoveredPerspectiveIdx}
+              selectedPerspectiveIdx={selectedPerspective}
+              focusAnimatingIdx={focusAnimatingIdx}
+            />
+          )}
           {header === 'wheel' && (
             <WheelRing
               segments={ringData.invisible}

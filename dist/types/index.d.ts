@@ -115,6 +115,9 @@ export interface WheelProps {
     perspectives: Perspective[];
     header?: HeaderRing;
     direction?: WheelDirection;
+    showArrows?: boolean;
+    showInwardSpiral?: boolean;
+    showOutwardSpiral?: boolean;
     interactive?: boolean;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;

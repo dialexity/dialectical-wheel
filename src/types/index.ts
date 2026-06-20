@@ -124,6 +124,7 @@ export interface WheelProps {
   header?: HeaderRing;
   direction?: WheelDirection;
   showArrows?: boolean;
+  showInwardSpiral?: boolean;
   interactive?: boolean;
   selectedPerspective?: number | null;
   focusedSegment?: string | null;

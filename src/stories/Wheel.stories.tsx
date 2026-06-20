@@ -373,6 +373,37 @@ export const DirectionHidden: Story = {
   },
 };
 
+export const InwardSpiral: Story = {
+  args: {
+    ...Default.args,
+    showInwardSpiral: true,
+  },
+};
+
+export const InwardSpiralNeutralOutside: Story = {
+  args: {
+    ...Default.args,
+    neutralOutside: true,
+    showInwardSpiral: true,
+  },
+};
+
+export const SpiralLeftDirection: Story = {
+  args: {
+    ...Default.args,
+    direction: 'left',
+    showInwardSpiral: true,
+  },
+};
+
+export const SpiralOnePerspective: Story = {
+  args: {
+    perspectives: [samplePerspectives[0]],
+    styles: defaultStyles,
+    showInwardSpiral: true,
+  },
+};
+
 export const PerCellNeutralHeader: Story = {
   args: {
     perspectives: samplePerspectives,

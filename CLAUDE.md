@@ -44,6 +44,10 @@
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
 - Arrow visibility: `arrow.color !== 'transparent'` — no separate opacity flag; cascading color controls show/hide
+- `InwardSpiralArrows`: quadratic bezier arrows from neg ring into pos ring; skipped for 1 perspective
+- `showInwardSpiral` prop enables inward spiral arrows connecting negative cells to next positive cells (clockwise or per direction)
+- Spiral arrow geometry: start at leading edge of neg cell (30% inward from inner edge), end just inside pos cell outer corner (15% inward), control point at ring boundary midpoint
+- `neutralOutside` affects spiral radii: when true, neg ring = middleStart..middleEnd; boundary shared with pos ring at innerEnd
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
@@ -60,6 +64,7 @@
 - `styles.tbody.synthesis` is deprecated but still works as fallback in resolveStyle when `tfoot` is undefined — don't remove without migration
 - `RowScope` uses TypeScript intersection with `{ [n: number]: ... }` — numeric keys alongside named props; pure interfaces can't express this
 - Arrow tangent at angle θ: tangentX = cos(θ), tangentY = sin(θ) (because polarToCartesian uses sin/−cos mapping); radialX = sin(θ), radialY = −cos(θ)
+- Angular midpoint for spiral arrows must account for CW/CCW wrapping: use `(angle + 2π) % 2π` to get positive delta in travel direction
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"
