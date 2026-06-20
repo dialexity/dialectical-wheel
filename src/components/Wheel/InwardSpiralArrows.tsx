@@ -1,7 +1,16 @@
 import React, { useMemo } from 'react';
 import { polarToCartesian } from './utils/geometry';
-import type { SegmentData, Styles, WheelDirection } from '../../types';
+import type { CSSValue, SegmentData, Styles, WheelDirection } from '../../types';
 import type { Radii } from './utils/geometry';
+
+function resolveCSSValue(value: CSSValue | undefined, relativeTo: number, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (typeof value === 'number') return value;
+  const str = value.trim();
+  if (str.endsWith('%')) return (parseFloat(str) / 100) * relativeTo;
+  if (str.endsWith('px')) return parseFloat(str);
+  return parseFloat(str) || fallback;
+}
 
 export interface SpiralArrowsProps {
   segments: {
@@ -33,6 +42,8 @@ export const InwardSpiralArrows: React.FC<SpiralArrowsProps> = ({
     // Positive ring boundaries (inner = green ring)
     const posInner = radii.innerStart;
     const posOuter = radii.innerEnd;
+
+    const arrowSize = (negOuter - negInner) * 0.15;
 
     // Arrow spans from inside neg ring to just inside pos ring corner
     // Start: 30% inward from neg inner edge
@@ -77,27 +88,33 @@ export const InwardSpiralArrows: React.FC<SpiralArrowsProps> = ({
 
       const path = `M${sx},${sy} Q${cx},${cy} ${ex},${ey}`;
 
-      // Arrowhead from tangent at t=1: tangent = 2*(E - CP)
+      // Open chevron arrowhead (matching causality arrows)
+      // Tangent at t=1: tangent = 2*(E - CP)
       const tx = 2 * (ex - cx);
       const ty = 2 * (ey - cy);
       const tLen = Math.sqrt(tx * tx + ty * ty);
       const ux = tx / tLen;
       const uy = ty / tLen;
-      const headLen = 6;
-      const headWidth = 3;
       const px = -uy;
       const py = ux;
-      const h1x = ex - ux * headLen + px * headWidth;
-      const h1y = ey - uy * headLen + py * headWidth;
-      const h2x = ex - ux * headLen - px * headWidth;
-      const h2y = ey - uy * headLen - py * headWidth;
-      const head = `M${ex},${ey} L${h1x},${h1y} L${h2x},${h2y} Z`;
+      const hl = arrowSize * 0.35;
+      const h1x = ex - ux * hl + px * hl * 0.5;
+      const h1y = ey - uy * hl + py * hl * 0.5;
+      const h2x = ex - ux * hl - px * hl * 0.5;
+      const h2y = ey - uy * hl - py * hl * 0.5;
+      const head = `M${h1x},${h1y} L${ex},${ey} L${h2x},${h2y}`;
 
       result.push({ fromIdx: negSeg.perspectiveIndex, toIdx: posSeg.perspectiveIndex, path, head });
     }
 
     return result;
   }, [segments, radii, neutralOutside, direction]);
+
+  const negCellHeight = neutralOutside
+    ? radii.middleEnd - radii.middleStart
+    : radii.outerEnd - radii.outerStart;
+  const spiralColor = styles.spiralArrow?.color ?? '#333';
+  const spiralWidth = resolveCSSValue(styles.spiralArrow?.width, negCellHeight, negCellHeight * 0.03);
 
   const dimUnfocused = styles.dimUnfocused ?? 0.5;
 
@@ -125,14 +142,17 @@ export const InwardSpiralArrows: React.FC<SpiralArrowsProps> = ({
           <path
             d={arrow.path}
             fill="none"
-            stroke="#000"
-            strokeWidth={1.5}
+            stroke={spiralColor}
+            strokeWidth={spiralWidth}
             strokeLinecap="round"
           />
           <path
             d={arrow.head}
-            fill="#000"
-            stroke="none"
+            fill="none"
+            stroke={spiralColor}
+            strokeWidth={spiralWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
         </g>
       ))}

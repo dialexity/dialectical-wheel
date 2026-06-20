@@ -44,8 +44,9 @@
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
 - Arrow visibility: `arrow.color !== 'transparent'` — no separate opacity flag; cascading color controls show/hide
-- `InwardSpiralArrows`: quadratic bezier arrows from neg ring into pos ring; skipped for 1 perspective
+- `InwardSpiralArrows`: quadratic bezier arrows from neg ring into pos ring; skipped for 1 perspective; hidden when `interactive` + selected
 - `showInwardSpiral` prop enables inward spiral arrows connecting negative cells to next positive cells (clockwise or per direction)
+- Spiral arrows use open chevron arrowhead (same shape as causality arrows) — not filled triangles
 - Spiral arrow geometry: start at leading edge of neg cell (30% inward from inner edge), end just inside pos cell outer corner (15% inward), control point at ring boundary midpoint
 - `neutralOutside` affects spiral radii: when true, neg ring = middleStart..middleEnd; boundary shared with pos ring at innerEnd
 
@@ -71,6 +72,7 @@
 - `HeaderRing = 'wheel' | 'cycle' | 'none'` — type for the `header` prop (previously named `headerRing`)
 - `WheelDirection = 'left' | 'right'` — type for the `direction` prop (default 'right'); models reading direction ('right' = clockwise, 'left' = counterclockwise); does not affect data order
 - `showArrows` prop (default `true`) — prop-level kill switch for all arrows; independent of style system (colors stay intact for when re-enabled)
+- `Styles.spiralArrow: { color?, width? }` — global-only (no cascade); color defaults to `#333`, width defaults to 3% of neg cell height
 - `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to table-level border color (visible by default), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
 - `CellStyle.hoverArrowColor` — arrow color on hover, defaults to hoverBorderColor
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties

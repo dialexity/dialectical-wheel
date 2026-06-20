@@ -309,7 +309,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             onPointerLeave={handlePointerLeave}
           />
           <SynthesisRing styles={styles} radii={radii} segments={ringData.positive} />
-          {showInwardSpiral && (
+          {showInwardSpiral && !(interactive && selectedPerspective != null) && (
             <InwardSpiralArrows
               segments={{ negative: ringData.negative, positive: ringData.positive }}
               radii={radii}

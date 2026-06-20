@@ -23,6 +23,7 @@ export type RowScope = Partial<CellStyle> & {
 
 export interface Styles extends Partial<CellStyle> {
   dimUnfocused?: number;
+  spiralArrow?: { color?: string; width?: CSSValue };
   thead?: RowScope & { neutral?: RowScope };
   tbody?: Partial<CellStyle> & {
     positive?: RowScope;
