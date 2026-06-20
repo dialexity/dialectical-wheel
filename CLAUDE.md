@@ -31,6 +31,7 @@
 - If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
 - Equidistant tie-break: T prefers top (−180°), A prefers bottom (+180°)
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
+- Focus animation skips phased fade when rotation delta < 1° (segment already at target) — just dims without flicker
 - Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor
 - `isRotationPaused` suppresses CSS transition on `<g>` during fade-out so rotation doesn't animate early
 - `focusAnimatingIdx` drives opacity on non-focused perspective cells across all rings
@@ -59,6 +60,7 @@
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
 - `rotationDegRef` mirrors `rotationDeg` state so the focus effect can read current rotation without depending on it
+- `effectiveFocusedSegment` derives from `selectedPerspective` when `focusedSegment` is null — skipping `setInternalFocused` alone won't prevent useRotation from firing
 - `onPointerDown` captures `rotationDeg` in its deps — this is correct; it needs the latest value for drag start
 - Rotation causes cells to slide under a stationary cursor — suppress hover until real `pointerMove` fires, otherwise selection dimming breaks. The `focusAnimatingIdx` effect handles this for phased animation; imperative rotation (e.g. `refocusWithoutFade`) must suppress manually.
 - package.json `exports.source` condition lets Vite/Storybook resolve TypeScript source directly for HMR

@@ -55,6 +55,14 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
 
     clearTimers();
 
+    // If segment is already at focus position, skip phased animation (no flicker)
+    const delta = ((targetRaw - rotationDegRef.current) % 360 + 540) % 360 - 180;
+    if (Math.abs(delta) < 1) {
+      setFocusAnimatingIdx(null);
+      setIsRotationPaused(false);
+      return;
+    }
+
     // Phase 1: fade out others (pause rotation transition)
     setIsRotationPaused(true);
     setFocusAnimatingIdx(perspectiveIdx);
