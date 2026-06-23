@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState, useRef } from 'react';
-import { Wheel } from '../components';
+import { Wheel, Callout } from '../components';
 import { exportWheelSVG, exportWheelPNG, downloadBlob } from '../export';
 import type { SegmentEvent } from '../types';
 
@@ -404,6 +404,47 @@ export const SpiralOnePerspective: Story = {
   },
 };
 
+export const CalloutOnePerspective: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T" border={{ color: '#2d5a2d' }}>
+        <div><strong>Tr1 (0.74)</strong></div>
+        <div>Rank by complexity</div>
+      </Callout>
+      <Callout rightEdge="A" border={{ color: '#8b1538' }}>
+        <div><strong>Tr2 (0.91)</strong></div>
+        <div>Document anomalies</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: [samplePerspectives[0]],
+    styles: defaultStyles,
+    interactive: true,
+  },
+};
+
+export const CalloutOnePerspectiveSpiral: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T" border={{ color: '#2d5a2d' }}>
+        <div><strong>Tr1 (0.74)</strong></div>
+        <div>Rank by complexity</div>
+      </Callout>
+      <Callout rightEdge="A" border={{ color: '#8b1538' }}>
+        <div><strong>Tr2 (0.91)</strong></div>
+        <div>Document anomalies</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: [samplePerspectives[0]],
+    styles: defaultStyles,
+    showInwardSpiral: true,
+    interactive: true,
+  },
+};
+
 export const PerCellNeutralHeader: Story = {
   args: {
     perspectives: samplePerspectives,
@@ -419,6 +460,111 @@ export const PerCellNeutralHeader: Story = {
         },
       },
     },
+    interactive: true,
+  },
+};
+
+export const WithCallouts: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T" header={<strong>Tr1 (0.74)</strong>}>
+        <div>Rank by complexity</div>
+      </Callout>
+      <Callout segment="T4" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
+        <div>Cement evaluation protocol</div>
+      </Callout>
+      <Callout rightEdge="A" header={<strong>Tr3 (0.82)</strong>}>
+        <div>Pre-defined timelines</div>
+      </Callout>
+      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
+        <div>Document anomalies resolutions</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: samplePerspectives,
+    styles: defaultStyles,
+    interactive: true,
+  },
+};
+
+export const CalloutRichContent: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T" border={{ color: '#2d5a2d', width: 1.5 }} header="Treatment 1">
+        <div style={{ background: '#fff', borderRadius: 3, padding: '4px 8px', margin: -4 }}>
+          <div><strong>Score: 0.74</strong></div>
+          <p style={{ margin: '4px 0', fontSize: 10 }}>
+            This treatment ranks alternatives by complexity score and filters
+            out any perspective below the threshold. It has been validated across
+            multiple scenarios with consistent results.
+          </p>
+          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+            <button style={{ fontSize: 9, padding: '2px 6px', cursor: 'pointer' }}>Edit</button>
+            <button style={{ fontSize: 9, padding: '2px 6px', cursor: 'pointer' }}>Delete</button>
+            <button style={{ fontSize: 9, padding: '2px 6px', cursor: 'pointer', background: '#2d5a2d', color: '#fff', border: 'none', borderRadius: 3 }}>Apply</button>
+          </div>
+        </div>
+      </Callout>
+      <Callout rightEdge="A" border={{ color: '#8b1538' }}>
+        <div><strong>Tr2 (0.88)</strong></div>
+        <div>Short one</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: samplePerspectives,
+    styles: defaultStyles,
+    interactive: true,
+  },
+};
+
+export const CalloutsWithSpiral: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T" header={<strong>Tr1 (0.74)</strong>}>
+        <div>Rank by complexity</div>
+      </Callout>
+      <Callout rightEdge="T4" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
+        <div>Cement evaluation protocol</div>
+      </Callout>
+      <Callout segment="A" header={<strong>Tr3 (0.82)</strong>}>
+        <div>Pre-defined timelines</div>
+      </Callout>
+      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
+        <div>Document anomalies resolutions</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: samplePerspectives,
+    styles: defaultStyles,
+    showInwardSpiral: true,
+    interactive: true,
+  },
+};
+
+export const CalloutsNeutralOutside: Story = {
+  render: (args) => (
+    <Wheel {...args}>
+      <Callout segment="T1" border={{ color: '#2d5a2d' }} header="Tr1 (0.74)">
+        <div>Isolation and uncertainty about the future of personal entrepreneurial ambitions</div>
+      </Callout>
+      <Callout rightEdge="T2" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
+        <div>Forfeiting stability and professional recognition from established networks</div>
+      </Callout>
+      <Callout segment="A1" border={{ color: '#8b1538' }} header="Tr3 (0.82)">
+        <div>Loss of autonomy and time for personal vision and creative pursuits</div>
+      </Callout>
+      <Callout rightEdge="A2" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
+        <div>Losing autonomy and abandoning personal vision for corporate obligations</div>
+      </Callout>
+    </Wheel>
+  ),
+  args: {
+    perspectives: longTextPerspectives,
+    styles: defaultStyles,
+    neutralOutside: true,
     interactive: true,
   },
 };

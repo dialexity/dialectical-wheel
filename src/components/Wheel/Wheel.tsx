@@ -1,15 +1,17 @@
-import { useMemo, useCallback, useRef, useState, useEffect, forwardRef } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect, forwardRef, Children, isValidElement } from 'react';
 import { Ring } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { InwardSpiralArrows } from './InwardSpiralArrows';
 import { WheelRing } from './WheelRing';
 import { CycleRing } from './CycleRing';
 import { SelectionOverlay } from './SelectionOverlay';
+import { CalloutInternal } from './Callout';
+import type { CalloutProps } from './Callout';
 import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
 import { DEFAULT_STYLES } from './utils/styles';
-import { getRadii } from './utils/geometry';
+import { getRadii, polarToCartesian } from './utils/geometry';
 import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, RowScope } from '../../types';
 
 function mergeRowScope(defaults?: RowScope, user?: RowScope): RowScope | undefined {
@@ -62,6 +64,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   onPerspectiveOver,
   onPerspectiveOut,
   onPerspectiveClicked,
+  children,
 }, ref) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
   const radii = useMemo(() => getRadii(perspectives.length), [perspectives.length]);
@@ -112,6 +115,17 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const stitched = neutralOutsideProp === 'header';
   const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
   const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
+
+  const callouts = useMemo(() => {
+    const result: CalloutProps[] = [];
+    Children.forEach(children, child => {
+      if (isValidElement(child) && (child.type as any)?._isWheelCallout) {
+        result.push(child.props as CalloutProps);
+      }
+    });
+    return result;
+  }, [children]);
+
 
   const derivePerspectiveEvent = useCallback((cell: CellEvent): PerspectiveEvent => {
     const p = perspectives[cell.perspectiveIndex];
@@ -237,7 +251,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
         ref={setSvgRef}
-        viewBox="-250 -250 500 500"
+        viewBox={callouts.length > 0 ? "-420 -420 840 840" : "-250 -250 500 500"}
         style={{
           width: '100%',
           height: 'auto',
@@ -367,6 +381,166 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               radii={radii}
             />
           )}
+          {callouts.map((callout, ci) => {
+            const segId = callout.segment || callout.rightEdge;
+            const seg = ringData.negative.find(s => s.segmentId === segId);
+            if (!seg) return null;
+
+            const isEdge = !!callout.rightEdge;
+            const negInnerR = neutralOutside ? radii.middleStart : radii.outerStart;
+            const negOuterR = neutralOutside ? radii.middleEnd : radii.outerEnd;
+            const spiralsVisible = showInwardSpiral && !(interactive && selectedPerspective != null);
+            const cw = direction !== 'left';
+            const isSinglePP = perspectives.length === 1;
+
+            let tipR: number;
+            let tipAngle: number;
+            let midAngle: number;
+            let boxEndR = radii.cycleEnd + 65;
+
+            if (isSinglePP) {
+              // 1-PP: callout sits in the spacer zone, connects to spiral arrow midpoint
+              const posOuter = radii.innerEnd;
+              const startR = negInnerR + (negOuterR - negInnerR) * 0.3;
+              const spiralEndR = posOuter - (posOuter - radii.innerStart) * 0.15;
+              const cpR = (negInnerR + posOuter) / 2;
+
+              const segSpan = seg.endAngle - seg.startAngle;
+              const sAngle = cw
+                ? seg.endAngle - segSpan * 0.1
+                : seg.startAngle + segSpan * 0.1;
+
+              const negSegs = ringData.negative.filter(s => s.perspectiveIndex !== -1);
+              const posSegs = ringData.positive.filter(s => s.perspectiveIndex !== -1);
+              const segIdx = negSegs.indexOf(seg);
+              const nextIdx = cw ? (segIdx + 1) % posSegs.length : (segIdx - 1 + posSegs.length) % posSegs.length;
+              const posSeg = posSegs[nextIdx];
+              const posSpan = posSeg.endAngle - posSeg.startAngle;
+              const eAngle = cw
+                ? posSeg.startAngle + posSpan * 0.1
+                : posSeg.endAngle - posSpan * 0.1;
+
+              let angleDelta = cw
+                ? ((eAngle - sAngle + 2 * Math.PI) % (2 * Math.PI))
+                : ((sAngle - eAngle + 2 * Math.PI) % (2 * Math.PI));
+              const cpAngle = cw
+                ? sAngle + angleDelta * 0.5
+                : sAngle - angleDelta * 0.5;
+
+              const [sx, sy] = polarToCartesian(startR, sAngle);
+              const [cx, cy] = polarToCartesian(cpR, cpAngle);
+              const [ex, ey] = polarToCartesian(spiralEndR, eAngle);
+
+              // t=0.5 → midpoint of the bezier
+              const t = 0.5;
+              const it = 1 - t;
+              const bx = it * it * sx + 2 * it * t * cx + t * t * ex;
+              const by = it * it * sy + 2 * it * t * cy + t * t * ey;
+              tipR = Math.sqrt(bx * bx + by * by);
+              tipAngle = Math.atan2(bx, -by);
+
+              // Box positioned in the spacer zone (between perspectives), at neg ring level
+              midAngle = cw ? seg.endAngle + Math.PI * 0.25 : seg.startAngle - Math.PI * 0.25;
+              boxEndR = negOuterR;
+            } else if (!isEdge) {
+              // segment mode: attach to the outer ring edge at cell center
+              midAngle = (seg.startAngle + seg.endAngle) / 2;
+              tipR = radii.cycleEnd;
+              tipAngle = midAngle;
+            } else if (spiralsVisible) {
+              // rightEdge + spiral: attach to bezier-edge intersection
+              midAngle = seg.endAngle;
+              const posOuter = radii.innerEnd;
+              const startR = negInnerR + (negOuterR - negInnerR) * 0.3;
+              const spiralEndR = posOuter - (posOuter - radii.innerStart) * 0.15;
+              const cpR = (negInnerR + posOuter) / 2;
+
+              const segSpan = seg.endAngle - seg.startAngle;
+              const sAngle = cw
+                ? seg.endAngle - segSpan * 0.1
+                : seg.startAngle + segSpan * 0.1;
+
+              const negSegs = ringData.negative.filter(s => s.perspectiveIndex !== -1);
+              const posSegs = ringData.positive.filter(s => s.perspectiveIndex !== -1);
+              const segIdx = negSegs.indexOf(seg);
+              const nextIdx = cw ? (segIdx + 1) % posSegs.length : (segIdx - 1 + posSegs.length) % posSegs.length;
+              const posSeg = posSegs[nextIdx];
+              const posSpan = posSeg.endAngle - posSeg.startAngle;
+              const eAngle = cw
+                ? posSeg.startAngle + posSpan * 0.1
+                : posSeg.endAngle - posSpan * 0.1;
+
+              let angleDelta = cw
+                ? ((eAngle - sAngle + 2 * Math.PI) % (2 * Math.PI))
+                : ((sAngle - eAngle + 2 * Math.PI) % (2 * Math.PI));
+              const cpAngle = cw
+                ? sAngle + angleDelta * 0.5
+                : sAngle - angleDelta * 0.5;
+
+              const [sx, sy] = polarToCartesian(startR, sAngle);
+              const [cx, cy] = polarToCartesian(cpR, cpAngle);
+              const [ex, ey] = polarToCartesian(spiralEndR, eAngle);
+
+              const edgeAngle = seg.endAngle;
+              const perpX = Math.cos(edgeAngle);
+              const perpY = Math.sin(edgeAngle);
+
+              const ax2 = sx - 2 * cx + ex;
+              const bx2 = 2 * (cx - sx);
+              const cx2 = sx;
+              const ay2 = sy - 2 * cy + ey;
+              const by2 = 2 * (cy - sy);
+              const cy2 = sy;
+
+              const a = perpX * ax2 + perpY * ay2;
+              const b = perpX * bx2 + perpY * by2;
+              const c = perpX * cx2 + perpY * cy2;
+
+              const disc = b * b - 4 * a * c;
+              let t = 0.5;
+              if (disc >= 0) {
+                const sqrtDisc = Math.sqrt(disc);
+                const t1 = (-b + sqrtDisc) / (2 * a);
+                const t2 = (-b - sqrtDisc) / (2 * a);
+                if (t1 >= 0 && t1 <= 1) t = t1;
+                else if (t2 >= 0 && t2 <= 1) t = t2;
+                else t = (Math.abs(t1 - 0.5) < Math.abs(t2 - 0.5)) ? t1 : t2;
+              }
+
+              const it = 1 - t;
+              const bx = it * it * sx + 2 * it * t * cx + t * t * ex;
+              const by = it * it * sy + 2 * it * t * cy + t * t * ey;
+              tipR = Math.sqrt(bx * bx + by * by);
+              tipAngle = Math.atan2(bx, -by);
+            } else {
+              // rightEdge without spiral: attach to outer edge at segment boundary
+              midAngle = seg.endAngle;
+              tipR = negOuterR;
+              tipAngle = seg.endAngle;
+            }
+
+            const resolvedBorder = {
+              width: Number(callout.border?.width ?? styles.border?.width ?? 0.5),
+              color: callout.border?.color ?? styles.border?.color ?? '#ccc',
+            };
+            const tailShape: 'triangle' | 'line' = callout.header ? 'line' : (callout.tail ?? 'triangle');
+
+            return (
+              <CalloutInternal
+                key={segId! + ci}
+                midAngle={midAngle}
+                anchorR={tipR}
+                anchorAngle={tipAngle}
+                endR={boxEndR}
+                rotationDeg={rotationDeg}
+                border={resolvedBorder}
+                tail={tailShape}
+                header={callout.header}
+              >
+                {callout.children}
+              </CalloutInternal>
+            );
+          })}
         </g>
       </svg>
     </div>

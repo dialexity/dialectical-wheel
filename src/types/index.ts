@@ -132,6 +132,7 @@ export interface WheelProps {
   neutralOutside?: boolean | 'header';
   styles?: Partial<Styles>;
   css?: React.CSSProperties;
+  children?: React.ReactNode;
   onFocusChanged?: (topSegment: string) => void;
 
   onCellOver?: (event: CellEvent) => void;

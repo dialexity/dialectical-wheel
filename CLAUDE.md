@@ -50,6 +50,17 @@
 - Spiral arrows use open chevron arrowhead (same shape as causality arrows) — not filled triangles
 - Spiral arrow geometry: start at leading edge of neg cell (30% inward from inner edge), end just inside pos cell outer corner (15% inward), control point at ring boundary midpoint
 - `neutralOutside` affects spiral radii: when true, neg ring = middleStart..middleEnd; boundary shared with pos ring at innerEnd
+- `Callout` compound children: `<Wheel><Callout segment="T1">...</Callout></Wheel>` — marker component, collected via `_isWheelCallout` flag
+- Callout modes: `segment` = attach to outer ring edge at cell center; `rightEdge` = attach to neg ring edge at segment boundary
+- Callout `rightEdge` + spiral: tail connects to bezier-edge intersection (quadratic solve for radial line crossing)
+- Callout `tail`: `'triangle'` (default) or `'line'`; `header` prop forces `'line'`
+- Callout `header`: ReactNode rendered above the box (outside the border)
+- Callout box background defaults to `border.color`; consumers override with inner HTML background
+- Callout foreignObject uses oversized container (400×400) centered on endpoint; box uses `width: fit-content` + `maxWidth: 180`
+- Callout counter-rotates content (`rotate(-rotationDeg)`) so text stays horizontal while tail rotates with wheel
+- Callout triangle tail uses push-away transform to prevent box overlapping wheel at diagonal angles
+- 1-PP callout: special case — tip at spiral bezier midpoint (t=0.5), box positioned in spacer zone at neg ring level
+- ViewBox auto-expands from 500→840 when callouts are present
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
@@ -88,3 +99,5 @@
 - `resolveStyle` builds 7-layer cascade: table → row-group → row → row+colType → row+nth → row+colType+nth → inline
 - `styles.tfoot` replaces deprecated `styles.tbody.synthesis` (backward compat fallback exists)
 - `styles.thead.neutral` activates only when `neutralOutside='header'`
+- `CalloutProps`: `segment?`, `rightEdge?`, `border?: { width?: CSSValue; color?: string }`, `tail?: 'triangle' | 'line'`, `header?: ReactNode`, `children`
+- Callout `border` defaults from wheel's `styles.border`; show/hide via conditional rendering (no dedicated prop)
