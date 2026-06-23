@@ -436,16 +436,37 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               const [cx, cy] = polarToCartesian(cpR, cpAngle);
               const [ex, ey] = polarToCartesian(spiralEndR, eAngle);
 
-              // t=0.5 → midpoint of the bezier
-              const t = 0.5;
+              // Box direction first — then find where bezier crosses this radial
+              midAngle = cw ? seg.endAngle + Math.PI * 0.25 : seg.startAngle - Math.PI * 0.25;
+
+              // Solve for t where bezier crosses the radial line at midAngle
+              // Radial line direction: perpendicular dot product = 0
+              const perpX = Math.cos(midAngle);
+              const perpY = Math.sin(midAngle);
+              const ax2 = sx - 2 * cx + ex;
+              const bx2 = 2 * (cx - sx);
+              const cx2 = sx;
+              const ay2 = sy - 2 * cy + ey;
+              const by2 = 2 * (cy - sy);
+              const cy2 = sy;
+              const a = perpX * ax2 + perpY * ay2;
+              const b = perpX * bx2 + perpY * by2;
+              const c = perpX * cx2 + perpY * cy2;
+              const disc = b * b - 4 * a * c;
+              let t = 0.5;
+              if (disc >= 0) {
+                const sqrtDisc = Math.sqrt(disc);
+                const t1 = (-b + sqrtDisc) / (2 * a);
+                const t2 = (-b - sqrtDisc) / (2 * a);
+                if (t1 >= 0 && t1 <= 1) t = t1;
+                else if (t2 >= 0 && t2 <= 1) t = t2;
+              }
+
               const it = 1 - t;
               const bx = it * it * sx + 2 * it * t * cx + t * t * ex;
               const by = it * it * sy + 2 * it * t * cy + t * t * ey;
               tipR = Math.sqrt(bx * bx + by * by);
               tipAngle = Math.atan2(bx, -by);
-
-              // Box positioned in the spacer zone, close to tip
-              midAngle = cw ? seg.endAngle + Math.PI * 0.25 : seg.startAngle - Math.PI * 0.25;
               boxEndR = tipR + 25;
             } else if (!isEdge) {
               // segment mode: attach to the outer ring edge at cell center

@@ -61,7 +61,7 @@
 - Callout push-away: `translate(50% * norm/maxAbs)` on both axes ensures box inner edge/corner stays at endpoint regardless of content size
 - Callout tail overshoots 20 units past endpoint into box area — box renders on top, hiding overlap; ensures connection at all rotation angles
 - Callout foreignObject needs `style={{ pointerEvents: 'none' }}` on the element itself (not just inner div) to avoid blocking wheel interaction
-- 1-PP callout `rightEdge`: special case — tip at spiral bezier midpoint (t=0.5), box positioned at tipR+25 along spacer angle
+- 1-PP callout `rightEdge`: tip at bezier-radial intersection (where arrow crosses the midAngle line toward box), box at tipR+25
 - 1-PP callout `segment`: same as multi-PP — attaches to outer ring edge at cell center (no special case)
 - ViewBox auto-expands from 500→840 when callouts are present
 
