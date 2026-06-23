@@ -41,7 +41,14 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const midAngle = idx * segmentAngle + segmentAngle / 2;
     const isAntithesis = idx >= N / 2;
 
-    const targetPosition = isAntithesis ? 180 : 0;
+    let targetPosition = isAntithesis ? 180 : 0;
+    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+      targetPosition = 0;
+    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+      targetPosition = 180;
+    }
+
     const targetRaw = targetPosition - midAngle;
 
     const perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
@@ -159,7 +166,14 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const midAngle = idx * segmentAngle + segmentAngle / 2;
     const isAntithesis = idx >= N / 2;
 
-    const targetPosition = isAntithesis ? 180 : 0;
+    let targetPosition = isAntithesis ? 180 : 0;
+    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+      targetPosition = 0;
+    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+      targetPosition = 180;
+    }
+
     const targetRaw = targetPosition - midAngle;
     clearTimers();
     setRotationDeg(current => {

@@ -22,14 +22,14 @@
 - SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
-- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
+- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority if both set
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
-- Shortest-path rotation formula handles all directions correctly — no snap override needed; T always targets 0°, A always targets 180°
-- Equidistant tie-break (delta === 180): dead code — the normalization formula maps ±180 boundary to −180, so the condition never fires; harmless but cosmetic
+- If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
+- Equidistant tie-break: T prefers top (−180°), A prefers bottom (+180°)
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
 - Focus animation skips phased fade when rotation delta < 1° (segment already at target) — just dims without flicker
 - Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor
