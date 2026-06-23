@@ -467,7 +467,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               const by = it * it * sy + 2 * it * t * cy + t * t * ey;
               tipR = Math.sqrt(bx * bx + by * by);
               tipAngle = Math.atan2(bx, -by);
-              boxEndR = tipR + 35;
+              boxEndR = tipR + 50;
             } else if (!isEdge) {
               // segment mode: attach to the outer ring edge at cell center
               midAngle = (seg.startAngle + seg.endAngle) / 2;
