@@ -58,8 +58,10 @@
 - Callout box background defaults to `border.color`; consumers override with inner HTML background
 - Callout foreignObject uses oversized container (400×400) centered on endpoint; box uses `width: fit-content` + `maxWidth: 180`
 - Callout counter-rotates content (`rotate(-rotationDeg)`) so text stays horizontal while tail rotates with wheel
-- Callout triangle tail uses push-away transform to prevent box overlapping wheel at diagonal angles
-- 1-PP callout `rightEdge`: special case — tip at spiral bezier midpoint (t=0.5), box positioned in spacer zone at neg ring level
+- Callout push-away: `translate(50% * norm/maxAbs)` on both axes ensures box inner edge/corner stays at endpoint regardless of content size
+- Callout tail overshoots 20 units past endpoint into box area — box renders on top, hiding overlap; ensures connection at all rotation angles
+- Callout foreignObject needs `style={{ pointerEvents: 'none' }}` on the element itself (not just inner div) to avoid blocking wheel interaction
+- 1-PP callout `rightEdge`: special case — tip at spiral bezier midpoint (t=0.5), box positioned at tipR+25 along spacer angle
 - 1-PP callout `segment`: same as multi-PP — attaches to outer ring edge at cell center (no special case)
 - ViewBox auto-expands from 500→840 when callouts are present
 

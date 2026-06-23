@@ -396,7 +396,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             let tipR: number;
             let tipAngle: number;
             let midAngle: number;
-            let boxEndR = radii.cycleEnd + 65;
+            let boxEndR = radii.cycleEnd + 15;
 
             if (isSinglePP && !isEdge) {
               // 1-PP segment mode: attach to outer ring edge at cell center (same as multi-PP)
@@ -444,9 +444,9 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               tipR = Math.sqrt(bx * bx + by * by);
               tipAngle = Math.atan2(bx, -by);
 
-              // Box positioned in the spacer zone (between perspectives), at neg ring level
+              // Box positioned in the spacer zone, close to tip
               midAngle = cw ? seg.endAngle + Math.PI * 0.25 : seg.startAngle - Math.PI * 0.25;
-              boxEndR = negOuterR;
+              boxEndR = tipR + 25;
             } else if (!isEdge) {
               // segment mode: attach to the outer ring edge at cell center
               midAngle = (seg.startAngle + seg.endAngle) / 2;

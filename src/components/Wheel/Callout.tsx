@@ -44,25 +44,30 @@ export function CalloutInternal({
   const { width: borderWidth, color: borderColor } = border;
   const [tipX, tipY] = polarToCartesian(anchorR, anchorAngle);
   const [endX, endY] = polarToCartesian(endR, midAngle);
+  // Extend tail past endpoint so it always reaches into the box regardless of rotation
+  const TAIL_OVERSHOOT = 20;
+  const [tailBaseX, tailBaseY] = polarToCartesian(endR + TAIL_OVERSHOOT, midAngle);
 
   // Outward direction in screen space after counter-rotation
+  // Push box so its inner edge/corner sits at the endpoint, never intruding toward wheel center
   const rotRad = rotationDeg * Math.PI / 180;
   const effectiveAngle = midAngle + rotRad;
   const normX = Math.sin(effectiveAngle);
   const normY = -Math.cos(effectiveAngle);
-  const pushStrength = 20 + 15 * Math.min(Math.abs(normX), Math.abs(normY)) / 0.707;
-  const tx = normX * pushStrength;
-  const ty = normY * pushStrength;
+  const maxAbs = Math.max(Math.abs(normX), Math.abs(normY), 0.001);
+  // 50% = half the box's own size along each axis, placing inner edge exactly at the endpoint
+  const tx = 50 * normX / maxAbs;
+  const ty = 50 * normY / maxAbs;
 
   let tailElement: React.ReactNode;
   if (tail === 'triangle') {
     const tailWidth = 8;
     const tangentX = Math.cos(midAngle);
     const tangentY = Math.sin(midAngle);
-    const leftX = endX + tailWidth * tangentX;
-    const leftY = endY + tailWidth * tangentY;
-    const rightX = endX - tailWidth * tangentX;
-    const rightY = endY - tailWidth * tangentY;
+    const leftX = tailBaseX + tailWidth * tangentX;
+    const leftY = tailBaseY + tailWidth * tangentY;
+    const rightX = tailBaseX - tailWidth * tangentX;
+    const rightY = tailBaseY - tailWidth * tangentY;
     tailElement = (
       <path
         d={`M ${tipX} ${tipY} L ${leftX} ${leftY} L ${rightX} ${rightY} Z`}
@@ -75,8 +80,8 @@ export function CalloutInternal({
       <line
         x1={tipX}
         y1={tipY}
-        x2={endX}
-        y2={endY}
+        x2={tailBaseX}
+        y2={tailBaseY}
         stroke={borderColor}
         strokeWidth={borderWidth * 2}
       />
@@ -93,6 +98,7 @@ export function CalloutInternal({
           width={FO_SIZE}
           height={FO_SIZE}
           overflow="visible"
+          style={{ pointerEvents: 'none' }}
         >
           <div
             style={{
@@ -113,7 +119,7 @@ export function CalloutInternal({
                 alignItems: 'center',
                 maxWidth: 180,
                 width: 'fit-content',
-                transform: tail === 'triangle' ? `translate(${tx}%, ${ty}%)` : undefined,
+                transform: `translate(${tx}%, ${ty}%)`,
               }}
             >
               {header && (
