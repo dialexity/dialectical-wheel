@@ -396,7 +396,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             let tipR: number;
             let tipAngle: number;
             let midAngle: number;
-            let boxEndR = radii.cycleEnd + 15;
+            let boxEndR = radii.cycleEnd + 25;
 
             if (isSinglePP && !isEdge) {
               // 1-PP segment mode: attach to outer ring edge at cell center (same as multi-PP)
