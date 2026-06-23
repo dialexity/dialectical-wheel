@@ -64,6 +64,7 @@
 - 1-PP callout `rightEdge`: tip at bezier-radial intersection (where arrow crosses the midAngle line toward box), box at tipR+25
 - 1-PP callout `segment`: same as multi-PP — attaches to outer ring edge at cell center (no special case)
 - ViewBox auto-expands from 500→840 when callouts are present
+- Callout opacity: hidden (opacity 0) when another perspective is selected/animating; hover on a perspective shows its callouts; uses same `perspectiveIndex` from the attached segment
 
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers

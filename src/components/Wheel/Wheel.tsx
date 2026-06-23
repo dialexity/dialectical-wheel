@@ -551,20 +551,26 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             };
             const tailShape: 'triangle' | 'line' = callout.header ? 'line' : (callout.tail ?? 'triangle');
 
+            const pIdx = seg.perspectiveIndex;
+            let calloutOpacity = 1;
+            if (focusAnimatingIdx != null && pIdx !== focusAnimatingIdx) calloutOpacity = 0;
+            else if (selectedPerspective != null && pIdx !== selectedPerspective && pIdx !== hoveredPerspectiveIdx) calloutOpacity = 0;
+
             return (
-              <CalloutInternal
-                key={segId! + ci}
-                midAngle={midAngle}
-                anchorR={tipR}
-                anchorAngle={tipAngle}
-                endR={boxEndR}
-                rotationDeg={rotationDeg}
-                border={resolvedBorder}
-                tail={tailShape}
-                header={callout.header}
-              >
-                {callout.children}
-              </CalloutInternal>
+              <g key={segId! + ci} style={{ opacity: calloutOpacity, transition: 'opacity 200ms ease-in' }}>
+                <CalloutInternal
+                  midAngle={midAngle}
+                  anchorR={tipR}
+                  anchorAngle={tipAngle}
+                  endR={boxEndR}
+                  rotationDeg={rotationDeg}
+                  border={resolvedBorder}
+                  tail={tailShape}
+                  header={callout.header}
+                >
+                  {callout.children}
+                </CalloutInternal>
+              </g>
             );
           })}
         </g>
