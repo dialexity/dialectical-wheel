@@ -408,11 +408,11 @@ export const CalloutOnePerspective: Story = {
   render: (args) => (
     <Wheel {...args}>
       <Callout segment="T" border={{ color: '#2d5a2d' }}>
-        <div><strong>Tr1 (0.74)</strong></div>
+        <div><strong>segment="T"</strong></div>
         <div>Rank by complexity</div>
       </Callout>
       <Callout rightEdge="A" border={{ color: '#8b1538' }}>
-        <div><strong>Tr2 (0.91)</strong></div>
+        <div><strong>rightEdge="A"</strong></div>
         <div>Document anomalies</div>
       </Callout>
     </Wheel>
@@ -428,11 +428,11 @@ export const CalloutOnePerspectiveSpiral: Story = {
   render: (args) => (
     <Wheel {...args}>
       <Callout segment="T" border={{ color: '#2d5a2d' }}>
-        <div><strong>Tr1 (0.74)</strong></div>
+        <div><strong>segment="T"</strong></div>
         <div>Rank by complexity</div>
       </Callout>
       <Callout rightEdge="A" border={{ color: '#8b1538' }}>
-        <div><strong>Tr2 (0.91)</strong></div>
+        <div><strong>rightEdge="A"</strong></div>
         <div>Document anomalies</div>
       </Callout>
     </Wheel>
@@ -467,16 +467,16 @@ export const PerCellNeutralHeader: Story = {
 export const WithCallouts: Story = {
   render: (args) => (
     <Wheel {...args}>
-      <Callout segment="T" header={<strong>Tr1 (0.74)</strong>}>
+      <Callout segment="T" header={<strong>segment="T"</strong>}>
         <div>Rank by complexity</div>
       </Callout>
-      <Callout segment="T4" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
+      <Callout segment="T4" border={{ color: '#2d5a2d' }} header="segment=T4">
         <div>Cement evaluation protocol</div>
       </Callout>
-      <Callout rightEdge="A" header={<strong>Tr3 (0.82)</strong>}>
+      <Callout rightEdge="A" header={<strong>rightEdge="A"</strong>}>
         <div>Pre-defined timelines</div>
       </Callout>
-      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
+      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header="rightEdge=A4">
         <div>Document anomalies resolutions</div>
       </Callout>
     </Wheel>
@@ -491,7 +491,7 @@ export const WithCallouts: Story = {
 export const CalloutRichContent: Story = {
   render: (args) => (
     <Wheel {...args}>
-      <Callout segment="T" border={{ color: '#2d5a2d', width: 1.5 }} header="Treatment 1">
+      <Callout segment="T" border={{ color: '#2d5a2d', width: 1.5 }} header='segment="T"'>
         <div style={{ background: '#fff', borderRadius: 3, padding: '4px 8px', margin: -4 }}>
           <div><strong>Score: 0.74</strong></div>
           <p style={{ margin: '4px 0', fontSize: 10 }}>
@@ -507,7 +507,7 @@ export const CalloutRichContent: Story = {
         </div>
       </Callout>
       <Callout rightEdge="A" border={{ color: '#8b1538' }}>
-        <div><strong>Tr2 (0.88)</strong></div>
+        <div><strong>rightEdge="A"</strong></div>
         <div>Short one</div>
       </Callout>
     </Wheel>
@@ -522,16 +522,16 @@ export const CalloutRichContent: Story = {
 export const CalloutsWithSpiral: Story = {
   render: (args) => (
     <Wheel {...args}>
-      <Callout segment="T" header={<strong>Tr1 (0.74)</strong>}>
+      <Callout segment="T" header={<strong>segment="T"</strong>}>
         <div>Rank by complexity</div>
       </Callout>
-      <Callout rightEdge="T4" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
+      <Callout rightEdge="T4" border={{ color: '#2d5a2d' }} header='rightEdge="T4"'>
         <div>Cement evaluation protocol</div>
       </Callout>
-      <Callout segment="A" header={<strong>Tr3 (0.82)</strong>}>
+      <Callout segment="A" header={<strong>segment="A"</strong>}>
         <div>Pre-defined timelines</div>
       </Callout>
-      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
+      <Callout rightEdge="A4" border={{ color: '#8b1538' }} header='rightEdge="A4"'>
         <div>Document anomalies resolutions</div>
       </Callout>
     </Wheel>
@@ -547,17 +547,17 @@ export const CalloutsWithSpiral: Story = {
 export const CalloutsNeutralOutside: Story = {
   render: (args) => (
     <Wheel {...args}>
-      <Callout segment="T1" border={{ color: '#2d5a2d' }} header="Tr1 (0.74)">
-        <div>Isolation and uncertainty about the future of personal entrepreneurial ambitions</div>
+      <Callout segment="T1" border={{ color: '#2d5a2d' }} header='segment="T1"'>
+        <div>Isolation and uncertainty</div>
       </Callout>
-      <Callout rightEdge="T2" border={{ color: '#2d5a2d' }} header="Tr2 (0.88)">
-        <div>Forfeiting stability and professional recognition from established networks</div>
+      <Callout rightEdge="T2" border={{ color: '#2d5a2d' }} header='rightEdge="T2"'>
+        <div>Forfeiting stability</div>
       </Callout>
-      <Callout segment="A1" border={{ color: '#8b1538' }} header="Tr3 (0.82)">
-        <div>Loss of autonomy and time for personal vision and creative pursuits</div>
+      <Callout segment="A1" border={{ color: '#8b1538' }} header='segment="A1"'>
+        <div>Loss of autonomy</div>
       </Callout>
-      <Callout rightEdge="A2" border={{ color: '#8b1538' }} header="Tr4 (0.91)">
-        <div>Losing autonomy and abandoning personal vision for corporate obligations</div>
+      <Callout rightEdge="A2" border={{ color: '#8b1538' }} header='rightEdge="A2"'>
+        <div>Losing autonomy</div>
       </Callout>
     </Wheel>
   ),

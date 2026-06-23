@@ -59,7 +59,8 @@
 - Callout foreignObject uses oversized container (400×400) centered on endpoint; box uses `width: fit-content` + `maxWidth: 180`
 - Callout counter-rotates content (`rotate(-rotationDeg)`) so text stays horizontal while tail rotates with wheel
 - Callout triangle tail uses push-away transform to prevent box overlapping wheel at diagonal angles
-- 1-PP callout: special case — tip at spiral bezier midpoint (t=0.5), box positioned in spacer zone at neg ring level
+- 1-PP callout `rightEdge`: special case — tip at spiral bezier midpoint (t=0.5), box positioned in spacer zone at neg ring level
+- 1-PP callout `segment`: same as multi-PP — attaches to outer ring edge at cell center (no special case)
 - ViewBox auto-expands from 500→840 when callouts are present
 
 ## Key Gotchas

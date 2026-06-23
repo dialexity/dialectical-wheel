@@ -398,8 +398,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             let midAngle: number;
             let boxEndR = radii.cycleEnd + 65;
 
-            if (isSinglePP) {
-              // 1-PP: callout sits in the spacer zone, connects to spiral arrow midpoint
+            if (isSinglePP && !isEdge) {
+              // 1-PP segment mode: attach to outer ring edge at cell center (same as multi-PP)
+              midAngle = (seg.startAngle + seg.endAngle) / 2;
+              tipR = radii.cycleEnd;
+              tipAngle = midAngle;
+            } else if (isSinglePP && isEdge) {
+              // 1-PP rightEdge: callout sits in the spacer zone, connects to spiral arrow midpoint
               const posOuter = radii.innerEnd;
               const startR = negInnerR + (negOuterR - negInnerR) * 0.3;
               const spiralEndR = posOuter - (posOuter - radii.innerStart) * 0.15;
