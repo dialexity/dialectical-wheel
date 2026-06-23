@@ -22,7 +22,7 @@
 - SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
-- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority if both set
+- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
@@ -72,6 +72,7 @@
 - The cell shape is a trapezoid (wider at outer radius); midR chord is the safe wrap width
 - When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
 - Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
+- T/A detection in useRotation uses array position (`idx >= N/2`), not alias — this is correct; the `t` field IS thesis regardless of alias naming
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
 - `rotationDegRef` mirrors `rotationDeg` state so the focus effect can read current rotation without depending on it
