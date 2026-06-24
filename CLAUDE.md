@@ -25,6 +25,10 @@
 - `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
+- Interactive arrow-click navigation (overrides T=12/A=6 convention): (1) selected segment at pole → flips T↔A to opposite pole in arrow direction, (2) at pole but not selected → rotates one segment in arrow direction, (3) off-pole → focuses to next pole in arrow direction (selects if something was selected)
+- `isSegmentAtPole` in useRotation — checks if segment's angular range covers 0° or 180° (threshold = halfSegmentAngle, not 1°)
+- `focusSegmentToPosition` / `focusSegmentToNextPole` in useRotation — set `skipFocusEffect` ref to prevent the standard T=12/A=6 focus effect from overriding arrow-directed rotation
+- `rotateBySegments(count)` in useRotation — rotates by N segments; positive count in `setRotationDeg(c => c - angle*count)` moves segments CCW; for CW arrows pass negative count
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
@@ -86,6 +90,7 @@
 - `RowScope` uses TypeScript intersection with `{ [n: number]: ... }` — numeric keys alongside named props; pure interfaces can't express this
 - Arrow tangent at angle θ: tangentX = cos(θ), tangentY = sin(θ) (because polarToCartesian uses sin/−cos mapping); radialX = sin(θ), radialY = −cos(θ)
 - Angular midpoint for spiral arrows must account for CW/CCW wrapping: use `(angle + 2π) % 2π` to get positive delta in travel direction
+- SVG `rotate(deg)` positive = CW for group; so positive `rotationDeg` delta = segments move CW visually. For CW arrow direction, `focusSegmentToPosition` uses `delta = +180`, `rotateBySegments` uses negative count.
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"

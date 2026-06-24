@@ -26,6 +26,7 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
   const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const skipFocusEffect = useRef(false);
 
   const clearTimers = () => {
     animTimers.current.forEach(t => clearTimeout(t));
@@ -33,6 +34,10 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
   };
 
   useEffect(() => {
+    if (skipFocusEffect.current) {
+      skipFocusEffect.current = false;
+      return;
+    }
     if (focusedSegment == null || segmentIds.length === 0) return;
     const idx = segmentIds.indexOf(focusedSegment);
     if (idx === -1) return;
@@ -159,6 +164,21 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     return diff < 1;
   }, [segmentIds]);
 
+  const isSegmentAtPole = useCallback((segmentId: string): 'top' | 'bottom' | null => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return null;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const currentVisualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
+    const halfSeg = segmentAngle / 2;
+    const topDiff = Math.abs(((currentVisualAngle + 540) % 360) - 180);
+    if (topDiff < halfSeg) return 'top';
+    const bottomDiff = Math.abs(((currentVisualAngle - 180 + 540) % 360) - 180);
+    if (bottomDiff < halfSeg) return 'bottom';
+    return null;
+  }, [segmentIds]);
+
   const refocusWithoutFade = useCallback((segmentId: string) => {
     const idx = segmentIds.indexOf(segmentId);
     if (idx === -1) return;
@@ -185,6 +205,49 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     });
   }, [segmentIds]);
 
+  const focusSegmentToPosition = useCallback((segmentId: string, targetPosition: number, clockwise: boolean) => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const targetRaw = targetPosition - midAngle;
+    clearTimers();
+    skipFocusEffect.current = true;
+    setRotationDeg(current => {
+      let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+
+  const focusSegmentToNextPole = useCallback((segmentId: string, clockwise: boolean) => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const visualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
+    const targetPosition = clockwise
+      ? (visualAngle > 0 && visualAngle <= 180 ? 180 : 0)
+      : (visualAngle >= 180 && visualAngle < 360 ? 180 : 0);
+    const targetRaw = targetPosition - midAngle;
+    clearTimers();
+    skipFocusEffect.current = true;
+    setRotationDeg(current => {
+      let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+
+  const rotateBySegments = useCallback((count: number) => {
+    if (segmentIds.length === 0) return;
+    const segmentAngle = 360 / segmentIds.length;
+    clearTimers();
+    setRotationDeg(current => current - segmentAngle * count);
+  }, [segmentIds]);
+
   const rotationRad = (rotationDeg * Math.PI) / 180;
 
   return {
@@ -194,7 +257,11 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     isRotationPaused,
     focusAnimatingIdx,
     isSegmentAtFocusTarget,
+    isSegmentAtPole,
     refocusWithoutFade,
+    focusSegmentToPosition,
+    focusSegmentToNextPole,
+    rotateBySegments,
     svgRef,
     pointerHandlers: { onPointerDown, onPointerMove, onPointerUp },
   };

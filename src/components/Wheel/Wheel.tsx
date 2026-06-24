@@ -102,7 +102,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     return null;
   }, [focusedSegment, selectedPerspective, segmentIds]);
 
-  const { rotationDeg, rotationRad, isDragging, isRotationPaused, focusAnimatingIdx, isSegmentAtFocusTarget, refocusWithoutFade, svgRef, pointerHandlers } = useRotation({
+  const { rotationDeg, rotationRad, isDragging, isRotationPaused, focusAnimatingIdx, isSegmentAtFocusTarget, isSegmentAtPole, refocusWithoutFade, focusSegmentToPosition, focusSegmentToNextPole, rotateBySegments, svgRef, pointerHandlers } = useRotation({
     onFocusChanged,
     segmentIds,
     focusedSegment: effectiveFocusedSegment,
@@ -246,8 +246,47 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   }, [onArrowOut]);
 
   const handleArrowClicked = useCallback((event: ArrowEvent) => {
+    if (interactive) {
+      const N = segmentIds.length;
+      const idx = segmentIds.indexOf(event.segmentId);
+      const isAntithesis = idx >= N / 2;
+      const clockwise = direction !== 'left';
+      const pole = isSegmentAtPole(event.segmentId);
+
+      const suppressHover = () => {
+        hoverSuppressedRef.current = true;
+        suppressPointerPos.current = null;
+        hoveredSegmentRef.current = null;
+        hoveredPerspectiveRef.current = null;
+        lastCellEventRef.current = null;
+        setHoveredSegmentId(null);
+        setHoveredPerspectiveIdx(null);
+      };
+
+      if (internalSelected === event.perspectiveIndex && pole != null) {
+        // Case 1: arrow on selected segment at pole → flip to opposite pole in arrow direction
+        const oppositeIdx = isAntithesis ? idx - N / 2 : idx + N / 2;
+        const oppositeSegment = segmentIds[oppositeIdx];
+        const targetPosition = pole === 'top' ? 0 : 180;
+        suppressHover();
+        setInternalFocused(oppositeSegment);
+        focusSegmentToPosition(oppositeSegment, targetPosition, clockwise);
+      } else if (pole != null && internalSelected !== event.perspectiveIndex) {
+        // Case 2: arrow at pole, not the selected perspective → rotate one segment in arrow direction
+        suppressHover();
+        rotateBySegments(clockwise ? -1 : 1);
+      } else {
+        // Case 3: arrow not at pole → focus to next pole in arrow direction; select if something was already selected
+        suppressHover();
+        if (internalSelected != null) {
+          setInternalSelected(event.perspectiveIndex);
+        }
+        setInternalFocused(event.segmentId);
+        focusSegmentToNextPole(event.segmentId, clockwise);
+      }
+    }
     if (onArrowClicked) onArrowClicked(event);
-  }, [onArrowClicked]);
+  }, [interactive, segmentIds, direction, internalSelected, isSegmentAtPole, focusSegmentToPosition, focusSegmentToNextPole, rotateBySegments, onArrowClicked]);
 
   const handleWheelPointerLeave = useCallback(() => {
     hoverSuppressedRef.current = false;
