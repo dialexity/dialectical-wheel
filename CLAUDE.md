@@ -27,7 +27,7 @@
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
 - Interactive arrow-click navigation (overrides T=12/A=6 convention): (1) selected segment at pole → flips T↔A to opposite pole in arrow direction, (2) at pole but not selected → rotates one segment in arrow direction, (3) off-pole → focuses to next pole in arrow direction (selects if something was selected)
 - `isSegmentAtPole` in useRotation — checks if segment's angular range covers 0° or 180° (threshold = halfSegmentAngle, not 1°)
-- `focusSegmentToPosition` / `focusSegmentToNextPole` in useRotation — set `skipFocusEffect` ref to prevent the standard T=12/A=6 focus effect from overriding arrow-directed rotation
+- `focusSegmentToPosition` / `focusSegmentToNextPole` in useRotation — focus effect skips when segment is already at either pole (topDiff < 1 || bottomDiff < 1), no ref flag needed
 - `rotateBySegments(count)` in useRotation — rotates by N segments; positive count in `setRotationDeg(c => c - angle*count)` moves segments CCW; for CW arrows pass negative count
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
@@ -48,6 +48,8 @@
 - Direction arrows render in their own `<g>` inside each header ring cell — independently hoverable/clickable with `stopPropagation`
 - Arrow hit area is a filled wedge (`describeArc`) spanning full ring height (innerR→outerR), from 8% past tail to cell edge in arrow direction
 - Arrow hit area shows `#000` at 4% fillOpacity on direct hover — button-like affordance fitting cell boundaries
+- Arrow hit path: `onClick` only active when `directArrowHover` is true (prevents stealing clicks from cell); hover events don't stopPropagation (cell tracks hover normally)
+- Arrow visual paths wrapped in `<g style={{ pointerEvents: 'none' }}>` — only the hit path receives events
 - Arrow direct-hover: color becomes `#333` + stroke thickens 1.5x; cell/segment hover uses `arrowHoverColor` (darkened border)
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
@@ -92,6 +94,8 @@
 - Arrow tangent at angle θ: tangentX = cos(θ), tangentY = sin(θ) (because polarToCartesian uses sin/−cos mapping); radialX = sin(θ), radialY = −cos(θ)
 - Angular midpoint for spiral arrows must account for CW/CCW wrapping: use `(angle + 2π) % 2π` to get positive delta in travel direction
 - SVG `rotate(deg)` positive = CW for group; so positive `rotationDeg` delta = segments move CW visually. For CW arrow direction, `focusSegmentToPosition` uses `delta = +180`, `rotateBySegments` uses negative count.
+- Arrow click that changes selection must fire `onPerspectiveClicked` — consumers sync via this callback; without it, prop-sync creates double-click-to-deselect bug
+- `handleCellClick` deselect check uses `isSegmentAtPole` (any pole) not `isSegmentAtFocusTarget` (T=12/A=6 only) — arrow nav can put T at 6
 
 ## Types
 - Props: `styles` (Partial<Styles>), `css` (React.CSSProperties) — not "colors"/"style"

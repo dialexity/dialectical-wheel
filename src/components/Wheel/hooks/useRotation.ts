@@ -26,7 +26,6 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
   const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const animTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const skipFocusEffect = useRef(false);
 
   const clearTimers = () => {
     animTimers.current.forEach(t => clearTimeout(t));
@@ -34,10 +33,6 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
   };
 
   useEffect(() => {
-    if (skipFocusEffect.current) {
-      skipFocusEffect.current = false;
-      return;
-    }
     if (focusedSegment == null || segmentIds.length === 0) return;
     const idx = segmentIds.indexOf(focusedSegment);
     if (idx === -1) return;
@@ -47,7 +42,7 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const isAntithesis = idx >= N / 2;
 
     let targetPosition = isAntithesis ? 180 : 0;
-    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
+    const currentVisualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
     const overlapThreshold = segmentAngle * 0.97;
     if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
       targetPosition = 0;
@@ -61,9 +56,10 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
 
     clearTimers();
 
-    // If segment is already at focus position, skip phased animation (no flicker)
-    const delta = ((targetRaw - rotationDegRef.current) % 360 + 540) % 360 - 180;
-    if (Math.abs(delta) < 1) {
+    // If segment is already at either pole, skip phased animation
+    const topDiff = Math.abs(((currentVisualAngle + 540) % 360) - 180);
+    const bottomDiff = Math.abs(((currentVisualAngle - 180 + 540) % 360) - 180);
+    if (topDiff < 1 || bottomDiff < 1) {
       setFocusAnimatingIdx(null);
       setIsRotationPaused(false);
       return;
@@ -213,7 +209,6 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const midAngle = idx * segmentAngle + segmentAngle / 2;
     const targetRaw = targetPosition - midAngle;
     clearTimers();
-    skipFocusEffect.current = true;
     setRotationDeg(current => {
       let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
       if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;
@@ -233,7 +228,6 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
       : (visualAngle >= 180 && visualAngle < 360 ? 180 : 0);
     const targetRaw = targetPosition - midAngle;
     clearTimers();
-    skipFocusEffect.current = true;
     setRotationDeg(current => {
       let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
       if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;

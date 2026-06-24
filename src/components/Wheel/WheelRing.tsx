@@ -63,7 +63,6 @@ export const WheelRing: React.FC<WheelRingProps> = ({
   );
 
   const interactive = onClick || onPointerEnter;
-  const arrowInteractive = onArrowOver || onArrowClicked;
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
@@ -130,13 +129,11 @@ export const WheelRing: React.FC<WheelRingProps> = ({
           const directArrowHover = hoveredArrowId === segment.segmentId;
           const arrowHovered = directArrowHover || isHovered;
           const strokeColor = directArrowHover ? '#333' : isHovered ? style.arrowHoverColor : style.arrowColor;
+          const hitStartAngle = cw ? tailAngle - cellSpan * 0.08 : segment.startAngle;
+          const hitEndAngle = cw ? segment.endAngle : tailAngle + cellSpan * 0.08;
+          const hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
           return (
-            <g
-              onClick={(e) => { e.stopPropagation(); onArrowClicked?.(arrowEvents[i]); }}
-              onPointerEnter={(e) => { e.stopPropagation(); onArrowOver?.(arrowEvents[i]); }}
-              onPointerLeave={(e) => { e.stopPropagation(); onArrowOut?.(arrowEvents[i]); }}
-              style={{ cursor: arrowInteractive ? 'pointer' : 'default' }}
-            >
+            <g style={{ pointerEvents: 'none' }}>
               <path
                 d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
                 fill="none"
@@ -152,20 +149,16 @@ export const WheelRing: React.FC<WheelRingProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              {(() => {
-                const hitStartAngle = cw ? tailAngle - cellSpan * 0.08 : segment.startAngle;
-                const hitEndAngle = cw ? segment.endAngle : tailAngle + cellSpan * 0.08;
-                const hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
-                return (
-                  <path
-                    d={hitPath}
-                    fill={directArrowHover ? '#000' : 'transparent'}
-                    fillOpacity={directArrowHover ? 0.04 : 0}
-                    stroke="none"
-                    style={{ pointerEvents: 'fill' }}
-                  />
-                );
-              })()}
+              <path
+                d={hitPath}
+                fill={directArrowHover ? '#000' : 'transparent'}
+                fillOpacity={directArrowHover ? 0.04 : 0}
+                stroke="none"
+                onClick={directArrowHover ? (e) => { e.stopPropagation(); onArrowClicked?.(arrowEvents[i]); } : undefined}
+                onPointerEnter={() => { onArrowOver?.(arrowEvents[i]); }}
+                onPointerLeave={() => { onArrowOut?.(arrowEvents[i]); }}
+                style={{ cursor: directArrowHover ? 'pointer' : 'default', pointerEvents: 'fill' }}
+              />
             </g>
           );
         })()}
