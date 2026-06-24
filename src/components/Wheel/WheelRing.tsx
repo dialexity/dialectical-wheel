@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { polarToCartesian, normalizeAngle, describeArc } from './utils/geometry';
 import { resolveStyle } from './utils/styles';
-import type { SegmentData, CellEvent, Styles, StyleContext, WheelDirection } from '../../types';
+import type { SegmentData, CellEvent, ArrowEvent, Styles, StyleContext, WheelDirection } from '../../types';
 
 interface WheelRingProps {
   segments: SegmentData[];
@@ -15,13 +15,17 @@ interface WheelRingProps {
   hoveredPerspectiveIdx?: number | null;
   selectedPerspectiveIdx?: number | null;
   focusAnimatingIdx?: number | null;
+  hoveredArrowId?: string | null;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
   onPointerLeave?: (event: CellEvent) => void;
+  onArrowOver?: (event: ArrowEvent) => void;
+  onArrowOut?: (event: ArrowEvent) => void;
+  onArrowClicked?: (event: ArrowEvent) => void;
 }
 
 export const WheelRing: React.FC<WheelRingProps> = ({
-  segments, innerR, outerR, rotationRad, styles, transparent, direction, showArrows = true, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave
+  segments, innerR, outerR, rotationRad, styles, transparent, direction, showArrows = true, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, hoveredArrowId, onClick, onPointerEnter, onPointerLeave, onArrowOver, onArrowOut, onArrowClicked
 }) => {
   const cellRadialHeight = outerR - innerR;
   const radius = (innerR + outerR) / 2;
@@ -50,7 +54,16 @@ export const WheelRing: React.FC<WheelRingProps> = ({
     [segments]
   );
 
+  const arrowEvents = useMemo(() =>
+    segments.map(segment => ({
+      segmentId: segment.segmentId,
+      perspectiveIndex: segment.perspectiveIndex,
+    } as ArrowEvent)),
+    [segments]
+  );
+
   const interactive = onClick || onPointerEnter;
+  const arrowInteractive = onArrowOver || onArrowClicked;
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
@@ -113,25 +126,42 @@ export const WheelRing: React.FC<WheelRingProps> = ({
         >
           {segment.segmentId}
         </text>
-        {showArrows && style.arrowColor !== 'transparent' && (
-          <g>
-            <path
-              d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
-              fill="none"
-              stroke={isHovered ? style.arrowHoverColor : style.arrowColor}
-              strokeWidth={style.arrowWidth}
-              strokeLinecap="round"
-            />
-            <path
-              d={`M${tx},${ty} L${ex},${ey} L${tx2},${ty2}`}
-              fill="none"
-              stroke={isHovered ? style.arrowHoverColor : style.arrowColor}
-              strokeWidth={style.arrowWidth}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </g>
-        )}
+        {showArrows && style.arrowColor !== 'transparent' && (() => {
+          const directArrowHover = hoveredArrowId === segment.segmentId;
+          const arrowHovered = directArrowHover || isHovered;
+          const strokeColor = directArrowHover ? '#333' : isHovered ? style.arrowHoverColor : style.arrowColor;
+          return (
+            <g
+              onClick={(e) => { e.stopPropagation(); onArrowClicked?.(arrowEvents[i]); }}
+              onPointerEnter={(e) => { e.stopPropagation(); onArrowOver?.(arrowEvents[i]); }}
+              onPointerLeave={(e) => { e.stopPropagation(); onArrowOut?.(arrowEvents[i]); }}
+              style={{ cursor: arrowInteractive ? 'pointer' : 'default' }}
+            >
+              <path
+                d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth}
+                strokeLinecap="round"
+              />
+              <path
+                d={`M${tx},${ty} L${ex},${ey} L${tx2},${ty2}`}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={Math.max(style.arrowWidth * 10, 20)}
+                style={{ pointerEvents: 'stroke' }}
+              />
+            </g>
+          );
+        })()}
       </g>
     );
   };

@@ -12,7 +12,7 @@ import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
 import { DEFAULT_STYLES } from './utils/styles';
 import { getRadii, polarToCartesian } from './utils/geometry';
-import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, RowScope } from '../../types';
+import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, ArrowEvent, RowScope } from '../../types';
 
 function mergeRowScope(defaults?: RowScope, user?: RowScope): RowScope | undefined {
   if (!defaults && !user) return undefined;
@@ -64,6 +64,9 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   onPerspectiveOver,
   onPerspectiveOut,
   onPerspectiveClicked,
+  onArrowOver,
+  onArrowOut,
+  onArrowClicked,
   children,
 }, ref) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
@@ -147,6 +150,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const suppressPointerPos = useRef<{ x: number; y: number } | null>(null);
   const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
   const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
+  const [hoveredArrowId, setHoveredArrowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (focusAnimatingIdx != null) {
@@ -231,6 +235,20 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     }
   }, []);
 
+  const handleArrowOver = useCallback((event: ArrowEvent) => {
+    setHoveredArrowId(event.segmentId);
+    if (onArrowOver) onArrowOver(event);
+  }, [onArrowOver]);
+
+  const handleArrowOut = useCallback((event: ArrowEvent) => {
+    setHoveredArrowId(null);
+    if (onArrowOut) onArrowOut(event);
+  }, [onArrowOut]);
+
+  const handleArrowClicked = useCallback((event: ArrowEvent) => {
+    if (onArrowClicked) onArrowClicked(event);
+  }, [onArrowClicked]);
+
   const handleWheelPointerLeave = useCallback(() => {
     hoverSuppressedRef.current = false;
     const last = lastCellEventRef.current;
@@ -245,6 +263,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     lastCellEventRef.current = null;
     setHoveredSegmentId(null);
     setHoveredPerspectiveIdx(null);
+    setHoveredArrowId(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
   return (
@@ -348,9 +367,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
+              hoveredArrowId={hoveredArrowId}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
+              onArrowOver={handleArrowOver}
+              onArrowOut={handleArrowOut}
+              onArrowClicked={handleArrowClicked}
             />
           )}
           {header === 'cycle' && (
@@ -366,9 +389,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
               hoveredPerspectiveIdx={hoveredPerspectiveIdx}
               selectedPerspectiveIdx={selectedPerspective}
               focusAnimatingIdx={focusAnimatingIdx}
+              hoveredArrowId={hoveredArrowId}
               onClick={handleCellClick}
               onPointerEnter={handlePointerEnter}
               onPointerLeave={handlePointerLeave}
+              onArrowOver={handleArrowOver}
+              onArrowOut={handleArrowOut}
+              onArrowClicked={handleArrowClicked}
             />
           )}
           {selectedPerspective != null && (

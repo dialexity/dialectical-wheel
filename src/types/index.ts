@@ -95,6 +95,11 @@ export interface PerspectiveEvent {
   antithesis: string;
 }
 
+export interface ArrowEvent {
+  segmentId: string;
+  perspectiveIndex: number;
+}
+
 /** @deprecated Use CellEvent instead */
 export type ClickedCell = CellEvent;
 
@@ -146,4 +151,8 @@ export interface WheelProps {
   onPerspectiveOver?: (event: PerspectiveEvent) => void;
   onPerspectiveOut?: (event: PerspectiveEvent) => void;
   onPerspectiveClicked?: (event: PerspectiveEvent) => void;
+
+  onArrowOver?: (event: ArrowEvent) => void;
+  onArrowOut?: (event: ArrowEvent) => void;
+  onArrowClicked?: (event: ArrowEvent) => void;
 }

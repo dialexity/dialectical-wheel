@@ -32,6 +32,10 @@ export type RowScope = Partial<CellStyle> & {
 };
 export interface Styles extends Partial<CellStyle> {
     dimUnfocused?: number;
+    spiralArrow?: {
+        color?: string;
+        width?: CSSValue;
+    };
     thead?: RowScope & {
         neutral?: RowScope;
     };
@@ -93,6 +97,10 @@ export interface PerspectiveEvent {
     thesis: string;
     antithesis: string;
 }
+export interface ArrowEvent {
+    segmentId: string;
+    perspectiveIndex: number;
+}
 /** @deprecated Use CellEvent instead */
 export type ClickedCell = CellEvent;
 export interface ResolvedCellStyle {
@@ -117,13 +125,13 @@ export interface WheelProps {
     direction?: WheelDirection;
     showArrows?: boolean;
     showInwardSpiral?: boolean;
-    showOutwardSpiral?: boolean;
     interactive?: boolean;
     selectedPerspective?: number | null;
     focusedSegment?: string | null;
     neutralOutside?: boolean | 'header';
     styles?: Partial<Styles>;
     css?: React.CSSProperties;
+    children?: React.ReactNode;
     onFocusChanged?: (topSegment: string) => void;
     onCellOver?: (event: CellEvent) => void;
     onCellOut?: (event: CellEvent) => void;
@@ -134,5 +142,8 @@ export interface WheelProps {
     onPerspectiveOver?: (event: PerspectiveEvent) => void;
     onPerspectiveOut?: (event: PerspectiveEvent) => void;
     onPerspectiveClicked?: (event: PerspectiveEvent) => void;
+    onArrowOver?: (event: ArrowEvent) => void;
+    onArrowOut?: (event: ArrowEvent) => void;
+    onArrowClicked?: (event: ArrowEvent) => void;
 }
 //# sourceMappingURL=index.d.ts.map

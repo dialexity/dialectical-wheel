@@ -1,5 +1,5 @@
 import React from 'react';
-import type { SegmentData, CellEvent, Styles, WheelDirection } from '../../types';
+import type { SegmentData, CellEvent, ArrowEvent, Styles, WheelDirection } from '../../types';
 interface WheelRingProps {
     segments: SegmentData[];
     innerR: number;
@@ -12,9 +12,13 @@ interface WheelRingProps {
     hoveredPerspectiveIdx?: number | null;
     selectedPerspectiveIdx?: number | null;
     focusAnimatingIdx?: number | null;
+    hoveredArrowId?: string | null;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;
     onPointerLeave?: (event: CellEvent) => void;
+    onArrowOver?: (event: ArrowEvent) => void;
+    onArrowOut?: (event: ArrowEvent) => void;
+    onArrowClicked?: (event: ArrowEvent) => void;
 }
 export declare const WheelRing: React.FC<WheelRingProps>;
 export {};

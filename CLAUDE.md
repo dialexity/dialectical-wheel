@@ -41,7 +41,9 @@
 - `resolveStyle` in utils/styles.ts is the single resolution point — all rings/components call it with a `StyleContext`
 - Ring.tsx takes `rowGroup` prop to tell resolveStyle which section it belongs to
 - SynthesisRing renders per-segment wedges when tfoot styles differ per perspective, otherwise a single circle
-- Direction arrows render inside each header ring cell's `<g>` — inherit dimming, elevation, opacity transitions
+- Direction arrows render in their own `<g>` inside each header ring cell — independently hoverable/clickable with `stopPropagation`
+- Arrow hit area uses invisible fat stroke path (10x arrow width, min 20px) for easy targeting
+- Arrow direct-hover: color becomes `#333` + stroke thickens 1.5x; cell/segment hover uses `arrowHoverColor` (darkened border)
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
 - Arrow visibility: `arrow.color !== 'transparent'` — no separate opacity flag; cascading color controls show/hide
@@ -94,7 +96,8 @@
 - `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to table-level border color (visible by default), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
 - `CellStyle.hoverArrowColor` — arrow color on hover, defaults to hoverBorderColor
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
-- Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent` — narrowing as they bubble up
+- Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent`, `ArrowEvent` — narrowing as they bubble up
+- `ArrowEvent { segmentId, perspectiveIndex }` — fired by `onArrowOver`/`onArrowOut`/`onArrowClicked` props; independent of cell events
 - `ClickedCell` is deprecated alias for `CellEvent`
 - `SegmentData` carries `perspectiveIndex` and `colType` ('thesis'|'antithesis') for style resolution
 - `Styles.dimUnfocused` (0–1, default 0.5) — how much to dim unselected perspectives when one is selected; hovered perspectives undim

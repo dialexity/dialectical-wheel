@@ -1,4 +1,5 @@
-export { Wheel } from './components';
+export { Wheel, Callout } from './components';
+export type { CalloutProps } from './components';
 export * from './types';
 export { exportWheelSVG, exportWheelPNG, downloadBlob } from './export';
 export type { ExportPNGOptions } from './export';
