@@ -23,6 +23,7 @@
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
 - `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
+- `useRotation` useState initializer computes correct rotation from `focusedSegment` on mount — no animation on first render when a segment is pre-selected; the focus effect early-returns since segment is already at pole
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
 - Interactive arrow-click navigation (overrides T=12/A=6 convention): (1) selected segment at pole → flips T↔A to opposite pole in arrow direction, (2) at pole but not selected → rotates one segment in arrow direction, (3) off-pole → focuses to next pole in arrow direction (selects if something was selected)

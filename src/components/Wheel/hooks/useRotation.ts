@@ -16,7 +16,20 @@ function defaultRotation(segmentCount: number): number {
 }
 
 export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseRotationOptions) {
-  const [rotationDeg, setRotationDeg] = useState(() => defaultRotation(segmentIds.length));
+  const [rotationDeg, setRotationDeg] = useState(() => {
+    if (focusedSegment != null && segmentIds.length > 0) {
+      const idx = segmentIds.indexOf(focusedSegment);
+      if (idx !== -1) {
+        const N = segmentIds.length;
+        const segmentAngle = 360 / N;
+        const midAngle = idx * segmentAngle + segmentAngle / 2;
+        const isAntithesis = idx >= N / 2;
+        const targetPosition = isAntithesis ? 180 : 0;
+        return targetPosition - midAngle;
+      }
+    }
+    return defaultRotation(segmentIds.length);
+  });
   const rotationDegRef = useRef(rotationDeg);
   rotationDegRef.current = rotationDeg;
   const [isDragging, setIsDragging] = useState(false);
