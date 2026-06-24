@@ -155,13 +155,20 @@ export const CycleRing: React.FC<CycleRingProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <path
-                d={`M${sx},${sy} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex},${ey}`}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={Math.max(style.arrowWidth * 10, 20)}
-                style={{ pointerEvents: 'stroke' }}
-              />
+              {(() => {
+                const hitStartAngle = cw ? tailAngle - cellSpan * 0.08 : segment.startAngle;
+                const hitEndAngle = cw ? segment.endAngle : tailAngle + cellSpan * 0.08;
+                const hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
+                return (
+                  <path
+                    d={hitPath}
+                    fill={directArrowHover ? '#000' : 'transparent'}
+                    fillOpacity={directArrowHover ? 0.04 : 0}
+                    stroke="none"
+                    style={{ pointerEvents: 'fill' }}
+                  />
+                );
+              })()}
             </g>
           );
         })()}

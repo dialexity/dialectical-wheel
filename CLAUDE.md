@@ -46,7 +46,8 @@
 - Ring.tsx takes `rowGroup` prop to tell resolveStyle which section it belongs to
 - SynthesisRing renders per-segment wedges when tfoot styles differ per perspective, otherwise a single circle
 - Direction arrows render in their own `<g>` inside each header ring cell — independently hoverable/clickable with `stopPropagation`
-- Arrow hit area uses invisible fat stroke path (10x arrow width, min 20px) for easy targeting
+- Arrow hit area is a filled wedge (`describeArc`) spanning full ring height (innerR→outerR), from 8% past tail to cell edge in arrow direction
+- Arrow hit area shows `#000` at 4% fillOpacity on direct hover — button-like affordance fitting cell boundaries
 - Arrow direct-hover: color becomes `#333` + stroke thickens 1.5x; cell/segment hover uses `arrowHoverColor` (darkened border)
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
