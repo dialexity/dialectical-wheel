@@ -28,7 +28,7 @@
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
 - Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
-- If segment already overlaps top/bottom (any edge in zone), it snaps there regardless of T/A — prevents going the wrong way after manual drag
+- If segment already overlaps top/bottom (3% penetration into the target slice), it snaps there regardless of T/A — prevents going the wrong way after manual drag
 - Equidistant tie-break: T prefers top (−180°), A prefers bottom (+180°)
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
 - Focus animation skips phased fade when rotation delta < 1° (segment already at target) — just dims without flicker

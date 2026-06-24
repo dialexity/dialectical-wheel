@@ -43,9 +43,10 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
 
     let targetPosition = isAntithesis ? 180 : 0;
     const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
-    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+    const overlapThreshold = segmentAngle * 0.97;
+    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
       targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
       targetPosition = 180;
     }
 
@@ -168,9 +169,10 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
 
     let targetPosition = isAntithesis ? 180 : 0;
     const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
-    if (currentVisualAngle < segmentAngle || currentVisualAngle > 360 - segmentAngle) {
+    const overlapThreshold = segmentAngle * 0.97;
+    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
       targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < segmentAngle) {
+    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
       targetPosition = 180;
     }
 
