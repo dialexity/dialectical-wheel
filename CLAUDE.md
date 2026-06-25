@@ -53,6 +53,7 @@
 - Arrow visual paths wrapped in `<g style={{ pointerEvents: 'none' }}>` — only the hit path receives events
 - Arrow direct-hover: color becomes `#333` + stroke thickens 1.5x; cell/segment hover uses `arrowHoverColor` (darkened border)
 - Arrow geometry: short curved arc following ring radius + chevron tip computed from tangent vector at tip point
+- `Perspective.swapped` flag: when true, the T-identity label lives in the a-slot; CycleRing filter uses `swapped ? colType==='antithesis' : colType==='thesis'` to pick the T-label segment
 - CycleRing has a connecting dotted arc through the empty (antithesis) gap at 50% opacity, with arrowhead
 - Arrow visibility: `arrow.color !== 'transparent'` — no separate opacity flag; cascading color controls show/hide
 - `InwardSpiralArrows`: quadratic bezier arrows from neg ring into pos ring; skipped for 1 perspective; hidden when `interactive` + selected

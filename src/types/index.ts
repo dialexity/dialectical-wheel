@@ -58,6 +58,7 @@ export interface Perspective {
   a_plus: string | Cell;
   a: string | Cell;
   a_minus: string | Cell;
+  swapped?: boolean;
   style?: Partial<CellStyle>;
 }
 
@@ -68,6 +69,7 @@ export interface SegmentData {
   perspectiveIndex: number;
   polarity: 'positive' | 'neutral' | 'negative' | 'invisible';
   colType: 'thesis' | 'antithesis';
+  swapped?: boolean;
   fullText: string;
   pairWith: string;
   startAngle: number;
