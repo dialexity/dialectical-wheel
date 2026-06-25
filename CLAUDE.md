@@ -22,7 +22,7 @@
 - SynthesisRing has no events
 - SVG has `userSelect: none` + grab/grabbing cursor for drag UX
 - `useRotation` hook: drag (internal) + `focusedSegment` prop (external) both control rotation
-- `selectedPerspective` implies focus (rotates thesis to top) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
+- `selectedPerspective` implies focus (rotates to nearest pole) — explicit `focusedSegment` takes priority for rotation target only; `selectedPerspective` independently controls dimming/highlighting
 - `useRotation` useState initializer computes correct rotation from `focusedSegment` on mount — no animation on first render when a segment is pre-selected; the focus effect early-returns since segment is already at pole
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
@@ -33,9 +33,8 @@
 - `rotateBySegments(count)` in useRotation — rotates by N segments; positive count in `setRotationDeg(c => c - angle*count)` moves segments CCW; for CW arrows pass negative count
 - `refocusWithoutFade` in useRotation — rotates to target without phased animation; must manually suppress hover before calling
 - Segment order in segmentIds: [...theses, ...antitheses] — first half is thesis, second half antithesis
-- Thesis focuses to 12 o'clock (0°), antithesis to 6 o'clock (180°) — same perspective always vertical
-- If segment already overlaps top/bottom (3% penetration into the target slice), it snaps there regardless of T/A — prevents going the wrong way after manual drag
-- Equidistant tie-break: T prefers top (−180°), A prefers bottom (+180°)
+- Cell click / focus effect always goes to nearest pole (0° or 180°); equidistant tie-break prefers top (0°)
+- Arrow navigation (`focusSegmentToPosition`, `focusSegmentToNextPole`) still uses explicit target — not nearest-pole
 - Focus animation is phased: fade-out others (200ms) → rotate (300ms) → fade-in (200ms)
 - Focus animation skips phased fade when rotation delta < 1° (segment already at target) — just dims without flicker
 - Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor

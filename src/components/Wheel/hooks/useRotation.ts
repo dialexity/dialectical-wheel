@@ -23,8 +23,11 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
         const N = segmentIds.length;
         const segmentAngle = 360 / N;
         const midAngle = idx * segmentAngle + segmentAngle / 2;
-        const isAntithesis = idx >= N / 2;
-        const targetPosition = isAntithesis ? 180 : 0;
+        const defRot = defaultRotation(N);
+        const visualAngle = (((midAngle + defRot) % 360) + 360) % 360;
+        const distToTop = Math.min(visualAngle, 360 - visualAngle);
+        const distToBottom = Math.abs(visualAngle - 180);
+        const targetPosition = distToTop <= distToBottom ? 0 : 180;
         return targetPosition - midAngle;
       }
     }
@@ -52,16 +55,10 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const N = segmentIds.length;
     const segmentAngle = 360 / N;
     const midAngle = idx * segmentAngle + segmentAngle / 2;
-    const isAntithesis = idx >= N / 2;
-
-    let targetPosition = isAntithesis ? 180 : 0;
     const currentVisualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
-    const overlapThreshold = segmentAngle * 0.97;
-    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
-      targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
-      targetPosition = 180;
-    }
+    const distToTop = Math.min(currentVisualAngle, 360 - currentVisualAngle);
+    const distToBottom = Math.abs(currentVisualAngle - 180);
+    const targetPosition = distToTop <= distToBottom ? 0 : 180;
 
     const targetRaw = targetPosition - midAngle;
 
@@ -87,7 +84,7 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
       setIsRotationPaused(false);
       setRotationDeg(current => {
         let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
-        if (delta === 180) delta = isAntithesis ? 180 : -180;
+        if (delta === 180 || delta === -180) delta = -180;
         return current + delta;
       });
     }, FADE_OUT_MS);
@@ -194,22 +191,16 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     const N = segmentIds.length;
     const segmentAngle = 360 / N;
     const midAngle = idx * segmentAngle + segmentAngle / 2;
-    const isAntithesis = idx >= N / 2;
-
-    let targetPosition = isAntithesis ? 180 : 0;
-    const currentVisualAngle = ((midAngle + rotationDegRef.current + 360) % 360);
-    const overlapThreshold = segmentAngle * 0.97;
-    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
-      targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
-      targetPosition = 180;
-    }
+    const currentVisualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
+    const distToTop = Math.min(currentVisualAngle, 360 - currentVisualAngle);
+    const distToBottom = Math.abs(currentVisualAngle - 180);
+    const targetPosition = distToTop <= distToBottom ? 0 : 180;
 
     const targetRaw = targetPosition - midAngle;
     clearTimers();
     setRotationDeg(current => {
       let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
-      if (delta === 180) delta = isAntithesis ? 180 : -180;
+      if (delta === 180 || delta === -180) delta = -180;
       return current + delta;
     });
   }, [segmentIds]);
@@ -248,6 +239,25 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     });
   }, [segmentIds]);
 
+  const focusSegmentToNearestPole = useCallback((segmentId: string) => {
+    const idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    const N = segmentIds.length;
+    const segmentAngle = 360 / N;
+    const midAngle = idx * segmentAngle + segmentAngle / 2;
+    const visualAngle = (((midAngle + rotationDegRef.current) % 360) + 360) % 360;
+    const distToTop = Math.min(visualAngle, 360 - visualAngle);
+    const distToBottom = Math.abs(visualAngle - 180);
+    const targetPosition = distToTop <= distToBottom ? 0 : 180;
+    const targetRaw = targetPosition - midAngle;
+    clearTimers();
+    setRotationDeg(current => {
+      let delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+
   const rotateBySegments = useCallback((count: number) => {
     if (segmentIds.length === 0) return;
     const segmentAngle = 360 / segmentIds.length;
@@ -268,6 +278,7 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
     refocusWithoutFade,
     focusSegmentToPosition,
     focusSegmentToNextPole,
+    focusSegmentToNearestPole,
     rotateBySegments,
     svgRef,
     pointerHandlers: { onPointerDown, onPointerMove, onPointerUp },
