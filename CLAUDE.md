@@ -81,7 +81,7 @@
 - Inner ring chords are very narrow — use textBias to shift text outward
 - The cell shape is a trapezoid (wider at outer radius); midR chord is the safe wrap width
 - When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
-- Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
+- Never use `segmentId` string patterns to identify thesis/antithesis — aliases are user-controlled; always use `colType === 'thesis'` or `colType === 'antithesis'` (only exception: `__spacer__` prefix is internal sentinel)
 - T/A detection in useRotation uses array position (`idx >= N/2`), not alias — this is correct; the `t` field IS thesis regardless of alias naming
 - 1-PP has N=4 segments (T1, spacer, A1, spacer) — `rotateBySegments(1)` = 90° not 180°; flip requires `focusSegmentToPosition` to opposite idx
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy

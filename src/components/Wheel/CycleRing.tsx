@@ -31,7 +31,7 @@ export const CycleRing: React.FC<CycleRingProps> = ({
   const radius = (innerR + outerR) / 2;
 
   const thesisSegments = useMemo(() =>
-    segments.filter(s => !s.segmentId.startsWith('A') && s.perspectiveIndex !== -1),
+    segments.filter(s => s.colType === 'thesis' && s.perspectiveIndex !== -1),
     [segments]
   );
 

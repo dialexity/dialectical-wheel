@@ -30,7 +30,7 @@ export const SelectionOverlay: React.FC<SelectionOverlayProps> = ({
   return (
     <g style={{ pointerEvents: 'none' }}>
       {selected.map(seg => {
-        const isThesis = !seg.segmentId.startsWith('A');
+        const isThesis = seg.colType === 'thesis';
         const includeHeader = stitched || header === 'wheel' || (header === 'cycle' && isThesis);
         const outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
         const path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);

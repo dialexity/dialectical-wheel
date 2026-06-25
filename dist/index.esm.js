@@ -1,4 +1,4 @@
-import { jsx, jsxs } from 'react/jsx-runtime';
+import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
 import { useMemo, useRef, useCallback, useState, useEffect, forwardRef, Children, isValidElement } from 'react';
 
 function _arrayLikeToArray(r, a) {
@@ -890,10 +890,12 @@ var WheelRing = function WheelRing(_ref) {
     });
   }, [segments]);
   var interactive = _onClick || _onPointerEnter;
-  var arrowInteractive = onArrowOver || onArrowClicked;
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
+  var isSinglePerspective = segments.filter(function (s) {
+    return s.perspectiveIndex !== -1;
+  }).length === 2;
   var isElevated = function isElevated(segment) {
     return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
@@ -911,8 +913,11 @@ var WheelRing = function WheelRing(_ref) {
     var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
     var cellSpan = segment.endAngle - segment.startAngle;
     var cw = direction !== 'left';
+    var isDoubleHeaded = segment.perspectiveIndex === selectedPerspectiveIdx || isSinglePerspective;
     var tipAngle = cw ? segment.endAngle - cellSpan * 0.08 : segment.startAngle + cellSpan * 0.08;
-    var tailAngle = cw ? tipAngle - cellSpan * 0.07 : tipAngle + cellSpan * 0.07;
+    var singleSpan = cellSpan * 0.07;
+    var arrowSpan = isDoubleHeaded ? singleSpan * 0.4 : singleSpan;
+    var tailAngle = cw ? tipAngle - arrowSpan : tipAngle + arrowSpan;
     var _polarToCartesian3 = polarToCartesian(radius, tailAngle),
       _polarToCartesian4 = _slicedToArray(_polarToCartesian3, 2),
       sx = _polarToCartesian4[0],
@@ -930,6 +935,25 @@ var WheelRing = function WheelRing(_ref) {
       ty = ey - tangentY * hl + radialY * hl * 0.5;
     var tx2 = ex - tangentX * hl - radialX * hl * 0.5,
       ty2 = ey - tangentY * hl - radialY * hl * 0.5;
+    var gap = singleSpan * 0.2;
+    var tip2Angle = cw ? tailAngle - gap : tailAngle + gap;
+    var tail2Angle = cw ? tip2Angle - arrowSpan : tip2Angle + arrowSpan;
+    var _polarToCartesian7 = polarToCartesian(radius, tail2Angle),
+      _polarToCartesian8 = _slicedToArray(_polarToCartesian7, 2),
+      sx2 = _polarToCartesian8[0],
+      sy2 = _polarToCartesian8[1];
+    var _polarToCartesian9 = polarToCartesian(radius, tip2Angle),
+      _polarToCartesian0 = _slicedToArray(_polarToCartesian9, 2),
+      ex2 = _polarToCartesian0[0],
+      ey2 = _polarToCartesian0[1];
+    var tangent2X = Math.cos(tip2Angle) * (cw ? 1 : -1);
+    var tangent2Y = Math.sin(tip2Angle) * (cw ? 1 : -1);
+    var radial2X = Math.sin(tip2Angle);
+    var radial2Y = -Math.cos(tip2Angle);
+    var tx3 = ex2 - tangent2X * hl + radial2X * hl * 0.5,
+      ty3 = ey2 - tangent2Y * hl + radial2Y * hl * 0.5;
+    var tx4 = ex2 - tangent2X * hl - radial2X * hl * 0.5,
+      ty4 = ey2 - tangent2Y * hl - radial2Y * hl * 0.5;
     return jsxs("g", {
       onClick: function onClick() {
         return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
@@ -960,23 +984,16 @@ var WheelRing = function WheelRing(_ref) {
         fontFamily: "system-ui, sans-serif",
         children: segment.segmentId
       }), showArrows && style.arrowColor !== 'transparent' && function () {
-        var arrowHovered = hoveredArrowId === segment.segmentId || isHovered;
-        var strokeColor = arrowHovered ? style.arrowHoverColor : style.arrowColor;
+        var directArrowHover = hoveredArrowId === segment.segmentId;
+        var arrowHovered = directArrowHover || isHovered;
+        var strokeColor = directArrowHover ? '#333' : isHovered ? style.arrowHoverColor : style.arrowColor;
+        var hitTail = isDoubleHeaded ? tail2Angle : tailAngle;
+        var hitStartAngle = cw ? hitTail - cellSpan * 0.08 : segment.startAngle;
+        var hitEndAngle = cw ? segment.endAngle : hitTail + cellSpan * 0.08;
+        var hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
         return jsxs("g", {
-          onClick: function onClick(e) {
-            e.stopPropagation();
-            onArrowClicked === null || onArrowClicked === void 0 || onArrowClicked(arrowEvents[i]);
-          },
-          onPointerEnter: function onPointerEnter(e) {
-            e.stopPropagation();
-            onArrowOver === null || onArrowOver === void 0 || onArrowOver(arrowEvents[i]);
-          },
-          onPointerLeave: function onPointerLeave(e) {
-            e.stopPropagation();
-            onArrowOut === null || onArrowOut === void 0 || onArrowOut(arrowEvents[i]);
-          },
           style: {
-            cursor: arrowInteractive ? 'pointer' : 'default'
+            pointerEvents: 'none'
           },
           children: [jsx("path", {
             d: "M".concat(sx, ",").concat(sy, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex, ",").concat(ey),
@@ -991,13 +1008,39 @@ var WheelRing = function WheelRing(_ref) {
             strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
             strokeLinecap: "round",
             strokeLinejoin: "round"
+          }), isDoubleHeaded && jsxs(Fragment, {
+            children: [jsx("path", {
+              d: "M".concat(sx2, ",").concat(sy2, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex2, ",").concat(ey2),
+              fill: "none",
+              stroke: strokeColor,
+              strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
+              strokeLinecap: "round"
+            }), jsx("path", {
+              d: "M".concat(tx3, ",").concat(ty3, " L").concat(ex2, ",").concat(ey2, " L").concat(tx4, ",").concat(ty4),
+              fill: "none",
+              stroke: strokeColor,
+              strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
+              strokeLinecap: "round",
+              strokeLinejoin: "round"
+            })]
           }), jsx("path", {
-            d: "M".concat(sx, ",").concat(sy, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex, ",").concat(ey),
-            fill: "none",
-            stroke: "transparent",
-            strokeWidth: Math.max(style.arrowWidth * 3, 8),
+            d: hitPath,
+            fill: directArrowHover ? '#000' : 'transparent',
+            fillOpacity: directArrowHover ? 0.04 : 0,
+            stroke: "none",
+            onClick: directArrowHover ? function (e) {
+              e.stopPropagation();
+              onArrowClicked === null || onArrowClicked === void 0 || onArrowClicked(arrowEvents[i]);
+            } : undefined,
+            onPointerEnter: function onPointerEnter() {
+              onArrowOver === null || onArrowOver === void 0 || onArrowOver(arrowEvents[i]);
+            },
+            onPointerLeave: function onPointerLeave() {
+              onArrowOut === null || onArrowOut === void 0 || onArrowOut(arrowEvents[i]);
+            },
             style: {
-              pointerEvents: 'stroke'
+              cursor: directArrowHover ? 'pointer' : 'default',
+              pointerEvents: 'fill'
             }
           })]
         });
@@ -1056,7 +1099,7 @@ var CycleRing = function CycleRing(_ref) {
   var radius = (innerR + outerR) / 2;
   var thesisSegments = useMemo(function () {
     return segments.filter(function (s) {
-      return !s.segmentId.startsWith('A') && s.perspectiveIndex !== -1;
+      return s.colType === 'thesis' && s.perspectiveIndex !== -1;
     });
   }, [segments]);
   var resolvedStyles = useMemo(function () {
@@ -1090,7 +1133,6 @@ var CycleRing = function CycleRing(_ref) {
     });
   }, [thesisSegments]);
   var interactive = _onClick || _onPointerEnter;
-  var arrowInteractive = onArrowOver || onArrowClicked;
   var isElevated = function isElevated(segment) {
     return segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
   };
@@ -1108,8 +1150,11 @@ var CycleRing = function CycleRing(_ref) {
     var path = describeArc(innerR, outerR, segment.startAngle, segment.endAngle);
     var cellSpan = segment.endAngle - segment.startAngle;
     var cw = direction !== 'left';
+    var isDoubleHeaded = segment.perspectiveIndex === selectedPerspectiveIdx || thesisSegments.length === 1;
     var tipAngle = cw ? segment.endAngle - cellSpan * 0.08 : segment.startAngle + cellSpan * 0.08;
-    var tailAngle = cw ? tipAngle - cellSpan * 0.07 : tipAngle + cellSpan * 0.07;
+    var singleSpan = cellSpan * 0.07;
+    var arrowSpan = isDoubleHeaded ? singleSpan * 0.4 : singleSpan;
+    var tailAngle = cw ? tipAngle - arrowSpan : tipAngle + arrowSpan;
     var _polarToCartesian3 = polarToCartesian(radius, tailAngle),
       _polarToCartesian4 = _slicedToArray(_polarToCartesian3, 2),
       sx = _polarToCartesian4[0],
@@ -1127,6 +1172,25 @@ var CycleRing = function CycleRing(_ref) {
       ty = ey - tangentY * hl + radialY * hl * 0.5;
     var tx2 = ex - tangentX * hl - radialX * hl * 0.5,
       ty2 = ey - tangentY * hl - radialY * hl * 0.5;
+    var gap = singleSpan * 0.2;
+    var tip2Angle = cw ? tailAngle - gap : tailAngle + gap;
+    var tail2Angle = cw ? tip2Angle - arrowSpan : tip2Angle + arrowSpan;
+    var _polarToCartesian7 = polarToCartesian(radius, tail2Angle),
+      _polarToCartesian8 = _slicedToArray(_polarToCartesian7, 2),
+      sx2 = _polarToCartesian8[0],
+      sy2 = _polarToCartesian8[1];
+    var _polarToCartesian9 = polarToCartesian(radius, tip2Angle),
+      _polarToCartesian0 = _slicedToArray(_polarToCartesian9, 2),
+      ex2 = _polarToCartesian0[0],
+      ey2 = _polarToCartesian0[1];
+    var tangent2X = Math.cos(tip2Angle) * (cw ? 1 : -1);
+    var tangent2Y = Math.sin(tip2Angle) * (cw ? 1 : -1);
+    var radial2X = Math.sin(tip2Angle);
+    var radial2Y = -Math.cos(tip2Angle);
+    var tx3 = ex2 - tangent2X * hl + radial2X * hl * 0.5,
+      ty3 = ey2 - tangent2Y * hl + radial2Y * hl * 0.5;
+    var tx4 = ex2 - tangent2X * hl - radial2X * hl * 0.5,
+      ty4 = ey2 - tangent2Y * hl - radial2Y * hl * 0.5;
     return jsxs("g", {
       onClick: function onClick() {
         return _onClick === null || _onClick === void 0 ? void 0 : _onClick(cellEvents[i]);
@@ -1157,23 +1221,16 @@ var CycleRing = function CycleRing(_ref) {
         fontFamily: "system-ui, sans-serif",
         children: segment.segmentId
       }), showArrows && style.arrowColor !== 'transparent' && function () {
-        var arrowHovered = hoveredArrowId === segment.segmentId || isHovered;
-        var strokeColor = arrowHovered ? style.arrowHoverColor : style.arrowColor;
+        var directArrowHover = hoveredArrowId === segment.segmentId;
+        var arrowHovered = directArrowHover || isHovered;
+        var strokeColor = directArrowHover ? '#333' : isHovered ? style.arrowHoverColor : style.arrowColor;
+        var hitTail = isDoubleHeaded ? tail2Angle : tailAngle;
+        var hitStartAngle = cw ? hitTail - cellSpan * 0.08 : segment.startAngle;
+        var hitEndAngle = cw ? segment.endAngle : hitTail + cellSpan * 0.08;
+        var hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
         return jsxs("g", {
-          onClick: function onClick(e) {
-            e.stopPropagation();
-            onArrowClicked === null || onArrowClicked === void 0 || onArrowClicked(arrowEvents[i]);
-          },
-          onPointerEnter: function onPointerEnter(e) {
-            e.stopPropagation();
-            onArrowOver === null || onArrowOver === void 0 || onArrowOver(arrowEvents[i]);
-          },
-          onPointerLeave: function onPointerLeave(e) {
-            e.stopPropagation();
-            onArrowOut === null || onArrowOut === void 0 || onArrowOut(arrowEvents[i]);
-          },
           style: {
-            cursor: arrowInteractive ? 'pointer' : 'default'
+            pointerEvents: 'none'
           },
           children: [jsx("path", {
             d: "M".concat(sx, ",").concat(sy, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex, ",").concat(ey),
@@ -1188,13 +1245,39 @@ var CycleRing = function CycleRing(_ref) {
             strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
             strokeLinecap: "round",
             strokeLinejoin: "round"
+          }), isDoubleHeaded && jsxs(Fragment, {
+            children: [jsx("path", {
+              d: "M".concat(sx2, ",").concat(sy2, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex2, ",").concat(ey2),
+              fill: "none",
+              stroke: strokeColor,
+              strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
+              strokeLinecap: "round"
+            }), jsx("path", {
+              d: "M".concat(tx3, ",").concat(ty3, " L").concat(ex2, ",").concat(ey2, " L").concat(tx4, ",").concat(ty4),
+              fill: "none",
+              stroke: strokeColor,
+              strokeWidth: arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth,
+              strokeLinecap: "round",
+              strokeLinejoin: "round"
+            })]
           }), jsx("path", {
-            d: "M".concat(sx, ",").concat(sy, " A").concat(radius, ",").concat(radius, " 0 0 ").concat(cw ? 1 : 0, " ").concat(ex, ",").concat(ey),
-            fill: "none",
-            stroke: "transparent",
-            strokeWidth: Math.max(style.arrowWidth * 3, 8),
+            d: hitPath,
+            fill: directArrowHover ? '#000' : 'transparent',
+            fillOpacity: directArrowHover ? 0.04 : 0,
+            stroke: "none",
+            onClick: directArrowHover ? function (e) {
+              e.stopPropagation();
+              onArrowClicked === null || onArrowClicked === void 0 || onArrowClicked(arrowEvents[i]);
+            } : undefined,
+            onPointerEnter: function onPointerEnter() {
+              onArrowOver === null || onArrowOver === void 0 || onArrowOver(arrowEvents[i]);
+            },
+            onPointerLeave: function onPointerLeave() {
+              onArrowOut === null || onArrowOut === void 0 || onArrowOut(arrowEvents[i]);
+            },
             style: {
-              pointerEvents: 'stroke'
+              cursor: directArrowHover ? 'pointer' : 'default',
+              pointerEvents: 'fill'
             }
           })]
         });
@@ -1220,14 +1303,14 @@ var CycleRing = function CycleRing(_ref) {
     if (gapEnd - gapStart < 0.1) return null;
     var arcStart = gapStart + pad;
     var arcEnd = gapEnd - pad;
-    var _polarToCartesian7 = polarToCartesian(radius, cw ? arcStart : arcEnd),
-      _polarToCartesian8 = _slicedToArray(_polarToCartesian7, 2),
-      s1x = _polarToCartesian8[0],
-      s1y = _polarToCartesian8[1];
-    var _polarToCartesian9 = polarToCartesian(radius, cw ? arcEnd : arcStart),
-      _polarToCartesian0 = _slicedToArray(_polarToCartesian9, 2),
-      s2x = _polarToCartesian0[0],
-      s2y = _polarToCartesian0[1];
+    var _polarToCartesian1 = polarToCartesian(radius, cw ? arcStart : arcEnd),
+      _polarToCartesian10 = _slicedToArray(_polarToCartesian1, 2),
+      s1x = _polarToCartesian10[0],
+      s1y = _polarToCartesian10[1];
+    var _polarToCartesian11 = polarToCartesian(radius, cw ? arcEnd : arcStart),
+      _polarToCartesian12 = _slicedToArray(_polarToCartesian11, 2),
+      s2x = _polarToCartesian12[0],
+      s2y = _polarToCartesian12[1];
     var largeArc = arcEnd - arcStart > Math.PI ? 1 : 0;
     var tipAngle = cw ? arcEnd : arcStart;
     var tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
@@ -1305,7 +1388,7 @@ var SelectionOverlay = function SelectionOverlay(_ref) {
       pointerEvents: 'none'
     },
     children: selected.map(function (seg) {
-      var isThesis = !seg.segmentId.startsWith('A');
+      var isThesis = seg.colType === 'thesis';
       var includeHeader = stitched || header === 'wheel' || header === 'cycle' && isThesis;
       var outerR = includeHeader ? radii.cycleEnd : radii.outerEnd;
       var path = describeArc(radii.innerStart, outerR, seg.startAngle, seg.endAngle);
@@ -1469,6 +1552,20 @@ function useRotation(_ref) {
     segmentIds = _ref.segmentIds,
     focusedSegment = _ref.focusedSegment;
   var _useState = useState(function () {
+      if (focusedSegment != null && segmentIds.length > 0) {
+        var idx = segmentIds.indexOf(focusedSegment);
+        if (idx !== -1) {
+          var N = segmentIds.length;
+          var segmentAngle = 360 / N;
+          var midAngle = idx * segmentAngle + segmentAngle / 2;
+          var defRot = defaultRotation(N);
+          var visualAngle = ((midAngle + defRot) % 360 + 360) % 360;
+          var distToTop = Math.min(visualAngle, 360 - visualAngle);
+          var distToBottom = Math.abs(visualAngle - 180);
+          var targetPosition = distToTop <= distToBottom ? 0 : 180;
+          return targetPosition - midAngle;
+        }
+      }
       return defaultRotation(segmentIds.length);
     }),
     _useState2 = _slicedToArray(_useState, 2),
@@ -1505,21 +1602,17 @@ function useRotation(_ref) {
     var N = segmentIds.length;
     var segmentAngle = 360 / N;
     var midAngle = idx * segmentAngle + segmentAngle / 2;
-    var isAntithesis = idx >= N / 2;
-    var targetPosition = isAntithesis ? 180 : 0;
-    var currentVisualAngle = (midAngle + rotationDegRef.current + 360) % 360;
-    var overlapThreshold = segmentAngle * 0.97;
-    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
-      targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
-      targetPosition = 180;
-    }
+    var currentVisualAngle = ((midAngle + rotationDegRef.current) % 360 + 360) % 360;
+    var distToTop = Math.min(currentVisualAngle, 360 - currentVisualAngle);
+    var distToBottom = Math.abs(currentVisualAngle - 180);
+    var targetPosition = distToTop <= distToBottom ? 0 : 180;
     var targetRaw = targetPosition - midAngle;
     var perspectiveIdx = idx < N / 2 ? idx : idx - N / 2;
     clearTimers();
-    // If segment is already at focus position, skip phased animation (no flicker)
-    var delta = ((targetRaw - rotationDegRef.current) % 360 + 540) % 360 - 180;
-    if (Math.abs(delta) < 1) {
+    // If segment is already at either pole, skip phased animation
+    var topDiff = Math.abs((currentVisualAngle + 540) % 360 - 180);
+    var bottomDiff = Math.abs((currentVisualAngle - 180 + 540) % 360 - 180);
+    if (topDiff < 1 || bottomDiff < 1) {
       setFocusAnimatingIdx(null);
       setIsRotationPaused(false);
       return;
@@ -1532,7 +1625,7 @@ function useRotation(_ref) {
       setIsRotationPaused(false);
       setRotationDeg(function (current) {
         var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
-        if (delta === 180) delta = isAntithesis ? 180 : -180;
+        if (delta === 180 || delta === -180) delta = -180;
         return current + delta;
       });
     }, FADE_OUT_MS);
@@ -1611,27 +1704,92 @@ function useRotation(_ref) {
     var diff = Math.abs((currentVisualAngle - targetPosition + 540) % 360 - 180);
     return diff < 1;
   }, [segmentIds]);
+  var isSegmentAtPole = useCallback(function (segmentId) {
+    var idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return null;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
+    var midAngle = idx * segmentAngle + segmentAngle / 2;
+    var currentVisualAngle = ((midAngle + rotationDegRef.current) % 360 + 360) % 360;
+    var halfSeg = segmentAngle / 2;
+    var topDiff = Math.abs((currentVisualAngle + 540) % 360 - 180);
+    if (topDiff < halfSeg) return 'top';
+    var bottomDiff = Math.abs((currentVisualAngle - 180 + 540) % 360 - 180);
+    if (bottomDiff < halfSeg) return 'bottom';
+    return null;
+  }, [segmentIds]);
   var refocusWithoutFade = useCallback(function (segmentId) {
     var idx = segmentIds.indexOf(segmentId);
     if (idx === -1) return;
     var N = segmentIds.length;
     var segmentAngle = 360 / N;
     var midAngle = idx * segmentAngle + segmentAngle / 2;
-    var isAntithesis = idx >= N / 2;
-    var targetPosition = isAntithesis ? 180 : 0;
-    var currentVisualAngle = (midAngle + rotationDegRef.current + 360) % 360;
-    var overlapThreshold = segmentAngle * 0.97;
-    if (currentVisualAngle < overlapThreshold || currentVisualAngle > 360 - overlapThreshold) {
-      targetPosition = 0;
-    } else if (Math.abs(currentVisualAngle - 180) < overlapThreshold) {
-      targetPosition = 180;
-    }
+    var currentVisualAngle = ((midAngle + rotationDegRef.current) % 360 + 360) % 360;
+    var distToTop = Math.min(currentVisualAngle, 360 - currentVisualAngle);
+    var distToBottom = Math.abs(currentVisualAngle - 180);
+    var targetPosition = distToTop <= distToBottom ? 0 : 180;
     var targetRaw = targetPosition - midAngle;
     clearTimers();
     setRotationDeg(function (current) {
       var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
-      if (delta === 180) delta = isAntithesis ? 180 : -180;
+      if (delta === 180 || delta === -180) delta = -180;
       return current + delta;
+    });
+  }, [segmentIds]);
+  var focusSegmentToPosition = useCallback(function (segmentId, targetPosition, clockwise) {
+    var idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
+    var midAngle = idx * segmentAngle + segmentAngle / 2;
+    var targetRaw = targetPosition - midAngle;
+    clearTimers();
+    setRotationDeg(function (current) {
+      var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+  var focusSegmentToNextPole = useCallback(function (segmentId, clockwise) {
+    var idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
+    var midAngle = idx * segmentAngle + segmentAngle / 2;
+    var visualAngle = ((midAngle + rotationDegRef.current) % 360 + 360) % 360;
+    var targetPosition = clockwise ? visualAngle > 0 && visualAngle <= 180 ? 180 : 0 : visualAngle >= 180 && visualAngle < 360 ? 180 : 0;
+    var targetRaw = targetPosition - midAngle;
+    clearTimers();
+    setRotationDeg(function (current) {
+      var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = clockwise ? 180 : -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+  var focusSegmentToNearestPole = useCallback(function (segmentId) {
+    var idx = segmentIds.indexOf(segmentId);
+    if (idx === -1) return;
+    var N = segmentIds.length;
+    var segmentAngle = 360 / N;
+    var midAngle = idx * segmentAngle + segmentAngle / 2;
+    var visualAngle = ((midAngle + rotationDegRef.current) % 360 + 360) % 360;
+    var distToTop = Math.min(visualAngle, 360 - visualAngle);
+    var distToBottom = Math.abs(visualAngle - 180);
+    var targetPosition = distToTop <= distToBottom ? 0 : 180;
+    var targetRaw = targetPosition - midAngle;
+    clearTimers();
+    setRotationDeg(function (current) {
+      var delta = ((targetRaw - current) % 360 + 540) % 360 - 180;
+      if (delta === 180 || delta === -180) delta = -180;
+      return current + delta;
+    });
+  }, [segmentIds]);
+  var rotateBySegments = useCallback(function (count) {
+    if (segmentIds.length === 0) return;
+    var segmentAngle = 360 / segmentIds.length;
+    clearTimers();
+    setRotationDeg(function (current) {
+      return current - segmentAngle * count;
     });
   }, [segmentIds]);
   var rotationRad = rotationDeg * Math.PI / 180;
@@ -1642,7 +1800,12 @@ function useRotation(_ref) {
     isRotationPaused: isRotationPaused,
     focusAnimatingIdx: focusAnimatingIdx,
     isSegmentAtFocusTarget: isSegmentAtFocusTarget,
+    isSegmentAtPole: isSegmentAtPole,
     refocusWithoutFade: refocusWithoutFade,
+    focusSegmentToPosition: focusSegmentToPosition,
+    focusSegmentToNextPole: focusSegmentToNextPole,
+    focusSegmentToNearestPole: focusSegmentToNearestPole,
+    rotateBySegments: rotateBySegments,
     svgRef: svgRef,
     pointerHandlers: {
       onPointerDown: onPointerDown,
@@ -1878,8 +2041,11 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
     isDragging = _useRotation.isDragging,
     isRotationPaused = _useRotation.isRotationPaused,
     focusAnimatingIdx = _useRotation.focusAnimatingIdx,
-    isSegmentAtFocusTarget = _useRotation.isSegmentAtFocusTarget,
+    isSegmentAtPole = _useRotation.isSegmentAtPole,
     refocusWithoutFade = _useRotation.refocusWithoutFade,
+    focusSegmentToPosition = _useRotation.focusSegmentToPosition,
+    focusSegmentToNextPole = _useRotation.focusSegmentToNextPole,
+    rotateBySegments = _useRotation.rotateBySegments,
     svgRef = _useRotation.svgRef,
     pointerHandlers = _useRotation.pointerHandlers;
   var setSvgRef = useCallback(function (el) {
@@ -1948,7 +2114,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var handleCellClick = useCallback(function (cell) {
     if (interactive) {
       if (internalSelected === cell.perspectiveIndex) {
-        if (isSegmentAtFocusTarget(cell.segmentId)) {
+        if (isSegmentAtPole(cell.segmentId) != null) {
           setInternalSelected(null);
           setInternalFocused(null);
         } else {
@@ -1969,7 +2135,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
     if (onCellClicked) onCellClicked(cell);
     if (onSegmentClicked) onSegmentClicked(deriveSegmentEvent(cell));
     if (onPerspectiveClicked) onPerspectiveClicked(derivePerspectiveEvent(cell));
-  }, [interactive, internalSelected, isSegmentAtFocusTarget, refocusWithoutFade, onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
+  }, [interactive, internalSelected, isSegmentAtPole, refocusWithoutFade, onCellClicked, onSegmentClicked, onPerspectiveClicked, deriveSegmentEvent, derivePerspectiveEvent]);
   var handlePointerEnter = useCallback(function (cell) {
     if (hoverSuppressedRef.current) return;
     if (onCellOver) onCellOver(cell);
@@ -2020,8 +2186,62 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
     if (onArrowOut) onArrowOut(event);
   }, [onArrowOut]);
   var handleArrowClicked = useCallback(function (event) {
+    if (interactive) {
+      var N = segmentIds.length;
+      var idx = segmentIds.indexOf(event.segmentId);
+      var isAntithesis = idx >= N / 2;
+      var clockwise = direction !== 'left';
+      var pole = isSegmentAtPole(event.segmentId);
+      var suppressHover = function suppressHover() {
+        hoverSuppressedRef.current = true;
+        suppressPointerPos.current = null;
+        hoveredSegmentRef.current = null;
+        hoveredPerspectiveRef.current = null;
+        lastCellEventRef.current = null;
+        setHoveredSegmentId(null);
+        setHoveredPerspectiveIdx(null);
+      };
+      if (internalSelected === event.perspectiveIndex && pole != null) {
+        // Case 1: arrow on selected segment at pole → flip to opposite pole in arrow direction
+        var oppositeIdx = isAntithesis ? idx - N / 2 : idx + N / 2;
+        var oppositeSegment = segmentIds[oppositeIdx];
+        var targetPosition = pole === 'top' ? 0 : 180;
+        suppressHover();
+        setInternalFocused(oppositeSegment);
+        focusSegmentToPosition(oppositeSegment, targetPosition, clockwise);
+      } else if (pole != null && internalSelected !== event.perspectiveIndex && perspectives.length === 1) {
+        // 1-PP: only one perspective, so flip to opposite (same as Case 1)
+        var _oppositeIdx = isAntithesis ? idx - N / 2 : idx + N / 2;
+        var _oppositeSegment = segmentIds[_oppositeIdx];
+        var _targetPosition = pole === 'top' ? 0 : 180;
+        suppressHover();
+        setInternalFocused(_oppositeSegment);
+        focusSegmentToPosition(_oppositeSegment, _targetPosition, clockwise);
+      } else if (pole != null && internalSelected !== event.perspectiveIndex) {
+        // Case 2: arrow at pole, not the selected perspective → rotate one segment in arrow direction
+        rotateBySegments(clockwise ? -1 : 1);
+      } else {
+        // Case 3: arrow not at pole → focus to next pole in arrow direction; select if something was already selected
+        suppressHover();
+        if (internalSelected != null) {
+          setInternalSelected(event.perspectiveIndex);
+          if (onPerspectiveClicked) {
+            var p = perspectives[event.perspectiveIndex];
+            var thesis = typeof p.t === 'string' ? p.t : p.t.statement || p.t.alias || '';
+            var antithesis = typeof p.a === 'string' ? p.a : p.a.statement || p.a.alias || '';
+            onPerspectiveClicked({
+              perspectiveIndex: event.perspectiveIndex,
+              thesis: thesis,
+              antithesis: antithesis
+            });
+          }
+        }
+        setInternalFocused(event.segmentId);
+        focusSegmentToNextPole(event.segmentId, clockwise);
+      }
+    }
     if (onArrowClicked) onArrowClicked(event);
-  }, [onArrowClicked]);
+  }, [interactive, segmentIds, direction, internalSelected, isSegmentAtPole, focusSegmentToPosition, focusSegmentToNextPole, rotateBySegments, onArrowClicked, perspectives, onPerspectiveClicked]);
   var handleWheelPointerLeave = useCallback(function () {
     hoverSuppressedRef.current = false;
     var last = lastCellEventRef.current;
