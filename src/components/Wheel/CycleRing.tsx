@@ -216,41 +216,47 @@ export const CycleRing: React.FC<CycleRingProps> = ({
 
   const hasVisibleArrows = showArrows && resolvedStyles[0]?.arrowColor !== 'transparent';
 
-  const connectingArc = useMemo(() => {
+  const connectingArcs = useMemo(() => {
     if (!hasVisibleArrows || thesisSegments.length < 2) return null;
-    const last = thesisSegments[thesisSegments.length - 1];
-    const first = thesisSegments[0];
-    const cellSpan = last.endAngle - last.startAngle;
+    const sorted = [...thesisSegments].sort((a, b) => a.startAngle - b.startAngle);
+    const cellSpan = sorted[0].endAngle - sorted[0].startAngle;
     const pad = cellSpan * 0.08;
     const cw = direction !== 'left';
-    const gapStart = last.endAngle;
-    const gapEnd = first.startAngle + 2 * Math.PI;
-    if (gapEnd - gapStart < 0.1) return null;
-    const arcStart = gapStart + pad;
-    const arcEnd = gapEnd - pad;
-    const [s1x, s1y] = polarToCartesian(radius, cw ? arcStart : arcEnd);
-    const [s2x, s2y] = polarToCartesian(radius, cw ? arcEnd : arcStart);
-    const largeArc = (arcEnd - arcStart) > Math.PI ? 1 : 0;
-    const tipAngle = cw ? arcEnd : arcStart;
-    const tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
-    const tangentY = Math.sin(tipAngle) * (cw ? 1 : -1);
-    const radialX = Math.sin(tipAngle);
-    const radialY = -Math.cos(tipAngle);
-    const hl = arrowSize * 0.5;
-    const [tx, ty] = [s2x - tangentX * hl + radialX * hl * 0.4, s2y - tangentY * hl + radialY * hl * 0.4];
-    const [tx2, ty2] = [s2x - tangentX * hl - radialX * hl * 0.4, s2y - tangentY * hl - radialY * hl * 0.4];
-    return {
-      d: `M${s1x},${s1y} A${radius},${radius} 0 ${largeArc} ${cw ? 1 : 0} ${s2x},${s2y}`,
-      head: `M${tx},${ty} L${s2x},${s2y} L${tx2},${ty2}`,
-    };
+    const arcs: { d: string; head: string }[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const curr = sorted[i];
+      const next = sorted[(i + 1) % sorted.length];
+      const gapStart = curr.endAngle;
+      const gapEnd = i < sorted.length - 1 ? next.startAngle : next.startAngle + 2 * Math.PI;
+      if (gapEnd - gapStart < 0.1) continue;
+      const arcStart = gapStart + pad;
+      const arcEnd = gapEnd - pad;
+      const [s1x, s1y] = polarToCartesian(radius, cw ? arcStart : arcEnd);
+      const [s2x, s2y] = polarToCartesian(radius, cw ? arcEnd : arcStart);
+      const largeArc = (arcEnd - arcStart) > Math.PI ? 1 : 0;
+      const tipAngle = cw ? arcEnd : arcStart;
+      const tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
+      const tangentY = Math.sin(tipAngle) * (cw ? 1 : -1);
+      const radialX = Math.sin(tipAngle);
+      const radialY = -Math.cos(tipAngle);
+      const hl = arrowSize * 0.5;
+      const [tx, ty] = [s2x - tangentX * hl + radialX * hl * 0.4, s2y - tangentY * hl + radialY * hl * 0.4];
+      const [tx2, ty2] = [s2x - tangentX * hl - radialX * hl * 0.4, s2y - tangentY * hl - radialY * hl * 0.4];
+      arcs.push({
+        d: `M${s1x},${s1y} A${radius},${radius} 0 ${largeArc} ${cw ? 1 : 0} ${s2x},${s2y}`,
+        head: `M${tx},${ty} L${s2x},${s2y} L${tx2},${ty2}`,
+      });
+    }
+    return arcs.length > 0 ? arcs : null;
   }, [hasVisibleArrows, thesisSegments, radius, direction, arrowSize]);
 
   return (
     <g>
-      {connectingArc && (
-        <g opacity={0.5}>
+      {connectingArcs?.map((arc, i) => (
+        <g key={`arc-${i}`} opacity={0.5}>
           <path
-            d={connectingArc.d}
+            d={arc.d}
             fill="none"
             stroke={resolvedStyles[0]?.arrowColor ?? '#666'}
             strokeWidth={(resolvedStyles[0]?.arrowWidth ?? arrowSize * 0.2) * 0.75}
@@ -258,7 +264,7 @@ export const CycleRing: React.FC<CycleRingProps> = ({
             strokeLinecap="round"
           />
           <path
-            d={connectingArc.head}
+            d={arc.head}
             fill="none"
             stroke={resolvedStyles[0]?.arrowColor ?? '#666'}
             strokeWidth={resolvedStyles[0]?.arrowWidth ?? arrowSize * 0.2}
@@ -266,7 +272,7 @@ export const CycleRing: React.FC<CycleRingProps> = ({
             strokeLinejoin="round"
           />
         </g>
-      )}
+      ))}
       {thesisSegments.map((segment, i) =>
         isElevated(segment) ? null : (
           <g key={`wrap-${segment.segmentId}`} opacity={cellOpacity(segment)} style={{ transition: 'opacity 200ms ease-in' }}>
