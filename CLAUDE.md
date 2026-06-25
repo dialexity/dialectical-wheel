@@ -26,7 +26,8 @@
 - `useRotation` useState initializer computes correct rotation from `focusedSegment` on mount — no animation on first render when a segment is pre-selected; the focus effect early-returns since segment is already at pole
 - `interactive` prop: self-contained click-to-select/focus app; props sync into internal state (commands); without it, fully controlled (no internal state)
 - Interactive click cycle: (1) click unselected → select+focus with fade, (2) click selected but displaced → refocus without fade (rotation only), (3) click selected+focused → deselect
-- Interactive arrow-click navigation (overrides T=12/A=6 convention): (1) selected segment at pole → flips T↔A to opposite pole in arrow direction, (2) at pole but not selected → rotates one segment in arrow direction, (3) off-pole → focuses to next pole in arrow direction (selects if something was selected)
+- Interactive arrow-click navigation (overrides T=12/A=6 convention): (1) selected segment at pole → flips T↔A to opposite pole in arrow direction, (2) at pole but not selected → rotates one segment in arrow direction, (3) off-pole → focuses to next pole in arrow direction (selects if something was selected); 1-PP always flips (no case 2)
+- Double-arrow visual (`→ →`): selected perspective arrows render two short arrows (each with own arc+chevron) instead of one; 1-PP always shows double arrows; total length matches single arrow
 - `isSegmentAtPole` in useRotation — checks if segment's angular range covers 0° or 180° (threshold = halfSegmentAngle, not 1°)
 - `focusSegmentToPosition` / `focusSegmentToNextPole` in useRotation — focus effect skips when segment is already at either pole (topDiff < 1 || bottomDiff < 1), no ref flag needed
 - `rotateBySegments(count)` in useRotation — rotates by N segments; positive count in `setRotationDeg(c => c - angle*count)` moves segments CCW; for CW arrows pass negative count
@@ -83,6 +84,7 @@
 - When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
 - Filtering segments by alias prefix (startsWith('A')) is fragile if aliases are overridden
 - T/A detection in useRotation uses array position (`idx >= N/2`), not alias — this is correct; the `t` field IS thesis regardless of alias naming
+- 1-PP has N=4 segments (T1, spacer, A1, spacer) — `rotateBySegments(1)` = 90° not 180°; flip requires `focusSegmentToPosition` to opposite idx
 - `hoveredPerspectiveIdx` uses `!= null` not `&&` because index 0 is falsy
 - `setRotationDeg` must use functional updater (`current => ...`) since effects don't re-run on rotation changes
 - `rotationDegRef` mirrors `rotationDeg` state so the focus effect can read current rotation without depending on it

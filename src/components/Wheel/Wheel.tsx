@@ -271,6 +271,14 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
         suppressHover();
         setInternalFocused(oppositeSegment);
         focusSegmentToPosition(oppositeSegment, targetPosition, clockwise);
+      } else if (pole != null && internalSelected !== event.perspectiveIndex && perspectives.length === 1) {
+        // 1-PP: only one perspective, so flip to opposite (same as Case 1)
+        const oppositeIdx = isAntithesis ? idx - N / 2 : idx + N / 2;
+        const oppositeSegment = segmentIds[oppositeIdx];
+        const targetPosition = pole === 'top' ? 0 : 180;
+        suppressHover();
+        setInternalFocused(oppositeSegment);
+        focusSegmentToPosition(oppositeSegment, targetPosition, clockwise);
       } else if (pole != null && internalSelected !== event.perspectiveIndex) {
         // Case 2: arrow at pole, not the selected perspective → rotate one segment in arrow direction
         rotateBySegments(clockwise ? -1 : 1);

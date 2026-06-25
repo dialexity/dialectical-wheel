@@ -65,6 +65,7 @@ export const WheelRing: React.FC<WheelRingProps> = ({
   const interactive = onClick || onPointerEnter;
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
+  const isSinglePerspective = segments.filter(s => s.perspectiveIndex !== -1).length === 2;
 
   const isElevated = (segment: SegmentData) =>
     segment.perspectiveIndex === hoveredPerspectiveIdx || segment.perspectiveIndex === selectedPerspectiveIdx;
@@ -82,12 +83,14 @@ export const WheelRing: React.FC<WheelRingProps> = ({
 
     const cellSpan = segment.endAngle - segment.startAngle;
     const cw = direction !== 'left';
+    const isDoubleHeaded = segment.perspectiveIndex === selectedPerspectiveIdx || isSinglePerspective;
+
     const tipAngle = cw
       ? segment.endAngle - cellSpan * 0.08
       : segment.startAngle + cellSpan * 0.08;
-    const tailAngle = cw
-      ? tipAngle - cellSpan * 0.07
-      : tipAngle + cellSpan * 0.07;
+    const singleSpan = cellSpan * 0.07;
+    const arrowSpan = isDoubleHeaded ? singleSpan * 0.4 : singleSpan;
+    const tailAngle = cw ? tipAngle - arrowSpan : tipAngle + arrowSpan;
     const [sx, sy] = polarToCartesian(radius, tailAngle);
     const [ex, ey] = polarToCartesian(radius, tipAngle);
     const tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
@@ -97,6 +100,18 @@ export const WheelRing: React.FC<WheelRingProps> = ({
     const hl = arrowSize * 0.35;
     const [tx, ty] = [ex - tangentX * hl + radialX * hl * 0.5, ey - tangentY * hl + radialY * hl * 0.5];
     const [tx2, ty2] = [ex - tangentX * hl - radialX * hl * 0.5, ey - tangentY * hl - radialY * hl * 0.5];
+
+    const gap = singleSpan * 0.2;
+    const tip2Angle = cw ? tailAngle - gap : tailAngle + gap;
+    const tail2Angle = cw ? tip2Angle - arrowSpan : tip2Angle + arrowSpan;
+    const [sx2, sy2] = polarToCartesian(radius, tail2Angle);
+    const [ex2, ey2] = polarToCartesian(radius, tip2Angle);
+    const tangent2X = Math.cos(tip2Angle) * (cw ? 1 : -1);
+    const tangent2Y = Math.sin(tip2Angle) * (cw ? 1 : -1);
+    const radial2X = Math.sin(tip2Angle);
+    const radial2Y = -Math.cos(tip2Angle);
+    const [tx3, ty3] = [ex2 - tangent2X * hl + radial2X * hl * 0.5, ey2 - tangent2Y * hl + radial2Y * hl * 0.5];
+    const [tx4, ty4] = [ex2 - tangent2X * hl - radial2X * hl * 0.5, ey2 - tangent2Y * hl - radial2Y * hl * 0.5];
 
     return (
       <g
@@ -129,8 +144,9 @@ export const WheelRing: React.FC<WheelRingProps> = ({
           const directArrowHover = hoveredArrowId === segment.segmentId;
           const arrowHovered = directArrowHover || isHovered;
           const strokeColor = directArrowHover ? '#333' : isHovered ? style.arrowHoverColor : style.arrowColor;
-          const hitStartAngle = cw ? tailAngle - cellSpan * 0.08 : segment.startAngle;
-          const hitEndAngle = cw ? segment.endAngle : tailAngle + cellSpan * 0.08;
+          const hitTail = isDoubleHeaded ? tail2Angle : tailAngle;
+          const hitStartAngle = cw ? hitTail - cellSpan * 0.08 : segment.startAngle;
+          const hitEndAngle = cw ? segment.endAngle : hitTail + cellSpan * 0.08;
           const hitPath = describeArc(innerR, outerR, hitStartAngle, hitEndAngle);
           return (
             <g style={{ pointerEvents: 'none' }}>
@@ -149,6 +165,25 @@ export const WheelRing: React.FC<WheelRingProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+              {isDoubleHeaded && (
+                <>
+                  <path
+                    d={`M${sx2},${sy2} A${radius},${radius} 0 0 ${cw ? 1 : 0} ${ex2},${ey2}`}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth}
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d={`M${tx3},${ty3} L${ex2},${ey2} L${tx4},${ty4}`}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={arrowHovered ? style.arrowWidth * 1.5 : style.arrowWidth}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </>
+              )}
               <path
                 d={hitPath}
                 fill={directArrowHover ? '#000' : 'transparent'}
