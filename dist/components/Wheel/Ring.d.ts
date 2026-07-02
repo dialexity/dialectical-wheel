@@ -22,6 +22,7 @@ interface RingProps {
     onPointerLeave?: (event: CellEvent) => void;
     showText?: boolean;
     headerBehavior?: boolean;
+    maxFontSize?: number;
 }
 export declare const Ring: React.FC<RingProps>;
 export {};

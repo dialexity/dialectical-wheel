@@ -813,7 +813,8 @@ var Ring = function Ring(_ref) {
     onPointerLeave = _ref.onPointerLeave,
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText,
-    headerBehavior = _ref.headerBehavior;
+    headerBehavior = _ref.headerBehavior,
+    maxFontSize = _ref.maxFontSize;
   var cellRadialHeight = outerR - innerR;
   var cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
   var resolvedStyles = useMemo(function () {
@@ -841,17 +842,18 @@ var Ring = function Ring(_ref) {
       return s.fullText;
     }).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
+    var startFs = maxFontSize != null ? Math.min(baseFontSize, maxFontSize) : baseFontSize;
     return computeUniformFontSize(texts, {
       innerR: innerR,
       outerR: textOuterR,
       cellAngle: cellAngle,
-      baseFontSize: baseFontSize,
+      baseFontSize: startFs,
       padding: basePadding,
       measure: measure,
       textBias: textBias,
       ring: ringNumber
     });
-  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
+  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
@@ -2536,6 +2538,35 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
     setHoveredPerspectiveIdx(null);
     setHoveredArrowId(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
+  var ring2FontSize = useMemo(function () {
+    var segs = ringData[middleRing];
+    if (segs.length === 0) return undefined;
+    var texts = segs.map(function (s) {
+      return s.fullText;
+    }).filter(Boolean);
+    if (texts.length === 0) return undefined;
+    var cellAngle = segs[0].endAngle - segs[0].startAngle;
+    var cellHeight = radii.middleEnd - radii.middleStart;
+    var ctx = {
+      rowGroup: 'tbody',
+      ring: middleRing,
+      colType: segs[0].colType,
+      perspectiveIndex: segs[0].perspectiveIndex
+    };
+    var s = resolveStyle(styles, ctx, cellHeight);
+    var baseFontSize = s.fontSize;
+    var padding = s.padding / cellHeight;
+    return computeUniformFontSize(texts, {
+      innerR: radii.middleStart,
+      outerR: radii.middleEnd,
+      cellAngle: cellAngle,
+      baseFontSize: baseFontSize,
+      padding: padding,
+      measure: measure,
+      textBias: 0,
+      ring: 2
+    });
+  }, [ringData, middleRing, radii, styles, measure]);
   return jsx("div", {
     style: _objectSpread2({
       background: 'white',
@@ -2578,6 +2609,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
           headerBehavior: stitched,
+          maxFontSize: stitched ? undefined : ring2FontSize,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave

@@ -14,6 +14,7 @@
 - Canvas measureText (with 1.05x factor) used for font size search and word-wrap decisions
 - `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer
 - Ring 1 uses simple midR-chord for font sizing (generous); rings 2/3 use min(normal,flipped) per-line widths with arc-limit constraint
+- Ring 3 font size is capped to ring 2's computed font size (`maxFontSize` prop on Ring) — except in `neutralOutside='header'` mode where ring 3 sizes independently
 - Arc-limit in `chordAt`: `2*sqrt(outerR²-r²)` prevents text endpoints from exceeding curved arc boundary (Pythagorean extension)
 - `lineWidths` computes per-line chord widths from centerR; flipped=true gives narrow→wide (inner→outer), false gives wide→narrow
 - Ring 1 non-flipped fallback: wraps with flipped widths then reverses lines (puts most words on widest position)

@@ -27,6 +27,7 @@ interface RingProps {
   onPointerLeave?: (event: CellEvent) => void;
   showText?: boolean;
   headerBehavior?: boolean;
+  maxFontSize?: number;
 }
 
 function computeTextBias(ringName: RingName, perspectiveCount: number): number {
@@ -36,7 +37,7 @@ function computeTextBias(ringName: RingName, perspectiveCount: number): number {
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, ringNumber, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
+  segments, innerR, outerR, ringName, ringNumber, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior, maxFontSize
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
@@ -67,8 +68,9 @@ export const Ring: React.FC<RingProps> = ({
     if (segments.length === 0) return baseFontSize;
     const texts = segments.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
-    return computeUniformFontSize(texts, { innerR, outerR: textOuterR, cellAngle, baseFontSize, padding: basePadding, measure, textBias, ring: ringNumber });
-  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
+    const startFs = maxFontSize != null ? Math.min(baseFontSize, maxFontSize) : baseFontSize;
+    return computeUniformFontSize(texts, { innerR, outerR: textOuterR, cellAngle, baseFontSize: startFs, padding: basePadding, measure, textBias, ring: ringNumber });
+  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 

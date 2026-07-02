@@ -10,7 +10,8 @@ import type { CalloutProps } from './Callout';
 import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
-import { DEFAULT_STYLES } from './utils/styles';
+import { computeUniformFontSize } from './utils/textLayout';
+import { DEFAULT_STYLES, resolveStyle } from './utils/styles';
 import { getRadii, polarToCartesian } from './utils/geometry';
 import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, ArrowEvent, RowScope } from '../../types';
 
@@ -318,6 +319,20 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     setHoveredArrowId(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
+  const ring2FontSize = useMemo(() => {
+    const segs = ringData[middleRing];
+    if (segs.length === 0) return undefined;
+    const texts = segs.map(s => s.fullText).filter(Boolean);
+    if (texts.length === 0) return undefined;
+    const cellAngle = segs[0].endAngle - segs[0].startAngle;
+    const cellHeight = radii.middleEnd - radii.middleStart;
+    const ctx = { rowGroup: 'tbody' as const, ring: middleRing, colType: segs[0].colType, perspectiveIndex: segs[0].perspectiveIndex };
+    const s = resolveStyle(styles, ctx, cellHeight);
+    const baseFontSize = s.fontSize;
+    const padding = s.padding / cellHeight;
+    return computeUniformFontSize(texts, { innerR: radii.middleStart, outerR: radii.middleEnd, cellAngle, baseFontSize, padding, measure, textBias: 0, ring: 2 });
+  }, [ringData, middleRing, radii, styles, measure]);
+
   return (
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
@@ -354,6 +369,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
             headerBehavior={stitched}
+            maxFontSize={stitched ? undefined : ring2FontSize}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
