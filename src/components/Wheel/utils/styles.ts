@@ -120,7 +120,7 @@ export function resolveStyle(
 
 export const DEFAULT_STYLES: Styles = {
   fontSize: 12,
-  border: { width: 0.5, color: '#ddd' },
+  border: { width: 0.5, color: '#fff' },
   thead: {
     color: '#333333',
     fontSize: 12,
