@@ -9,6 +9,9 @@ function _arrayLikeToArray(r, a) {
 function _arrayWithHoles(r) {
   if (Array.isArray(r)) return r;
 }
+function _arrayWithoutHoles(r) {
+  if (Array.isArray(r)) return _arrayLikeToArray(r);
+}
 function _createForOfIteratorHelper(r, e) {
   var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
   if (!t) {
@@ -65,6 +68,9 @@ function _defineProperty(e, r, t) {
     writable: true
   }) : e[r] = t, e;
 }
+function _iterableToArray(r) {
+  if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+}
 function _iterableToArrayLimit(r, l) {
   var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
   if (null != t) {
@@ -92,6 +98,9 @@ function _iterableToArrayLimit(r, l) {
 function _nonIterableRest() {
   throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
 function ownKeys(e, r) {
   var t = Object.keys(e);
   if (Object.getOwnPropertySymbols) {
@@ -115,6 +124,9 @@ function _objectSpread2(e) {
 }
 function _slicedToArray(r, e) {
   return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest();
+}
+function _toConsumableArray(r) {
+  return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread();
 }
 function _toPrimitive(t, r) {
   if ("object" != typeof t || !t) return t;
@@ -190,10 +202,316 @@ function getRadii(perspectiveCount) {
   return perspectiveCount <= 1 ? RADII_SINGLE : RADII_MULTI;
 }
 
-function chordWidth(r, halfAngle, cellHeight) {
-  var chord = 2 * r * Math.sin(halfAngle) * 0.9;
-  return Math.min(chord, cellHeight * 1.4);
+function getRingConfig(ring) {
+  switch (ring) {
+    case 1:
+      return {
+        chordShrink: 0.9,
+        chordCap: 1.4,
+        useGeometricInset: true
+      };
+    case 2:
+      return {
+        chordShrink: 0.9,
+        chordCap: Infinity,
+        useGeometricInset: true
+      };
+    case 3:
+      return {
+        chordShrink: 0.9,
+        chordCap: Infinity,
+        useGeometricInset: true
+      };
+  }
 }
+function chordAt(r, halfAngle, cellHeight, lineHeight, config, innerR, outerR) {
+  var inset = config.useGeometricInset ? lineHeight / (2 * Math.tan(halfAngle)) : lineHeight / 2;
+  var effectiveR = r - inset;
+  if (effectiveR <= 0) return 0;
+  var chord = 2 * effectiveR * Math.sin(halfAngle) * config.chordShrink;
+  var maxW = Math.min(chord, cellHeight * config.chordCap);
+  if (outerR !== undefined && r > 0) {
+    var arcLimit = 2 * Math.sqrt(Math.max(0, outerR * outerR - r * r));
+    maxW = Math.min(maxW, arcLimit * config.chordShrink);
+  }
+  if (innerR !== undefined && r > innerR) {
+    var _arcLimit = 2 * Math.sqrt(Math.max(0, r * r - innerR * innerR));
+    maxW = Math.min(maxW, _arcLimit * config.chordShrink);
+  }
+  return maxW;
+}
+function lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config, innerR, outerR) {
+  var lineHeight = fontSize * 1.3;
+  var widths = [];
+  for (var i = 0; i < n; i++) {
+    var lineR = void 0;
+    if (flipped) {
+      lineR = centerR - ((n - 1) / 2 - i) * lineHeight;
+    } else {
+      lineR = centerR + ((n - 1) / 2 - i) * lineHeight;
+    }
+    widths.push(chordAt(Math.max(lineR, 1), halfAngle, cellHeight, lineHeight, config, innerR, outerR));
+  }
+  return widths;
+}
+function tryWrap(words, widths, fontSize, measure) {
+  if (widths.length === 0) return null;
+  if (words.length === 0) return [''];
+  var lines = [];
+  var currentLine = '';
+  var slotIdx = 0;
+  var _iterator = _createForOfIteratorHelper(words),
+    _step;
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var word = _step.value;
+      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
+      if (measure(candidate, fontSize) <= widths[slotIdx]) {
+        currentLine = candidate;
+      } else if (currentLine) {
+        lines.push(currentLine);
+        slotIdx++;
+        if (slotIdx >= widths.length) return null;
+        currentLine = word;
+      } else {
+        currentLine = word;
+      }
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  if (lines.length > widths.length) return null;
+  for (var i = 0; i < lines.length; i++) {
+    if (measure(lines[i], fontSize) > widths[i]) return null;
+  }
+  return lines;
+}
+function tryFitUniform(text, fontSize, params) {
+  var innerR = params.innerR,
+    outerR = params.outerR,
+    cellAngle = params.cellAngle,
+    paddingFrac = params.padding,
+    measure = params.measure,
+    textBias = params.textBias,
+    ring = params.ring;
+  var config = getRingConfig(ring);
+  var lineHeight = fontSize * 1.3;
+  var halfAngle = cellAngle / 2;
+  var cellHeight = outerR - innerR;
+  var pad = cellHeight * paddingFrac;
+  var topR = outerR - pad;
+  var botR = innerR + pad;
+  var usableHeight = topR - botR;
+  var maxLines = Math.floor(usableHeight / lineHeight);
+  if (maxLines < 1) return false;
+  var midR = (topR + botR) / 2 + textBias * cellHeight;
+  var words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  if (ring === 1) {
+    var wrapWidth = chordAt(midR, halfAngle, cellHeight, lineHeight, config);
+    var lines = [];
+    var currentLine = '';
+    var _iterator2 = _createForOfIteratorHelper(words),
+      _step2;
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var word = _step2.value;
+        var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
+        if (measure(candidate, fontSize) <= wrapWidth) {
+          currentLine = candidate;
+        } else if (currentLine) {
+          lines.push(currentLine);
+          if (lines.length >= maxLines) return false;
+          currentLine = word;
+        } else {
+          currentLine = word;
+        }
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
+    }
+    if (currentLine) lines.push(currentLine);
+    if (lines.length > maxLines) return false;
+    for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
+      var line = _lines[_i];
+      if (measure(line, fontSize) > wrapWidth) return false;
+    }
+    return true;
+  }
+  var _loop = function _loop() {
+      var cR = clampCenter(n, lineHeight, topR, botR, midR);
+      var normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
+      var flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
+      var safeWidths = normalW.map(function (w, i) {
+        return Math.min(w, flippedW[i]);
+      });
+      var result = tryWrap(words, safeWidths, fontSize, measure);
+      if (result && result.length <= n) return {
+        v: true
+      };
+    },
+    _ret;
+  for (var n = 1; n <= maxLines; n++) {
+    _ret = _loop();
+    if (_ret) return _ret.v;
+  }
+  return false;
+}
+function computeUniformFontSize(texts, params) {
+  var baseFontSize = params.baseFontSize;
+  var _loop2 = function _loop2(fs) {
+      if (texts.every(function (t) {
+        return tryFitUniform(t, fs, params);
+      })) return {
+        v: fs
+      };
+    },
+    _ret2;
+  for (var fs = baseFontSize; fs >= 3; fs -= 0.5) {
+    _ret2 = _loop2(fs);
+    if (_ret2) return _ret2.v;
+  }
+  return 3;
+}
+function clampCenter(n, lineHeight, topR, botR, midR) {
+  if (n <= 1) return midR;
+  var blockH = n * lineHeight;
+  var margin = lineHeight * 0.5;
+  var maxC = topR - blockH / 2 - margin;
+  var minC = botR + blockH / 2 + margin;
+  if (minC > maxC) return (topR + botR) / 2;
+  return Math.max(minC, Math.min(midR, maxC));
+}
+function layoutTextVariable(text, fontSize, params, flipped) {
+  var innerR = params.innerR,
+    outerR = params.outerR,
+    cellAngle = params.cellAngle,
+    paddingFrac = params.padding,
+    measure = params.measure,
+    textBias = params.textBias,
+    ring = params.ring;
+  var config = getRingConfig(ring);
+  var lineHeight = fontSize * 1.3;
+  var halfAngle = cellAngle / 2;
+  var cellHeight = outerR - innerR;
+  var pad = cellHeight * paddingFrac;
+  var topR = outerR - pad;
+  var botR = innerR + pad;
+  var usableHeight = topR - botR;
+  var maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
+  var midR = (topR + botR) / 2 + textBias * cellHeight;
+  var words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return {
+      lines: [''],
+      fontSize: fontSize,
+      lineHeight: lineHeight,
+      centerR: midR
+    };
+  }
+  var _loop3 = function _loop3() {
+      var cR = clampCenter(n, lineHeight, topR, botR, midR);
+      if (ring === 1) {
+        var _widths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, flipped, config);
+        var result = tryWrap(words, _widths, fontSize, measure);
+        if (result && result.length <= n) {
+          return {
+            v: {
+              lines: result,
+              fontSize: fontSize,
+              lineHeight: lineHeight,
+              centerR: cR
+            }
+          };
+        }
+        if (!flipped && n > 1) {
+          var flippedWidths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config);
+          var flippedResult = tryWrap(words, flippedWidths, fontSize, measure);
+          if (flippedResult && flippedResult.length <= n) {
+            return {
+              v: {
+                lines: flippedResult.reverse(),
+                fontSize: fontSize,
+                lineHeight: lineHeight,
+                centerR: cR
+              }
+            };
+          }
+        }
+      } else {
+        var normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
+        var flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
+        var safeWidths = normalW.map(function (w, i) {
+          return Math.min(w, flippedW[i]);
+        });
+        var _result = tryWrap(words, safeWidths, fontSize, measure);
+        if (_result && _result.length <= n) {
+          return {
+            v: {
+              lines: _result,
+              fontSize: fontSize,
+              lineHeight: lineHeight,
+              centerR: cR
+            }
+          };
+        }
+      }
+    },
+    _ret3;
+  for (var n = 1; n <= maxLines; n++) {
+    _ret3 = _loop3();
+    if (_ret3) return _ret3.v;
+  }
+  var cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
+  var widths = lineWidths(maxLines, fontSize, cR, halfAngle, cellHeight, flipped, config);
+  var lenient = wrapLenient(words, widths, fontSize, measure);
+  return {
+    lines: lenient,
+    fontSize: fontSize,
+    lineHeight: lineHeight,
+    centerR: cR
+  };
+}
+function wrapLenient(words, widths, fontSize, measure) {
+  if (widths.length === 0 || words.length === 0) return [''];
+  var lines = [];
+  var currentLine = '';
+  var slotIdx = 0;
+  var _iterator3 = _createForOfIteratorHelper(words),
+    _step3;
+  try {
+    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+      var word = _step3.value;
+      var w = slotIdx < widths.length ? widths[slotIdx] : widths[widths.length - 1];
+      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
+      if (measure(candidate, fontSize) <= w) {
+        currentLine = candidate;
+      } else if (currentLine) {
+        lines.push(currentLine);
+        slotIdx++;
+        currentLine = word;
+      } else {
+        currentLine = word;
+      }
+    }
+  } catch (err) {
+    _iterator3.e(err);
+  } finally {
+    _iterator3.f();
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+}
+
 var CellText = function CellText(_ref) {
   var innerR = _ref.innerR,
     outerR = _ref.outerR,
@@ -204,48 +522,51 @@ var CellText = function CellText(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     padding = _ref.padding,
-    textBias = _ref.textBias;
+    textBias = _ref.textBias,
+    ringNumber = _ref.ringNumber,
+    measure = _ref.measure;
   var midAngle = (startAngle + endAngle) / 2;
-  var halfAngle = (endAngle - startAngle) / 2;
   var cellHeight = outerR - innerR;
-  var biasedR = (innerR + outerR) / 2 + textBias * cellHeight;
-  var _polarToCartesian = polarToCartesian(biasedR, midAngle),
-    _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
-    cx = _polarToCartesian2[0],
-    cy = _polarToCartesian2[1];
+  var cellAngle = endAngle - startAngle;
+  var paddingFrac = padding / cellHeight;
   var visualAngle = normalizeAngle(midAngle + rotationRad);
   var needsFlip = visualAngle > Math.PI / 2 && visualAngle < 3 * Math.PI / 2;
   var textRotDeg = midAngle * 180 / Math.PI + (needsFlip ? 180 : 0);
-  var boxHeight = outerR - innerR - padding * 2;
-  var boxWidth = chordWidth(biasedR, halfAngle, cellHeight);
-  return jsx("foreignObject", {
-    x: cx - boxWidth / 2,
-    y: cy - boxHeight / 2,
-    width: boxWidth,
-    height: boxHeight,
-    transform: "rotate(".concat(textRotDeg, ", ").concat(cx, ", ").concat(cy, ")"),
+  var layout = layoutTextVariable(text, fontSize, {
+    innerR: innerR,
+    outerR: outerR,
+    cellAngle: cellAngle,
+    padding: paddingFrac,
+    measure: measure,
+    textBias: textBias,
+    ring: ringNumber
+  }, needsFlip);
+  if (layout.lines.length === 0) return null;
+  var lineHeight = layout.lineHeight;
+  var n = layout.lines.length;
+  var blockCenterR = layout.centerR;
+  var _polarToCartesian = polarToCartesian(blockCenterR, midAngle),
+    _polarToCartesian2 = _slicedToArray(_polarToCartesian, 2),
+    cx = _polarToCartesian2[0],
+    cy = _polarToCartesian2[1];
+  var firstLineOffset = -(n - 1) * lineHeight / 2;
+  return jsx("text", {
+    transform: "translate(".concat(cx, ",").concat(cy, ") rotate(").concat(textRotDeg, ")"),
+    textAnchor: "middle",
+    dominantBaseline: "central",
+    fill: color,
+    fontSize: fontSize,
+    fontWeight: 600,
+    fontFamily: "system-ui, sans-serif",
     style: {
-      pointerEvents: 'none',
-      overflow: 'hidden'
+      pointerEvents: 'none'
     },
-    children: jsx("div", {
-      style: {
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        fontSize: fontSize,
-        fontWeight: 600,
-        fontFamily: 'system-ui, sans-serif',
-        color: color,
-        lineHeight: 1.2,
-        overflowWrap: 'break-word',
-        wordBreak: 'break-word',
-        overflow: 'hidden'
-      },
-      children: text
+    children: layout.lines.map(function (line, i) {
+      return jsx("tspan", {
+        x: "0",
+        dy: i === 0 ? firstLineOffset : lineHeight,
+        children: line
+      }, i);
     })
   });
 };
@@ -258,6 +579,8 @@ var Cell = function Cell(_ref) {
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
     textBias = _ref.textBias,
+    ringNumber = _ref.ringNumber,
+    measure = _ref.measure,
     hovered = _ref.hovered,
     onClick = _ref.onClick,
     onPointerEnter = _ref.onPointerEnter,
@@ -318,82 +641,13 @@ var Cell = function Cell(_ref) {
         rotationRad: rotationRad,
         fontSize: fontSize,
         padding: style.padding,
-        textBias: textBias
+        textBias: textBias,
+        ringNumber: ringNumber,
+        measure: measure
       })
     })]
   });
 };
-
-function chordAt(r, halfAngle, cellHeight) {
-  var chord = 2 * r * Math.sin(halfAngle) * 0.9;
-  return Math.min(chord, cellHeight * 1.4);
-}
-function tryFit(text, fontSize, params) {
-  var innerR = params.innerR,
-    outerR = params.outerR,
-    cellAngle = params.cellAngle,
-    paddingFrac = params.padding,
-    measure = params.measure;
-  var lineHeight = fontSize * 1.3;
-  var halfAngle = cellAngle / 2;
-  var cellHeight = outerR - innerR;
-  var pad = cellHeight * paddingFrac;
-  var topR = outerR - pad;
-  var botR = innerR + pad;
-  var usableHeight = topR - botR;
-  var maxLines = Math.floor(usableHeight / lineHeight);
-  if (maxLines < 1) return null;
-  var wrapR = innerR + cellHeight * 0.6;
-  var wrapWidth = chordAt(wrapR, halfAngle, cellHeight);
-  var words = text.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return [''];
-  var lines = [];
-  var currentLine = '';
-  var _iterator = _createForOfIteratorHelper(words),
-    _step;
-  try {
-    for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var word = _step.value;
-      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-      if (measure(candidate, fontSize) <= wrapWidth) {
-        currentLine = candidate;
-      } else if (currentLine) {
-        lines.push(currentLine);
-        if (lines.length >= maxLines) return null;
-        currentLine = word;
-      } else {
-        currentLine = word;
-      }
-    }
-  } catch (err) {
-    _iterator.e(err);
-  } finally {
-    _iterator.f();
-  }
-  if (currentLine) lines.push(currentLine);
-  if (lines.length > maxLines) return null;
-  for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
-    var line = _lines[_i];
-    if (measure(line, fontSize) > wrapWidth) return null;
-  }
-  return lines;
-}
-function computeUniformFontSize(texts, params) {
-  var baseFontSize = params.baseFontSize;
-  var _loop = function _loop(fs) {
-      if (texts.every(function (t) {
-        return tryFit(t, fs, params) !== null;
-      })) return {
-        v: fs
-      };
-    },
-    _ret;
-  for (var fs = baseFontSize; fs >= 3; fs -= 0.5) {
-    _ret = _loop(fs);
-    if (_ret) return _ret.v;
-  }
-  return 3;
-}
 
 function resolveCSSValue$1(value, relativeTo, fallback) {
   if (value === undefined) return fallback;
@@ -543,6 +797,7 @@ var Ring = function Ring(_ref) {
     innerR = _ref.innerR,
     outerR = _ref.outerR,
     ringName = _ref.ringName,
+    ringNumber = _ref.ringNumber,
     rowGroup = _ref.rowGroup,
     styles = _ref.styles,
     rotationRad = _ref.rotationRad,
@@ -577,6 +832,7 @@ var Ring = function Ring(_ref) {
   }, [segments, styles, ringName, rowGroup, cellRadialHeight, headerBehavior]);
   var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
+  var textBias = computeTextBias(ringName, perspectiveCount);
   var uniformFontSize = useMemo(function () {
     if (segments.length === 0) return baseFontSize;
     var texts = segments.map(function (s) {
@@ -589,10 +845,11 @@ var Ring = function Ring(_ref) {
       cellAngle: cellAngle,
       baseFontSize: baseFontSize,
       padding: basePadding,
-      measure: measure
+      measure: measure,
+      textBias: textBias,
+      ring: ringNumber
     });
-  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
-  var textBias = computeTextBias(ringName, perspectiveCount);
+  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
@@ -620,6 +877,8 @@ var Ring = function Ring(_ref) {
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
           textBias: textBias,
+          ringNumber: ringNumber,
+          measure: measure,
           hovered: false,
           onClick: onClick,
           onPointerEnter: onPointerEnter,
@@ -641,6 +900,8 @@ var Ring = function Ring(_ref) {
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
           textBias: textBias,
+          ringNumber: ringNumber,
+          measure: measure,
           hovered: segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === hoveredPerspectiveIdx,
           onClick: onClick,
           onPointerEnter: onPointerEnter,
@@ -1075,7 +1336,7 @@ var WheelRing = function WheelRing(_ref) {
 };
 
 var CycleRing = function CycleRing(_ref) {
-  var _styles$dimUnfocused, _resolvedStyles$, _resolvedStyles$0$arr, _resolvedStyles$2, _resolvedStyles$0$arr2, _resolvedStyles$3, _resolvedStyles$0$arr3, _resolvedStyles$4, _resolvedStyles$0$arr4, _resolvedStyles$5;
+  var _styles$dimUnfocused, _resolvedStyles$;
   var segments = _ref.segments,
     innerR = _ref.innerR,
     outerR = _ref.outerR,
@@ -1099,7 +1360,7 @@ var CycleRing = function CycleRing(_ref) {
   var radius = (innerR + outerR) / 2;
   var thesisSegments = useMemo(function () {
     return segments.filter(function (s) {
-      return s.colType === 'thesis' && s.perspectiveIndex !== -1;
+      return s.perspectiveIndex !== -1 && (s.swapped ? s.colType === 'antithesis' : s.colType === 'thesis');
     });
   }, [segments]);
   var resolvedStyles = useMemo(function () {
@@ -1291,60 +1552,70 @@ var CycleRing = function CycleRing(_ref) {
     return 1;
   };
   var hasVisibleArrows = showArrows && ((_resolvedStyles$ = resolvedStyles[0]) === null || _resolvedStyles$ === void 0 ? void 0 : _resolvedStyles$.arrowColor) !== 'transparent';
-  var connectingArc = useMemo(function () {
+  var connectingArcs = useMemo(function () {
     if (!hasVisibleArrows || thesisSegments.length < 2) return null;
-    var last = thesisSegments[thesisSegments.length - 1];
-    var first = thesisSegments[0];
-    var cellSpan = last.endAngle - last.startAngle;
+    var sorted = _toConsumableArray(thesisSegments).sort(function (a, b) {
+      return a.startAngle - b.startAngle;
+    });
+    var cellSpan = sorted[0].endAngle - sorted[0].startAngle;
     var pad = cellSpan * 0.08;
     var cw = direction !== 'left';
-    var gapStart = last.endAngle;
-    var gapEnd = first.startAngle + 2 * Math.PI;
-    if (gapEnd - gapStart < 0.1) return null;
-    var arcStart = gapStart + pad;
-    var arcEnd = gapEnd - pad;
-    var _polarToCartesian1 = polarToCartesian(radius, cw ? arcStart : arcEnd),
-      _polarToCartesian10 = _slicedToArray(_polarToCartesian1, 2),
-      s1x = _polarToCartesian10[0],
-      s1y = _polarToCartesian10[1];
-    var _polarToCartesian11 = polarToCartesian(radius, cw ? arcEnd : arcStart),
-      _polarToCartesian12 = _slicedToArray(_polarToCartesian11, 2),
-      s2x = _polarToCartesian12[0],
-      s2y = _polarToCartesian12[1];
-    var largeArc = arcEnd - arcStart > Math.PI ? 1 : 0;
-    var tipAngle = cw ? arcEnd : arcStart;
-    var tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
-    var tangentY = Math.sin(tipAngle) * (cw ? 1 : -1);
-    var radialX = Math.sin(tipAngle);
-    var radialY = -Math.cos(tipAngle);
-    var hl = arrowSize * 0.5;
-    var tx = s2x - tangentX * hl + radialX * hl * 0.4,
-      ty = s2y - tangentY * hl + radialY * hl * 0.4;
-    var tx2 = s2x - tangentX * hl - radialX * hl * 0.4,
-      ty2 = s2y - tangentY * hl - radialY * hl * 0.4;
-    return {
-      d: "M".concat(s1x, ",").concat(s1y, " A").concat(radius, ",").concat(radius, " 0 ").concat(largeArc, " ").concat(cw ? 1 : 0, " ").concat(s2x, ",").concat(s2y),
-      head: "M".concat(tx, ",").concat(ty, " L").concat(s2x, ",").concat(s2y, " L").concat(tx2, ",").concat(ty2)
-    };
+    var arcs = [];
+    for (var i = 0; i < sorted.length; i++) {
+      var curr = sorted[i];
+      var next = sorted[(i + 1) % sorted.length];
+      var gapStart = curr.endAngle;
+      var gapEnd = i < sorted.length - 1 ? next.startAngle : next.startAngle + 2 * Math.PI;
+      if (gapEnd - gapStart < 0.1) continue;
+      var arcStart = gapStart + pad;
+      var arcEnd = gapEnd - pad;
+      var _polarToCartesian1 = polarToCartesian(radius, cw ? arcStart : arcEnd),
+        _polarToCartesian10 = _slicedToArray(_polarToCartesian1, 2),
+        s1x = _polarToCartesian10[0],
+        s1y = _polarToCartesian10[1];
+      var _polarToCartesian11 = polarToCartesian(radius, cw ? arcEnd : arcStart),
+        _polarToCartesian12 = _slicedToArray(_polarToCartesian11, 2),
+        s2x = _polarToCartesian12[0],
+        s2y = _polarToCartesian12[1];
+      var largeArc = arcEnd - arcStart > Math.PI ? 1 : 0;
+      var tipAngle = cw ? arcEnd : arcStart;
+      var tangentX = Math.cos(tipAngle) * (cw ? 1 : -1);
+      var tangentY = Math.sin(tipAngle) * (cw ? 1 : -1);
+      var radialX = Math.sin(tipAngle);
+      var radialY = -Math.cos(tipAngle);
+      var hl = arrowSize * 0.5;
+      var tx = s2x - tangentX * hl + radialX * hl * 0.4,
+        ty = s2y - tangentY * hl + radialY * hl * 0.4;
+      var tx2 = s2x - tangentX * hl - radialX * hl * 0.4,
+        ty2 = s2y - tangentY * hl - radialY * hl * 0.4;
+      arcs.push({
+        d: "M".concat(s1x, ",").concat(s1y, " A").concat(radius, ",").concat(radius, " 0 ").concat(largeArc, " ").concat(cw ? 1 : 0, " ").concat(s2x, ",").concat(s2y),
+        head: "M".concat(tx, ",").concat(ty, " L").concat(s2x, ",").concat(s2y, " L").concat(tx2, ",").concat(ty2)
+      });
+    }
+    return arcs.length > 0 ? arcs : null;
   }, [hasVisibleArrows, thesisSegments, radius, direction, arrowSize]);
   return jsxs("g", {
-    children: [connectingArc && jsxs("g", {
-      opacity: 0.5,
-      children: [jsx("path", {
-        d: connectingArc.d,
-        fill: "none",
-        stroke: (_resolvedStyles$0$arr = (_resolvedStyles$2 = resolvedStyles[0]) === null || _resolvedStyles$2 === void 0 ? void 0 : _resolvedStyles$2.arrowColor) !== null && _resolvedStyles$0$arr !== void 0 ? _resolvedStyles$0$arr : '#666',
-        strokeWidth: ((_resolvedStyles$0$arr2 = (_resolvedStyles$3 = resolvedStyles[0]) === null || _resolvedStyles$3 === void 0 ? void 0 : _resolvedStyles$3.arrowWidth) !== null && _resolvedStyles$0$arr2 !== void 0 ? _resolvedStyles$0$arr2 : arrowSize * 0.2) * 0.75,
-        strokeDasharray: "".concat(arrowSize * 0.3, " ").concat(arrowSize * 0.3),
-        strokeLinecap: "round"
-      }), jsx("path", {
-        d: connectingArc.head,
-        fill: "none",
-        stroke: (_resolvedStyles$0$arr3 = (_resolvedStyles$4 = resolvedStyles[0]) === null || _resolvedStyles$4 === void 0 ? void 0 : _resolvedStyles$4.arrowColor) !== null && _resolvedStyles$0$arr3 !== void 0 ? _resolvedStyles$0$arr3 : '#666',
-        strokeWidth: (_resolvedStyles$0$arr4 = (_resolvedStyles$5 = resolvedStyles[0]) === null || _resolvedStyles$5 === void 0 ? void 0 : _resolvedStyles$5.arrowWidth) !== null && _resolvedStyles$0$arr4 !== void 0 ? _resolvedStyles$0$arr4 : arrowSize * 0.2,
-        strokeLinecap: "round",
-        strokeLinejoin: "round"
-      })]
+    children: [connectingArcs === null || connectingArcs === void 0 ? void 0 : connectingArcs.map(function (arc, i) {
+      var _resolvedStyles$0$arr, _resolvedStyles$2, _resolvedStyles$0$arr2, _resolvedStyles$3, _resolvedStyles$0$arr3, _resolvedStyles$4, _resolvedStyles$0$arr4, _resolvedStyles$5;
+      return jsxs("g", {
+        opacity: 0.5,
+        children: [jsx("path", {
+          d: arc.d,
+          fill: "none",
+          stroke: (_resolvedStyles$0$arr = (_resolvedStyles$2 = resolvedStyles[0]) === null || _resolvedStyles$2 === void 0 ? void 0 : _resolvedStyles$2.arrowColor) !== null && _resolvedStyles$0$arr !== void 0 ? _resolvedStyles$0$arr : '#666',
+          strokeWidth: ((_resolvedStyles$0$arr2 = (_resolvedStyles$3 = resolvedStyles[0]) === null || _resolvedStyles$3 === void 0 ? void 0 : _resolvedStyles$3.arrowWidth) !== null && _resolvedStyles$0$arr2 !== void 0 ? _resolvedStyles$0$arr2 : arrowSize * 0.2) * 0.75,
+          strokeDasharray: "".concat(arrowSize * 0.3, " ").concat(arrowSize * 0.3),
+          strokeLinecap: "round"
+        }), jsx("path", {
+          d: arc.head,
+          fill: "none",
+          stroke: (_resolvedStyles$0$arr3 = (_resolvedStyles$4 = resolvedStyles[0]) === null || _resolvedStyles$4 === void 0 ? void 0 : _resolvedStyles$4.arrowColor) !== null && _resolvedStyles$0$arr3 !== void 0 ? _resolvedStyles$0$arr3 : '#666',
+          strokeWidth: (_resolvedStyles$0$arr4 = (_resolvedStyles$5 = resolvedStyles[0]) === null || _resolvedStyles$5 === void 0 ? void 0 : _resolvedStyles$5.arrowWidth) !== null && _resolvedStyles$0$arr4 !== void 0 ? _resolvedStyles$0$arr4 : arrowSize * 0.2,
+          strokeLinecap: "round",
+          strokeLinejoin: "round"
+        })]
+      }, "arc-".concat(i));
     }), thesisSegments.map(function (segment, i) {
       return isElevated(segment) ? null : jsx("g", {
         opacity: cellOpacity(segment),
@@ -1845,6 +2116,7 @@ function transformPerspectives(perspectives) {
       segmentId: tAlias,
       perspectiveIndex: i,
       isThesis: true,
+      swapped: perspective.swapped,
       statement: extractStatement(perspective.t),
       positive: extractStatement(perspective.t_plus),
       negative: extractStatement(perspective.t_minus),
@@ -1860,6 +2132,7 @@ function transformPerspectives(perspectives) {
       segmentId: aAlias,
       perspectiveIndex: i,
       isThesis: false,
+      swapped: perspective.swapped,
       statement: extractStatement(perspective.a),
       positive: extractStatement(perspective.a_plus),
       negative: extractStatement(perspective.a_minus),
@@ -1900,6 +2173,7 @@ function transformPerspectives(perspectives) {
         perspectiveIndex: entry.perspectiveIndex,
         polarity: polarity,
         colType: entry.isThesis ? 'thesis' : 'antithesis',
+        swapped: entry.swapped,
         fullText: getText(entry),
         pairWith: entry.pairWith,
         startAngle: i * segmentAngle,
@@ -2289,6 +2563,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.outerStart,
           outerR: stitched ? radii.cycleEnd : radii.outerEnd,
           ringName: outerRing,
+          ringNumber: 3,
           rowGroup: stitched ? 'thead' : 'tbody',
           styles: styles,
           rotationRad: rotationRad,
@@ -2307,6 +2582,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.middleStart,
           outerR: radii.middleEnd,
           ringName: middleRing,
+          ringNumber: 2,
           rowGroup: "tbody",
           styles: styles,
           rotationRad: rotationRad,
@@ -2324,6 +2600,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           innerR: radii.innerStart,
           outerR: radii.innerEnd,
           ringName: "positive",
+          ringNumber: 1,
           rowGroup: "tbody",
           styles: styles,
           rotationRad: rotationRad,

@@ -1,4 +1,5 @@
 import React from 'react';
+import type { RingNumber } from './utils/textLayout';
 import type { SegmentData, CellEvent, ResolvedCellStyle } from '../../types';
 interface CellProps {
     segment: SegmentData;
@@ -8,6 +9,8 @@ interface CellProps {
     rotationRad: number;
     fontSize: number;
     textBias: number;
+    ringNumber: RingNumber;
+    measure: (text: string, fontSize: number) => number;
     hovered?: boolean;
     onClick?: (event: CellEvent) => void;
     onPointerEnter?: (event: CellEvent) => void;

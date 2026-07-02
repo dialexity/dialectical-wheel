@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { describeArc } from './utils/geometry';
 import { CellText } from './CellText';
+import type { RingNumber } from './utils/textLayout';
 import type { SegmentData, CellEvent, ResolvedCellStyle } from '../../types';
 
 interface CellProps {
@@ -11,6 +12,8 @@ interface CellProps {
   rotationRad: number;
   fontSize: number;
   textBias: number;
+  ringNumber: RingNumber;
+  measure: (text: string, fontSize: number) => number;
   hovered?: boolean;
   onClick?: (event: CellEvent) => void;
   onPointerEnter?: (event: CellEvent) => void;
@@ -19,7 +22,7 @@ interface CellProps {
 }
 
 export const Cell: React.FC<CellProps> = ({
-  segment, innerR, outerR, style, rotationRad, fontSize, textBias, hovered, onClick, onPointerEnter, onPointerLeave, showText = true
+  segment, innerR, outerR, style, rotationRad, fontSize, textBias, ringNumber, measure, hovered, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const clipId = useMemo(
     () => `dw-${segment.polarity}-${segment.segmentId}-${innerR}`.replace(/[^a-zA-Z0-9-]/g, '_'),
@@ -72,6 +75,8 @@ export const Cell: React.FC<CellProps> = ({
             fontSize={fontSize}
             padding={style.padding}
             textBias={textBias}
+            ringNumber={ringNumber}
+            measure={measure}
           />
         </g>
       )}

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Cell } from './Cell';
 import { computeUniformFontSize } from './utils/textLayout';
+import type { RingNumber } from './utils/textLayout';
 import { resolveStyle } from './utils/styles';
 import type { SegmentData, CellEvent, Styles, StyleContext, ResolvedCellStyle } from '../../types';
 
@@ -11,6 +12,7 @@ interface RingProps {
   innerR: number;
   outerR: number;
   ringName: RingName;
+  ringNumber: RingNumber;
   rowGroup: 'thead' | 'tbody' | 'tfoot';
   styles: Styles;
   rotationRad: number;
@@ -34,7 +36,7 @@ function computeTextBias(ringName: RingName, perspectiveCount: number): number {
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
+  segments, innerR, outerR, ringName, ringNumber, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
@@ -57,14 +59,14 @@ export const Ring: React.FC<RingProps> = ({
   const baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   const basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
 
+  const textBias = computeTextBias(ringName, perspectiveCount);
+
   const uniformFontSize = useMemo(() => {
     if (segments.length === 0) return baseFontSize;
     const texts = segments.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
-    return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize, padding: basePadding, measure });
-  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure]);
-
-  const textBias = computeTextBias(ringName, perspectiveCount);
+    return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize, padding: basePadding, measure, textBias, ring: ringNumber });
+  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
@@ -98,6 +100,8 @@ export const Ring: React.FC<RingProps> = ({
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
               textBias={textBias}
+              ringNumber={ringNumber}
+              measure={measure}
               hovered={false}
               onClick={onClick}
               onPointerEnter={onPointerEnter}
@@ -122,6 +126,8 @@ export const Ring: React.FC<RingProps> = ({
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
               textBias={textBias}
+              ringNumber={ringNumber}
+              measure={measure}
               hovered={segment.segmentId === hoveredSegmentId || segment.perspectiveIndex === hoveredPerspectiveIdx}
               onClick={onClick}
               onPointerEnter={onPointerEnter}

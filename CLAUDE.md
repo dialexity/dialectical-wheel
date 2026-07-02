@@ -8,10 +8,16 @@
 
 ## Architecture
 - Pure React+SVG component, no D3/Observable
-- Text rendering uses `<foreignObject>` with native browser word-wrap, NOT SVG <text>+tspan
+- Text rendering uses SVG `<text>` + `<tspan>` with per-line variable chord widths (trapezoid fill)
 - Clip paths on each arc cell prevent text bleeding — IDs must be deterministic (no useId() colons)
-- `computeUniformFontSize` in Ring.tsx ensures all cells in a ring share one font size
-- Canvas measureText (with 1.05x factor) used only for font size search, not rendering
+- `computeUniformFontSize` in textLayout.ts ensures all cells in a ring share one font size
+- Canvas measureText (with 1.05x factor) used for font size search and word-wrap decisions
+- `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer
+- Ring 1 uses simple midR-chord for font sizing (generous); rings 2/3 use min(normal,flipped) per-line widths with arc-limit constraint
+- Arc-limit in `chordAt`: `2*sqrt(outerR²-r²)` prevents text endpoints from exceeding curved arc boundary (Pythagorean extension)
+- `lineWidths` computes per-line chord widths from centerR; flipped=true gives narrow→wide (inner→outer), false gives wide→narrow
+- Ring 1 non-flipped fallback: wraps with flipped widths then reverses lines (puts most words on widest position)
+- Rings 2/3 use `safeWidths = min(normalW, flippedW)` per line — correct regardless of cell angle since dy direction varies with rotation
 - Bubbling event model: Cell → Segment → Perspective (like td → tr → table)
 - Segment/Perspective over/out only fire when identity changes (ref-tracked), not on every cell boundary
 - Header ring: `header` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
@@ -80,8 +86,10 @@
 ## Key Gotchas
 - SVG clip path IDs with colons (React useId) silently fail in some renderers
 - Inner ring chords are very narrow — use textBias to shift text outward
-- The cell shape is a trapezoid (wider at outer radius); midR chord is the safe wrap width
-- When tryFit rejects, layoutTextFixed must NOT shrink individually or ring uniformity breaks
+- The cell shape is a trapezoid (wider at outer radius); per-line chord widths create trapezoid text fill
+- When tryFitUniform rejects, font size steps down 0.5px — layoutTextVariable must NOT shrink individually or ring uniformity breaks
+- SVG `<tspan dy>` direction in world coords depends on cell angle — at 0° dy maps radially, at 90° it maps tangentially; rings 2/3 use min-widths to handle all angles safely
+- `wrapLenient` is the overflow fallback — if `tryFitUniform` is correct, it should never be reached; overflow usually means font sizing is too generous
 - Never use `segmentId` string patterns to identify thesis/antithesis — aliases are user-controlled; always use `colType === 'thesis'` or `colType === 'antithesis'` (only exception: `__spacer__` prefix is internal sentinel)
 - T/A detection in useRotation uses array position (`idx >= N/2`), not alias — this is correct; the `t` field IS thesis regardless of alias naming
 - 1-PP has N=4 segments (T1, spacer, A1, spacer) — `rotateBySegments(1)` = 90° not 180°; flip requires `focusSegmentToPosition` to opposite idx

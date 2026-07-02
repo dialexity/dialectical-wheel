@@ -1,4 +1,5 @@
 import React from 'react';
+import type { RingNumber } from './utils/textLayout';
 interface CellTextProps {
     innerR: number;
     outerR: number;
@@ -10,6 +11,8 @@ interface CellTextProps {
     fontSize: number;
     padding: number;
     textBias: number;
+    ringNumber: RingNumber;
+    measure: (text: string, fontSize: number) => number;
 }
 export declare const CellText: React.FC<CellTextProps>;
 export {};

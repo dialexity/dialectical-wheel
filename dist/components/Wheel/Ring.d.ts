@@ -1,4 +1,5 @@
 import React from 'react';
+import type { RingNumber } from './utils/textLayout';
 import type { SegmentData, CellEvent, Styles } from '../../types';
 type RingName = 'positive' | 'negative' | 'neutral' | 'synthesis';
 interface RingProps {
@@ -6,6 +7,7 @@ interface RingProps {
     innerR: number;
     outerR: number;
     ringName: RingName;
+    ringNumber: RingNumber;
     rowGroup: 'thead' | 'tbody' | 'tfoot';
     styles: Styles;
     rotationRad: number;
