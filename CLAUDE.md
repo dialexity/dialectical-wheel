@@ -23,6 +23,7 @@
 - Header ring: `header` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
 - WheelRing = all segment labels (T1,A1..); CycleRing = thesis-only labels (T1,T2..)
 - `neutralOutside` accepts `false | true | 'header'` — 'header' merges neutral ring with cycle ring into one taller cell (outerR extends to cycleEnd), no borders by default (only on hover), labels overlay transparently controlled by `header`
+- `headerBehavior` on Ring: text layout uses `textOuterR = innerR + height*0.65` (lower 65% of merged cell) so text centers between CycleRing label and negative ring border, not crowding the label
 - Hover highlights full perspective (both thesis+antithesis segments) across all rings
 - SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
 - SynthesisRing has no events

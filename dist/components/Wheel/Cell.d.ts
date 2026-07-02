@@ -5,6 +5,7 @@ interface CellProps {
     segment: SegmentData;
     innerR: number;
     outerR: number;
+    textOuterR?: number;
     style: ResolvedCellStyle;
     rotationRad: number;
     fontSize: number;

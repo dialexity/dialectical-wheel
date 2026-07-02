@@ -8,6 +8,7 @@ interface CellProps {
   segment: SegmentData;
   innerR: number;
   outerR: number;
+  textOuterR?: number;
   style: ResolvedCellStyle;
   rotationRad: number;
   fontSize: number;
@@ -22,7 +23,7 @@ interface CellProps {
 }
 
 export const Cell: React.FC<CellProps> = ({
-  segment, innerR, outerR, style, rotationRad, fontSize, textBias, ringNumber, measure, hovered, onClick, onPointerEnter, onPointerLeave, showText = true
+  segment, innerR, outerR, textOuterR, style, rotationRad, fontSize, textBias, ringNumber, measure, hovered, onClick, onPointerEnter, onPointerLeave, showText = true
 }) => {
   const clipId = useMemo(
     () => `dw-${segment.polarity}-${segment.segmentId}-${innerR}`.replace(/[^a-zA-Z0-9-]/g, '_'),
@@ -66,7 +67,7 @@ export const Cell: React.FC<CellProps> = ({
         <g clipPath={`url(#${clipId})`}>
           <CellText
             innerR={innerR}
-            outerR={outerR}
+            outerR={textOuterR ?? outerR}
             startAngle={segment.startAngle}
             endAngle={segment.endAngle}
             text={segment.fullText}

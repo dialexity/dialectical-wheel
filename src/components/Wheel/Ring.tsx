@@ -61,12 +61,14 @@ export const Ring: React.FC<RingProps> = ({
 
   const textBias = computeTextBias(ringName, perspectiveCount);
 
+  const textOuterR = headerBehavior ? innerR + (outerR - innerR) * 0.65 : outerR;
+
   const uniformFontSize = useMemo(() => {
     if (segments.length === 0) return baseFontSize;
     const texts = segments.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
-    return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize, padding: basePadding, measure, textBias, ring: ringNumber });
-  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
+    return computeUniformFontSize(texts, { innerR, outerR: textOuterR, cellAngle, baseFontSize, padding: basePadding, measure, textBias, ring: ringNumber });
+  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
@@ -96,6 +98,7 @@ export const Ring: React.FC<RingProps> = ({
               segment={segment}
               innerR={innerR}
               outerR={outerR}
+              textOuterR={headerBehavior ? textOuterR : undefined}
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
@@ -122,6 +125,7 @@ export const Ring: React.FC<RingProps> = ({
               segment={segment}
               innerR={innerR}
               outerR={outerR}
+              textOuterR={headerBehavior ? textOuterR : undefined}
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}

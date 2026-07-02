@@ -575,6 +575,7 @@ var Cell = function Cell(_ref) {
   var segment = _ref.segment,
     innerR = _ref.innerR,
     outerR = _ref.outerR,
+    textOuterR = _ref.textOuterR,
     style = _ref.style,
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
@@ -633,7 +634,7 @@ var Cell = function Cell(_ref) {
       clipPath: "url(#".concat(clipId, ")"),
       children: jsx(CellText, {
         innerR: innerR,
-        outerR: outerR,
+        outerR: textOuterR !== null && textOuterR !== void 0 ? textOuterR : outerR,
         startAngle: segment.startAngle,
         endAngle: segment.endAngle,
         text: segment.fullText,
@@ -833,6 +834,7 @@ var Ring = function Ring(_ref) {
   var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
   var textBias = computeTextBias(ringName, perspectiveCount);
+  var textOuterR = headerBehavior ? innerR + (outerR - innerR) * 0.65 : outerR;
   var uniformFontSize = useMemo(function () {
     if (segments.length === 0) return baseFontSize;
     var texts = segments.map(function (s) {
@@ -841,7 +843,7 @@ var Ring = function Ring(_ref) {
     if (texts.length === 0) return baseFontSize;
     return computeUniformFontSize(texts, {
       innerR: innerR,
-      outerR: outerR,
+      outerR: textOuterR,
       cellAngle: cellAngle,
       baseFontSize: baseFontSize,
       padding: basePadding,
@@ -849,7 +851,7 @@ var Ring = function Ring(_ref) {
       textBias: textBias,
       ring: ringNumber
     });
-  }, [segments, innerR, outerR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
+  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber]);
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
@@ -873,6 +875,7 @@ var Ring = function Ring(_ref) {
           segment: segment,
           innerR: innerR,
           outerR: outerR,
+          textOuterR: headerBehavior ? textOuterR : undefined,
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
@@ -896,6 +899,7 @@ var Ring = function Ring(_ref) {
           segment: segment,
           innerR: innerR,
           outerR: outerR,
+          textOuterR: headerBehavior ? textOuterR : undefined,
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
