@@ -1,6 +1,6 @@
 {
   "name": "dialectical-wheel",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "React components for interactive dialectical wheel visualization",
   "main": "dist/index.cjs",
