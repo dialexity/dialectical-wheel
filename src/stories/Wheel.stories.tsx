@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import React, { useState, useRef } from 'react';
 import { Wheel, Callout } from '../components';
 import { exportWheelSVG, exportWheelPNG, downloadBlob } from '../export';
