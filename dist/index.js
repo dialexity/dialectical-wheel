@@ -180,71 +180,100 @@ function describeArc(innerR, outerR, startAngle, endAngle) {
 function normalizeAngle(angle) {
   return (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 }
-var RADII_MULTI = {
-  synthesis: 30,
-  innerStart: 30,
-  innerEnd: 100,
-  middleStart: 100,
-  middleEnd: 150,
-  outerStart: 150,
-  outerEnd: 200,
-  cycleStart: 200,
-  cycleEnd: 250
-};
-var RADII_SINGLE = {
-  synthesis: 30,
-  innerStart: 30,
-  innerEnd: 87,
-  middleStart: 87,
-  middleEnd: 143,
-  outerStart: 143,
-  outerEnd: 200,
-  cycleStart: 200,
-  cycleEnd: 250
+// The inner (positive/green) ring gets the largest radial share because its
+// cells sit near the narrow tip of the wedge (smallest radius = narrowest
+// chords), making it the hardest ring to fit text in. Radius is zero-sum
+// (outerEnd is fixed at 200 by the cycle ring), so bands are sized to EQUALIZE
+// the three body rings' fonts rather than give any one a comfortable margin.
+//
+// The green ring's font degrades faster than the others as perspectives are
+// added (its wedge narrows fastest toward the tip), so a single fixed split
+// can't stay balanced: at few perspectives green would dominate, at many it
+// would be the smallest. Its share therefore GROWS with the count — the
+// positive/neutral boundary moves outward from 105 (1-2 PP) to 130 (4 PP).
+// Values are tuned so green ≥ the other two rings at every count (spread ≤ 1px).
+function buildRadii(innerEnd, middleEnd) {
+  return {
+    synthesis: 30,
+    innerStart: 30,
+    innerEnd: innerEnd,
+    middleStart: innerEnd,
+    middleEnd: middleEnd,
+    outerStart: middleEnd,
+    outerEnd: 200,
+    cycleStart: 200,
+    cycleEnd: 250
+  };
+}
+// [innerEnd, middleEnd] boundaries per perspective count (clamped to the 1..4
+// range that has been tuned; 5+ reuses the 4-PP split).
+var RADII_BY_COUNT = {
+  1: [105, 152],
+  2: [105, 152],
+  3: [118, 159],
+  4: [130, 164]
 };
 function getRadii(perspectiveCount) {
-  return perspectiveCount <= 1 ? RADII_SINGLE : RADII_MULTI;
+  var key = Math.min(4, Math.max(1, perspectiveCount));
+  var _RADII_BY_COUNT$key = _slicedToArray(RADII_BY_COUNT[key], 2),
+    innerEnd = _RADII_BY_COUNT$key[0],
+    middleEnd = _RADII_BY_COUNT$key[1];
+  return buildRadii(innerEnd, middleEnd);
 }
 
 function getRingConfig(ring) {
   switch (ring) {
+    // Ring 1 (innermost, positive) is a small central cell: reflow-on-rotation
+    // is barely noticeable, and its narrow wedge needs every pixel of the
+    // trapezoid, so it opts out of the stable profile for a bigger font.
     case 1:
       return {
         chordShrink: 0.9,
         chordCap: 1.4,
-        useGeometricInset: true
+        stable: false
       };
     case 2:
       return {
         chordShrink: 0.9,
         chordCap: Infinity,
-        useGeometricInset: true
+        stable: true
       };
     case 3:
       return {
         chordShrink: 0.9,
         chordCap: Infinity,
-        useGeometricInset: true
+        stable: true
       };
   }
 }
-function chordAt(r, halfAngle, cellHeight, lineHeight, config, innerR, outerR) {
-  var inset = config.useGeometricInset ? lineHeight / (2 * Math.tan(halfAngle)) : lineHeight / 2;
-  var effectiveR = r - inset;
-  if (effectiveR <= 0) return 0;
-  var chord = 2 * effectiveR * Math.sin(halfAngle) * config.chordShrink;
-  var maxW = Math.min(chord, cellHeight * config.chordCap);
-  if (outerR !== undefined && r > 0) {
-    var arcLimit = 2 * Math.sqrt(Math.max(0, outerR * outerR - r * r));
-    maxW = Math.min(maxW, arcLimit * config.chordShrink);
+/**
+ * Usable width for a single horizontal text line whose vertical center sits at
+ * radius `lineR` in the (rotated) cell frame.
+ *
+ * A line is a STRAIGHT rectangle (width w, height lineHeight) centered on the
+ * cell's mid-radial, so it is bounded by exactly two real walls:
+ *   - the two radial wedge edges (±halfAngle) — the line's INNER corners are
+ *     closest, at radius rInner = lineR − lineHeight/2, giving half-width
+ *     rInner·tan(halfAngle);
+ *   - the outer arc — the line's OUTER corners are closest, at radius
+ *     rOuter = lineR + lineHeight/2, giving half-width √(outerR² − rOuter²).
+ * The inner arc is never a constraint: a straight chord's minimum radius is at
+ * its midpoint, which always stays ≥ innerR.
+ */
+function chordAt(lineR, halfAngle, cellHeight, lineHeight, config, outerR) {
+  var rInner = lineR - lineHeight / 2;
+  if (rInner <= 0) return 0;
+  var half = rInner * Math.tan(halfAngle);
+  if (outerR !== undefined) {
+    var rOuter = lineR + lineHeight / 2;
+    var outerHalf = Math.sqrt(Math.max(0, outerR * outerR - rOuter * rOuter));
+    half = Math.min(half, outerHalf);
   }
-  if (innerR !== undefined && r > innerR) {
-    var _arcLimit = 2 * Math.sqrt(Math.max(0, r * r - innerR * innerR));
-    maxW = Math.min(maxW, _arcLimit * config.chordShrink);
-  }
-  return maxW;
+  var maxW = 2 * half * config.chordShrink;
+  maxW = Math.min(maxW, cellHeight * config.chordCap);
+  return Math.max(0, maxW);
 }
-function lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config, innerR, outerR) {
+function lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config, outerR) {
   var lineHeight = fontSize * 1.3;
   var widths = [];
   for (var i = 0; i < n; i++) {
@@ -254,9 +283,23 @@ function lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config
     } else {
       lineR = centerR + ((n - 1) / 2 - i) * lineHeight;
     }
-    widths.push(chordAt(Math.max(lineR, 1), halfAngle, cellHeight, lineHeight, config, innerR, outerR));
+    widths.push(chordAt(Math.max(lineR, 1), halfAngle, cellHeight, lineHeight, config, outerR));
   }
   return widths;
+}
+/**
+ * Per-line widths that hold regardless of the cell's rotation. Because rotating
+ * the cell past a pole swaps inner↔outer line order, we take the element-wise
+ * min of the normal and flipped width profiles. The result is symmetric
+ * top-to-bottom, so the wrapped text is identical in both orientations and
+ * never reflows as the wheel turns.
+ */
+function stableWidths(n, fontSize, centerR, halfAngle, cellHeight, config, outerR) {
+  var normalW = lineWidths(n, fontSize, centerR, halfAngle, cellHeight, false, config, outerR);
+  var flippedW = lineWidths(n, fontSize, centerR, halfAngle, cellHeight, true, config, outerR);
+  return normalW.map(function (w, i) {
+    return Math.min(w, flippedW[i]);
+  });
 }
 function tryWrap(words, widths, fontSize, measure) {
   if (widths.length === 0) return null;
@@ -295,6 +338,28 @@ function tryWrap(words, widths, fontSize, measure) {
   }
   return lines;
 }
+/**
+ * Widths used to wrap the text at a given orientation. Stable rings use the
+ * symmetric (rotation-invariant) profile; trapezoid rings use the true
+ * orientation-specific profile so long words fall on the wide (outer) lines.
+ */
+function widthsForOrientation(n, fontSize, centerR, halfAngle, cellHeight, config, outerR, flipped) {
+  if (config.stable) {
+    return stableWidths(n, fontSize, centerR, halfAngle, cellHeight, config, outerR);
+  }
+  return lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config, outerR);
+}
+/** True if `words` wrap within `maxLines` for the given orientation at `fontSize`. */
+function fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, flipped, measure) {
+  var lineHeight = fontSize * 1.3;
+  for (var n = 1; n <= maxLines; n++) {
+    var cR = clampCenter(n, lineHeight, topR, botR, midR);
+    var widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+    var result = tryWrap(words, widths, fontSize, measure);
+    if (result && result.length <= n) return true;
+  }
+  return false;
+}
 function tryFitUniform(text, fontSize, params) {
   var innerR = params.innerR,
     outerR = params.outerR,
@@ -316,71 +381,26 @@ function tryFitUniform(text, fontSize, params) {
   var midR = (topR + botR) / 2 + textBias * cellHeight;
   var words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
-  if (ring === 1) {
-    var wrapWidth = chordAt(midR, halfAngle, cellHeight, lineHeight, config);
-    var lines = [];
-    var currentLine = '';
-    var _iterator2 = _createForOfIteratorHelper(words),
-      _step2;
-    try {
-      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-        var word = _step2.value;
-        var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-        if (measure(candidate, fontSize) <= wrapWidth) {
-          currentLine = candidate;
-        } else if (currentLine) {
-          lines.push(currentLine);
-          if (lines.length >= maxLines) return false;
-          currentLine = word;
-        } else {
-          currentLine = word;
-        }
-      }
-    } catch (err) {
-      _iterator2.e(err);
-    } finally {
-      _iterator2.f();
-    }
-    if (currentLine) lines.push(currentLine);
-    if (lines.length > maxLines) return false;
-    for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
-      var line = _lines[_i];
-      if (measure(line, fontSize) > wrapWidth) return false;
-    }
-    return true;
-  }
-  var _loop = function _loop() {
-      var cR = clampCenter(n, lineHeight, topR, botR, midR);
-      var normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
-      var flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
-      var safeWidths = normalW.map(function (w, i) {
-        return Math.min(w, flippedW[i]);
-      });
-      var result = tryWrap(words, safeWidths, fontSize, measure);
-      if (result && result.length <= n) return {
-        v: true
-      };
-    },
-    _ret;
-  for (var n = 1; n <= maxLines; n++) {
-    _ret = _loop();
-    if (_ret) return _ret.v;
-  }
-  return false;
+  var fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, false, measure);
+  if (config.stable) return fitsNormal;
+  // Trapezoid rings re-wrap when rotated past vertical, so both orientations
+  // must fit independently or text would overflow at some rotation angle.
+  if (!fitsNormal) return false;
+  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, true, measure);
 }
 function computeUniformFontSize(texts, params) {
   var baseFontSize = params.baseFontSize;
-  var _loop2 = function _loop2(fs) {
+  var _loop = function _loop(fs) {
       if (texts.every(function (t) {
         return tryFitUniform(t, fs, params);
       })) return {
         v: fs
       };
     },
-    _ret2;
+    _ret;
   for (var fs = baseFontSize; fs >= 3; fs -= 0.5) {
-    _ret2 = _loop2(fs);
-    if (_ret2) return _ret2.v;
+    _ret = _loop(fs);
+    if (_ret) return _ret.v;
   }
   return 3;
 }
@@ -420,61 +440,21 @@ function layoutTextVariable(text, fontSize, params, flipped) {
       centerR: midR
     };
   }
-  var _loop3 = function _loop3() {
-      var cR = clampCenter(n, lineHeight, topR, botR, midR);
-      if (ring === 1) {
-        var _widths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, flipped, config);
-        var result = tryWrap(words, _widths, fontSize, measure);
-        if (result && result.length <= n) {
-          return {
-            v: {
-              lines: result,
-              fontSize: fontSize,
-              lineHeight: lineHeight,
-              centerR: cR
-            }
-          };
-        }
-        if (!flipped && n > 1) {
-          var flippedWidths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config);
-          var flippedResult = tryWrap(words, flippedWidths, fontSize, measure);
-          if (flippedResult && flippedResult.length <= n) {
-            return {
-              v: {
-                lines: flippedResult.reverse(),
-                fontSize: fontSize,
-                lineHeight: lineHeight,
-                centerR: cR
-              }
-            };
-          }
-        }
-      } else {
-        var normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
-        var flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
-        var safeWidths = normalW.map(function (w, i) {
-          return Math.min(w, flippedW[i]);
-        });
-        var _result = tryWrap(words, safeWidths, fontSize, measure);
-        if (_result && _result.length <= n) {
-          return {
-            v: {
-              lines: _result,
-              fontSize: fontSize,
-              lineHeight: lineHeight,
-              centerR: cR
-            }
-          };
-        }
-      }
-    },
-    _ret3;
   for (var n = 1; n <= maxLines; n++) {
-    _ret3 = _loop3();
-    if (_ret3) return _ret3.v;
+    var _cR = clampCenter(n, lineHeight, topR, botR, midR);
+    var _widths = widthsForOrientation(n, fontSize, _cR, halfAngle, cellHeight, config, outerR, flipped);
+    var result = tryWrap(words, _widths, fontSize, measure);
+    if (result && result.length <= n) {
+      return {
+        lines: result,
+        fontSize: fontSize,
+        lineHeight: lineHeight,
+        centerR: _cR
+      };
+    }
   }
   var cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
-  var widths = lineWidths(maxLines, fontSize, cR, halfAngle, cellHeight, flipped, config);
+  var widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
   var lenient = wrapLenient(words, widths, fontSize, measure);
   return {
     lines: lenient,
@@ -488,11 +468,11 @@ function wrapLenient(words, widths, fontSize, measure) {
   var lines = [];
   var currentLine = '';
   var slotIdx = 0;
-  var _iterator3 = _createForOfIteratorHelper(words),
-    _step3;
+  var _iterator2 = _createForOfIteratorHelper(words),
+    _step2;
   try {
-    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
-      var word = _step3.value;
+    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+      var word = _step2.value;
       var w = slotIdx < widths.length ? widths[slotIdx] : widths[widths.length - 1];
       var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
       if (measure(candidate, fontSize) <= w) {
@@ -506,9 +486,9 @@ function wrapLenient(words, widths, fontSize, measure) {
       }
     }
   } catch (err) {
-    _iterator3.e(err);
+    _iterator2.e(err);
   } finally {
-    _iterator3.f();
+    _iterator2.f();
   }
   if (currentLine) {
     lines.push(currentLine);
@@ -747,7 +727,7 @@ function resolveStyle(styles, ctx, cellRadialHeight, cellOverride) {
     background: get('background') || '#ffffff',
     color: get('color') || '#333333',
     fontSize: resolveCSSValue$1(get('fontSize'), cellRadialHeight, 12),
-    padding: resolveCSSValue$1(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
+    padding: resolveCSSValue$1(get('padding'), cellRadialHeight, cellRadialHeight * 0.06),
     borderWidth: resolveCSSValue$1(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: resolvedBorderColor,
     hoverBorderColor: resolvedHoverBorderColor,
@@ -762,7 +742,7 @@ var DEFAULT_STYLES = {
   fontSize: 12,
   border: {
     width: 0.5,
-    color: '#ddd'
+    color: '#fff'
   },
   thead: {
     color: '#333333',

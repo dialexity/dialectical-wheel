@@ -106,7 +106,7 @@ export function resolveStyle(
     background: (get('background') as string) || '#ffffff',
     color: (get('color') as string) || '#333333',
     fontSize: resolveCSSValue(get('fontSize'), cellRadialHeight, 12),
-    padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.05),
+    padding: resolveCSSValue(get('padding'), cellRadialHeight, cellRadialHeight * 0.06),
     borderWidth: resolveCSSValue(getBorder('width'), cellRadialHeight, 0.5),
     borderColor: resolvedBorderColor,
     hoverBorderColor: resolvedHoverBorderColor,

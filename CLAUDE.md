@@ -12,13 +12,15 @@
 - Clip paths on each arc cell prevent text bleeding — IDs must be deterministic (no useId() colons)
 - `computeUniformFontSize` in textLayout.ts ensures all cells in a ring share one font size
 - Canvas measureText (with 1.05x factor) used for font size search and word-wrap decisions
-- `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer
-- Ring 1 uses simple midR-chord for font sizing (generous); rings 2/3 use min(normal,flipped) per-line widths with arc-limit constraint
+- `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer — all share ONE `chordAt` geometry; rings differ via `RingConfig` (`chordCap` + `stable`)
 - Ring 3 font size is capped to ring 2's computed font size (`maxFontSize` prop on Ring) — except in `neutralOutside='header'` mode where ring 3 sizes independently
-- Arc-limit in `chordAt`: `2*sqrt(outerR²-r²)` prevents text endpoints from exceeding curved arc boundary (Pythagorean extension)
-- `lineWidths` computes per-line chord widths from centerR; flipped=true gives narrow→wide (inner→outer), false gives wide→narrow
-- Ring 1 non-flipped fallback: wraps with flipped widths then reverses lines (puts most words on widest position)
-- Rings 2/3 use `safeWidths = min(normalW, flippedW)` per line — correct regardless of cell angle since dy direction varies with rotation
+- `chordAt` models a text line as a STRAIGHT rectangle (width × lineHeight) on the mid-radial, bounded by exactly two walls: radial wedge edges → `(lineR − lineHeight/2)·tan(halfAngle)` (inner corners closest), and the outer arc → `√(outerR² − (lineR + lineHeight/2)²)` (OUTER corners closest — must use the outer-corner radius, not lineR, or the top line bows past the arc). The inner arc is NEVER a constraint (a straight chord's min radius is its midpoint, always ≥ innerR) — do not re-add an inner arc-limit term
+- Uses `tan(halfAngle)`, NOT `sin` — the line is straight/radial-centered, not an arc chord; `sin` under-measures wide cells (1-PP/2-PP) by ~30%
+- `RingConfig.stable` selects the width profile: rings 2/3 use `stableWidths` = element-wise `min(normalW, flippedW)` → symmetric top-to-bottom, so wrapped text is identical in both orientations and never reflows as the wheel rotates (long text, where reflow would be jarring). Ring 1 sets `stable:false` → true trapezoid widths (wide at outer edge) so long words land on wide lines = bigger font; it's a small central cell where reflow-on-rotate is negligible
+- Trapezoid (non-stable) rings must fit in BOTH orientations independently (`tryFitUniform` checks flipped too) or text overflows at some rotation angle; stable rings only need to check one orientation (both are equal by construction)
+- Default cell padding is `cellRadialHeight * 0.06` (styles.ts) — rings 2/3 are width-limited so this adds radial breathing room without shrinking their font; 0.07+ costs ring 1 a font step
+- Ring radii are COUNT-DEPENDENT (geometry.ts `getRadii`/`RADII_BY_COUNT`, outer fixed at 200 by cycle ring). The positive/neutral boundary grows with perspective count: [innerEnd, middleEnd] = 1-2 PP `[105,152]`, 3 PP `[118,159]`, 4+ PP `[130,164]`. The inner/positive (green) ring always gets the biggest band because its text sits at the narrow tip of the wedge, AND its font degrades faster than the others as the wedge narrows with more perspectives — so it needs a progressively larger share to stay balanced. A single fixed split can't work: it would make green dominate at 1-2 PP and be the smallest at 4 PP. Values are tuned so green ≥ neutral/negative at every count (spread ≤ 1px)
+- Radius is zero-sum: growing green's band steals from neutral/negative; shrinking the synthesis/yellow core does NOT help (it pushes green text to an even narrower radius). Absolute units are irrelevant (SVG scales to `width:100%`) — only proportions matter
 - Bubbling event model: Cell → Segment → Perspective (like td → tr → table)
 - Segment/Perspective over/out only fire when identity changes (ref-tracked), not on every cell boundary
 - Header ring: `header` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
@@ -90,7 +92,7 @@
 - Inner ring chords are very narrow — use textBias to shift text outward
 - The cell shape is a trapezoid (wider at outer radius); per-line chord widths create trapezoid text fill
 - When tryFitUniform rejects, font size steps down 0.5px — layoutTextVariable must NOT shrink individually or ring uniformity breaks
-- SVG `<tspan dy>` direction in world coords depends on cell angle — at 0° dy maps radially, at 90° it maps tangentially; rings 2/3 use min-widths to handle all angles safely
+- `<tspan dy>` is ALWAYS radial in the cell's local frame — the `<text>` is pre-rotated by `textRotDeg` to align with the mid-radial, so stacked lines move inward/outward regardless of cell angle. (The old note claiming dy becomes tangential at 90° was wrong — it conflated world coords with the rotated text frame.) Lines never reflow under rotation because `stableWidths` is symmetric, not because of any angle-dependent dy behavior
 - `wrapLenient` is the overflow fallback — if `tryFitUniform` is correct, it should never be reached; overflow usually means font sizing is too generous
 - Never use `segmentId` string patterns to identify thesis/antithesis — aliases are user-controlled; always use `colType === 'thesis'` or `colType === 'antithesis'` (only exception: `__spacer__` prefix is internal sentinel)
 - T/A detection in useRotation uses array position (`idx >= N/2`), not alias — this is correct; the `t` field IS thesis regardless of alias naming

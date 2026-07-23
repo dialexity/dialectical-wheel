@@ -21,37 +21,63 @@ export interface LayoutParams {
 interface RingConfig {
   chordShrink: number;
   chordCap: number;
-  useGeometricInset: boolean;
+  // When false, use the true trapezoid width profile (wider toward the outer
+  // edge) so long words land on the widest lines — larger font. Text re-wraps
+  // when the cell rotates past vertical. When true, use a rotation-stable
+  // symmetric profile (never reflows) at the cost of a smaller font.
+  stable: boolean;
 }
 
 function getRingConfig(ring: RingNumber): RingConfig {
   switch (ring) {
+    // Ring 1 (innermost, positive) is a small central cell: reflow-on-rotation
+    // is barely noticeable, and its narrow wedge needs every pixel of the
+    // trapezoid, so it opts out of the stable profile for a bigger font.
     case 1:
-      return { chordShrink: 0.9, chordCap: 1.4, useGeometricInset: true };
+      return { chordShrink: 0.9, chordCap: 1.4, stable: false };
     case 2:
-      return { chordShrink: 0.9, chordCap: Infinity, useGeometricInset: true };
+      return { chordShrink: 0.9, chordCap: Infinity, stable: true };
     case 3:
-      return { chordShrink: 0.9, chordCap: Infinity, useGeometricInset: true };
+      return { chordShrink: 0.9, chordCap: Infinity, stable: true };
   }
 }
 
-function chordAt(r: number, halfAngle: number, cellHeight: number, lineHeight: number, config: RingConfig, innerR?: number, outerR?: number): number {
-  const inset = config.useGeometricInset
-    ? lineHeight / (2 * Math.tan(halfAngle))
-    : lineHeight / 2;
-  const effectiveR = r - inset;
-  if (effectiveR <= 0) return 0;
-  const chord = 2 * effectiveR * Math.sin(halfAngle) * config.chordShrink;
-  let maxW = Math.min(chord, cellHeight * config.chordCap);
-  if (outerR !== undefined && r > 0) {
-    const arcLimit = 2 * Math.sqrt(Math.max(0, outerR * outerR - r * r));
-    maxW = Math.min(maxW, arcLimit * config.chordShrink);
+/**
+ * Usable width for a single horizontal text line whose vertical center sits at
+ * radius `lineR` in the (rotated) cell frame.
+ *
+ * A line is a STRAIGHT rectangle (width w, height lineHeight) centered on the
+ * cell's mid-radial, so it is bounded by exactly two real walls:
+ *   - the two radial wedge edges (±halfAngle) — the line's INNER corners are
+ *     closest, at radius rInner = lineR − lineHeight/2, giving half-width
+ *     rInner·tan(halfAngle);
+ *   - the outer arc — the line's OUTER corners are closest, at radius
+ *     rOuter = lineR + lineHeight/2, giving half-width √(outerR² − rOuter²).
+ * The inner arc is never a constraint: a straight chord's minimum radius is at
+ * its midpoint, which always stays ≥ innerR.
+ */
+function chordAt(
+  lineR: number,
+  halfAngle: number,
+  cellHeight: number,
+  lineHeight: number,
+  config: RingConfig,
+  outerR?: number
+): number {
+  const rInner = lineR - lineHeight / 2;
+  if (rInner <= 0) return 0;
+
+  let half = rInner * Math.tan(halfAngle);
+
+  if (outerR !== undefined) {
+    const rOuter = lineR + lineHeight / 2;
+    const outerHalf = Math.sqrt(Math.max(0, outerR * outerR - rOuter * rOuter));
+    half = Math.min(half, outerHalf);
   }
-  if (innerR !== undefined && r > innerR) {
-    const arcLimit = 2 * Math.sqrt(Math.max(0, r * r - innerR * innerR));
-    maxW = Math.min(maxW, arcLimit * config.chordShrink);
-  }
-  return maxW;
+
+  let maxW = 2 * half * config.chordShrink;
+  maxW = Math.min(maxW, cellHeight * config.chordCap);
+  return Math.max(0, maxW);
 }
 
 function lineWidths(
@@ -62,7 +88,6 @@ function lineWidths(
   cellHeight: number,
   flipped: boolean,
   config: RingConfig,
-  innerR?: number,
   outerR?: number
 ): number[] {
   const lineHeight = fontSize * 1.3;
@@ -74,9 +99,30 @@ function lineWidths(
     } else {
       lineR = centerR + ((n - 1) / 2 - i) * lineHeight;
     }
-    widths.push(chordAt(Math.max(lineR, 1), halfAngle, cellHeight, lineHeight, config, innerR, outerR));
+    widths.push(chordAt(Math.max(lineR, 1), halfAngle, cellHeight, lineHeight, config, outerR));
   }
   return widths;
+}
+
+/**
+ * Per-line widths that hold regardless of the cell's rotation. Because rotating
+ * the cell past a pole swaps inner↔outer line order, we take the element-wise
+ * min of the normal and flipped width profiles. The result is symmetric
+ * top-to-bottom, so the wrapped text is identical in both orientations and
+ * never reflows as the wheel turns.
+ */
+function stableWidths(
+  n: number,
+  fontSize: number,
+  centerR: number,
+  halfAngle: number,
+  cellHeight: number,
+  config: RingConfig,
+  outerR: number
+): number[] {
+  const normalW = lineWidths(n, fontSize, centerR, halfAngle, cellHeight, false, config, outerR);
+  const flippedW = lineWidths(n, fontSize, centerR, halfAngle, cellHeight, true, config, outerR);
+  return normalW.map((w, i) => Math.min(w, flippedW[i]));
 }
 
 function tryWrap(
@@ -118,6 +164,52 @@ function tryWrap(
   return lines;
 }
 
+/**
+ * Widths used to wrap the text at a given orientation. Stable rings use the
+ * symmetric (rotation-invariant) profile; trapezoid rings use the true
+ * orientation-specific profile so long words fall on the wide (outer) lines.
+ */
+function widthsForOrientation(
+  n: number,
+  fontSize: number,
+  centerR: number,
+  halfAngle: number,
+  cellHeight: number,
+  config: RingConfig,
+  outerR: number,
+  flipped: boolean
+): number[] {
+  if (config.stable) {
+    return stableWidths(n, fontSize, centerR, halfAngle, cellHeight, config, outerR);
+  }
+  return lineWidths(n, fontSize, centerR, halfAngle, cellHeight, flipped, config, outerR);
+}
+
+/** True if `words` wrap within `maxLines` for the given orientation at `fontSize`. */
+function fitsOrientation(
+  words: string[],
+  fontSize: number,
+  halfAngle: number,
+  cellHeight: number,
+  config: RingConfig,
+  outerR: number,
+  topR: number,
+  botR: number,
+  midR: number,
+  maxLines: number,
+  flipped: boolean,
+  measure: (text: string, fontSize: number) => number
+): boolean {
+  const lineHeight = fontSize * 1.3;
+  for (let n = 1; n <= maxLines; n++) {
+    const cR = clampCenter(n, lineHeight, topR, botR, midR);
+    const widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+    const result = tryWrap(words, widths, fontSize, measure);
+    if (result && result.length <= n) return true;
+  }
+  return false;
+}
+
 function tryFitUniform(text: string, fontSize: number, params: LayoutParams): boolean {
   const { innerR, outerR, cellAngle, padding: paddingFrac, measure, textBias, ring } = params;
   const config = getRingConfig(ring);
@@ -136,39 +228,12 @@ function tryFitUniform(text: string, fontSize: number, params: LayoutParams): bo
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
 
-  if (ring === 1) {
-    const wrapWidth = chordAt(midR, halfAngle, cellHeight, lineHeight, config);
-    const lines: string[] = [];
-    let currentLine = '';
-    for (const word of words) {
-      const candidate = currentLine ? `${currentLine} ${word}` : word;
-      if (measure(candidate, fontSize) <= wrapWidth) {
-        currentLine = candidate;
-      } else if (currentLine) {
-        lines.push(currentLine);
-        if (lines.length >= maxLines) return false;
-        currentLine = word;
-      } else {
-        currentLine = word;
-      }
-    }
-    if (currentLine) lines.push(currentLine);
-    if (lines.length > maxLines) return false;
-    for (const line of lines) {
-      if (measure(line, fontSize) > wrapWidth) return false;
-    }
-    return true;
-  }
-
-  for (let n = 1; n <= maxLines; n++) {
-    const cR = clampCenter(n, lineHeight, topR, botR, midR);
-    const normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
-    const flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
-    const safeWidths = normalW.map((w, i) => Math.min(w, flippedW[i]));
-    const result = tryWrap(words, safeWidths, fontSize, measure);
-    if (result && result.length <= n) return true;
-  }
-  return false;
+  const fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, false, measure);
+  if (config.stable) return fitsNormal;
+  // Trapezoid rings re-wrap when rotated past vertical, so both orientations
+  // must fit independently or text would overflow at some rotation angle.
+  if (!fitsNormal) return false;
+  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, true, measure);
 }
 
 export function computeUniformFontSize(
@@ -218,32 +283,15 @@ export function layoutTextVariable(
 
   for (let n = 1; n <= maxLines; n++) {
     const cR = clampCenter(n, lineHeight, topR, botR, midR);
-    if (ring === 1) {
-      const widths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, flipped, config);
-      const result = tryWrap(words, widths, fontSize, measure);
-      if (result && result.length <= n) {
-        return { lines: result, fontSize, lineHeight, centerR: cR };
-      }
-      if (!flipped && n > 1) {
-        const flippedWidths = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config);
-        const flippedResult = tryWrap(words, flippedWidths, fontSize, measure);
-        if (flippedResult && flippedResult.length <= n) {
-          return { lines: flippedResult.reverse(), fontSize, lineHeight, centerR: cR };
-        }
-      }
-    } else {
-      const normalW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, false, config, innerR, outerR);
-      const flippedW = lineWidths(n, fontSize, cR, halfAngle, cellHeight, true, config, innerR, outerR);
-      const safeWidths = normalW.map((w, i) => Math.min(w, flippedW[i]));
-      const result = tryWrap(words, safeWidths, fontSize, measure);
-      if (result && result.length <= n) {
-        return { lines: result, fontSize, lineHeight, centerR: cR };
-      }
+    const widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+    const result = tryWrap(words, widths, fontSize, measure);
+    if (result && result.length <= n) {
+      return { lines: result, fontSize, lineHeight, centerR: cR };
     }
   }
 
   const cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
-  const widths = lineWidths(maxLines, fontSize, cR, halfAngle, cellHeight, flipped, config);
+  const widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
   const lenient = wrapLenient(words, widths, fontSize, measure);
   return { lines: lenient, fontSize, lineHeight, centerR: cR };
 }

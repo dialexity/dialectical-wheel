@@ -34,32 +34,45 @@ export interface Radii {
   cycleEnd: number;
 }
 
-const RADII_MULTI: Radii = {
-  synthesis: 30,
-  innerStart: 30,
-  innerEnd: 100,
-  middleStart: 100,
-  middleEnd: 150,
-  outerStart: 150,
-  outerEnd: 200,
-  cycleStart: 200,
-  cycleEnd: 250,
-};
+// The inner (positive/green) ring gets the largest radial share because its
+// cells sit near the narrow tip of the wedge (smallest radius = narrowest
+// chords), making it the hardest ring to fit text in. Radius is zero-sum
+// (outerEnd is fixed at 200 by the cycle ring), so bands are sized to EQUALIZE
+// the three body rings' fonts rather than give any one a comfortable margin.
+//
+// The green ring's font degrades faster than the others as perspectives are
+// added (its wedge narrows fastest toward the tip), so a single fixed split
+// can't stay balanced: at few perspectives green would dominate, at many it
+// would be the smallest. Its share therefore GROWS with the count — the
+// positive/neutral boundary moves outward from 105 (1-2 PP) to 130 (4 PP).
+// Values are tuned so green ≥ the other two rings at every count (spread ≤ 1px).
+function buildRadii(innerEnd: number, middleEnd: number): Radii {
+  return {
+    synthesis: 30,
+    innerStart: 30,
+    innerEnd,
+    middleStart: innerEnd,
+    middleEnd,
+    outerStart: middleEnd,
+    outerEnd: 200,
+    cycleStart: 200,
+    cycleEnd: 250,
+  };
+}
 
-const RADII_SINGLE: Radii = {
-  synthesis: 30,
-  innerStart: 30,
-  innerEnd: 87,
-  middleStart: 87,
-  middleEnd: 143,
-  outerStart: 143,
-  outerEnd: 200,
-  cycleStart: 200,
-  cycleEnd: 250,
+// [innerEnd, middleEnd] boundaries per perspective count (clamped to the 1..4
+// range that has been tuned; 5+ reuses the 4-PP split).
+const RADII_BY_COUNT: Record<number, [number, number]> = {
+  1: [105, 152],
+  2: [105, 152],
+  3: [118, 159],
+  4: [130, 164],
 };
 
 export function getRadii(perspectiveCount: number): Radii {
-  return perspectiveCount <= 1 ? RADII_SINGLE : RADII_MULTI;
+  const key = Math.min(4, Math.max(1, perspectiveCount));
+  const [innerEnd, middleEnd] = RADII_BY_COUNT[key];
+  return buildRadii(innerEnd, middleEnd);
 }
 
-export const RADII = RADII_MULTI;
+export const RADII = buildRadii(118, 159);
