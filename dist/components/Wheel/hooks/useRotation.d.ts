@@ -16,7 +16,7 @@ export declare function useRotation({ onFocusChanged, segmentIds, focusedSegment
     focusSegmentToNextPole: (segmentId: string, clockwise: boolean) => void;
     focusSegmentToNearestPole: (segmentId: string) => void;
     rotateBySegments: (count: number) => void;
-    svgRef: import("react").MutableRefObject<SVGSVGElement | null>;
+    svgRef: import("react").RefObject<SVGSVGElement | null>;
     pointerHandlers: {
         onPointerDown: (e: React.PointerEvent) => void;
         onPointerMove: (e: React.PointerEvent) => void;

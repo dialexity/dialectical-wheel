@@ -29,6 +29,6 @@ interface CalloutInternalProps {
     header?: React.ReactNode;
     children?: React.ReactNode;
 }
-export declare function CalloutInternal({ midAngle, anchorR, anchorAngle, endR, rotationDeg, border, tail, header, children, }: CalloutInternalProps): import("react/jsx-runtime").JSX.Element;
+export declare function CalloutInternal({ midAngle, anchorR, anchorAngle, endR, rotationDeg, border, tail, header, children, }: CalloutInternalProps): React.JSX.Element;
 export {};
 //# sourceMappingURL=Callout.d.ts.map
