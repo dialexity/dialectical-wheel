@@ -46,6 +46,13 @@ export function useRotation({ onFocusChanged, segmentIds, focusedSegment }: UseR
   const clearTimers = () => {
     animTimers.current.forEach(t => clearTimeout(t));
     animTimers.current = [];
+    // Clearing the timers abandons any in-flight phased focus animation,
+    // including the fade-in timer (t2) whose only job is to reset these.
+    // Reset them here so an interrupting rotation (e.g. rapid double-click,
+    // arrow nav) can't leave other perspectives stuck invisible. The focus
+    // effect re-sets these synchronously when it starts a phased animation.
+    setFocusAnimatingIdx(null);
+    setIsRotationPaused(false);
   };
 
   useEffect(() => {
