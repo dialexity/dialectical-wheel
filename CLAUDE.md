@@ -3,7 +3,10 @@
 ## Build & Dev
 - `npx rollup -c` — build library (src → dist)
 - `npx tsc --noEmit` — type check without emitting (faster than full build for iteration)
-- Storybook is already running (user manages it manually) — do NOT launch it
+- Storybook: user usually manages it on port 6006 (don't auto-launch); if it's down and you need it, launch with explicit OK. It resolves TS source directly (HMR, no build needed) via package.json `exports.source`
+- No test suite (`jest` → "No tests found"); verify visually via headless Chrome screenshots of `http://localhost:6006/iframe.html?id=components-wheel--<story-kebab>&viewMode=story`
+- `dist/` is checked into git; the `dev` script (`rollup -c -w`) auto-recompiles it — commit dist alongside src changes
+- Font-sizing/geometry changes: validate numerically by porting textLayout.ts to a standalone node script (advance-width table) before eyeballing — the fit algorithm is deterministic
 - Zero runtime dependencies; React is peer dep only
 
 ## Architecture
@@ -118,7 +121,7 @@
 - `WheelDirection = 'left' | 'right'` — type for the `direction` prop (default 'right'); models reading direction ('right' = clockwise, 'left' = counterclockwise); does not affect data order
 - `showArrows` prop (default `true`) — prop-level kill switch for all arrows; independent of style system (colors stay intact for when re-enabled)
 - `Styles.spiralArrow: { color?, width? }` — global-only (no cascade); color defaults to `#333`, width defaults to 3% of neg cell height
-- `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to table-level border color (visible by default), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
+- `CellStyle.arrow: { color, width }` — cascades through style system; color defaults to `#999` (visible on both the white header ring and colored body rings — decoupled from the default border color, which is white `#fff` for hairline separators and would render arrows invisibly), width is CSSValue (px or %) defaulting to `cellRadialHeight * 0.03`; set color to `'transparent'` to hide arrows
 - `CellStyle.hoverArrowColor` — arrow color on hover, defaults to hoverBorderColor
 - `CellStyle.hoverBorderColor` — cascades through style system like other properties
 - Event types: `CellEvent`, `SegmentEvent`, `PerspectiveEvent`, `ArrowEvent` — narrowing as they bubble up

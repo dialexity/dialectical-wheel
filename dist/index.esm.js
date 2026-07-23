@@ -643,7 +643,6 @@ function resolveCSSValue$1(value, relativeTo, fallback) {
   return parseFloat(str) || fallback;
 }
 function resolveStyle(styles, ctx, cellRadialHeight, cellOverride) {
-  var _styles$border;
   var layers = [];
   // 1. Table level
   layers.push(styles);
@@ -718,7 +717,6 @@ function resolveStyle(styles, ctx, cellRadialHeight, cellOverride) {
   };
   var resolvedBorderColor = getBorder('color') || '#ddd';
   var resolvedHoverBorderColor = get('hoverBorderColor') || '#999';
-  var tableBorderColor = ((_styles$border = styles.border) === null || _styles$border === void 0 ? void 0 : _styles$border.color) || '#ddd';
   return {
     background: get('background') || '#ffffff',
     color: get('color') || '#333333',
@@ -729,7 +727,12 @@ function resolveStyle(styles, ctx, cellRadialHeight, cellOverride) {
     hoverBorderColor: resolvedHoverBorderColor,
     selectedBorderWidth: resolveCSSValue$1(getSelectedBorder('width'), cellRadialHeight, 1),
     selectedBorderColor: getSelectedBorder('color') || '#666',
-    arrowColor: getArrow('color') || tableBorderColor,
+    // Arrows default to a visible gray rather than tracking the table border
+    // color: the border defaults to white (#fff) for hairline cell separators,
+    // which would render header-ring arrows invisibly white-on-white. #999
+    // matches the hover-border/arrow-hover default so segment-hover reads as a
+    // width change, not a color shift. An explicit arrow.color still wins.
+    arrowColor: getArrow('color') || '#999',
     arrowHoverColor: get('hoverArrowColor') || resolvedHoverBorderColor,
     arrowWidth: resolveCSSValue$1(getArrow('width'), cellRadialHeight, cellRadialHeight * 0.03)
   };

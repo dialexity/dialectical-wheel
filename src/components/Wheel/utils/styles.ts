@@ -100,7 +100,6 @@ export function resolveStyle(
 
   const resolvedBorderColor = (getBorder('color') as string) || '#ddd';
   const resolvedHoverBorderColor = (get('hoverBorderColor') as string) || '#999';
-  const tableBorderColor = (styles as Partial<CellStyle>).border?.color || '#ddd';
 
   return {
     background: (get('background') as string) || '#ffffff',
@@ -112,7 +111,12 @@ export function resolveStyle(
     hoverBorderColor: resolvedHoverBorderColor,
     selectedBorderWidth: resolveCSSValue(getSelectedBorder('width'), cellRadialHeight, 1),
     selectedBorderColor: (getSelectedBorder('color') as string) || '#666',
-    arrowColor: (getArrow('color') as string) || tableBorderColor,
+    // Arrows default to a visible gray rather than tracking the table border
+    // color: the border defaults to white (#fff) for hairline cell separators,
+    // which would render header-ring arrows invisibly white-on-white. #999
+    // matches the hover-border/arrow-hover default so segment-hover reads as a
+    // width change, not a color shift. An explicit arrow.color still wins.
+    arrowColor: (getArrow('color') as string) || '#999',
     arrowHoverColor: (get('hoverArrowColor') as string) || resolvedHoverBorderColor,
     arrowWidth: resolveCSSValue(getArrow('width'), cellRadialHeight, cellRadialHeight * 0.03),
   };
