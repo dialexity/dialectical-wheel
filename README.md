@@ -12,6 +12,16 @@ engine live in the
   <img src="assets/wheel-preview.png" alt="Dialectical wheel with four perspectives" width="480">
 </p>
 
+## Try it
+
+Explore every prop and mode interactively in Storybook:
+
+```bash
+git clone https://github.com/dialexity/dialectical-wheel.git
+cd dialectical-wheel && npm install
+npm run storybook   # opens http://localhost:6006
+```
+
 ## Installation
 
 ```bash
@@ -47,11 +57,9 @@ are bundled.
 
 ## Development
 
-```bash
-git clone https://github.com/dialexity/dialectical-wheel.git
-cd dialectical-wheel
-npm install
+After cloning and `npm install` (see [Try it](#try-it)):
 
+```bash
 npm run type-check   # tsc --noEmit
 npm run lint         # eslint
 npm run build        # rollup: src → dist
@@ -64,7 +72,3 @@ Storybook is the living documentation — every prop and mode has a story.
 
 - [Dialexity](https://dialexity.com)
 - [dialectical-framework](https://github.com/dialexity/dialectical-framework) — the model and reasoning engine
-
-## License
-
-MIT
