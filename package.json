@@ -3,7 +3,7 @@
   "version": "1.2.1",
   "type": "module",
   "description": "React components for interactive dialectical wheel visualization",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -11,15 +11,14 @@
       "types": "./dist/index.d.ts",
       "source": "./src/index.ts",
       "import": "./dist/index.esm.js",
-      "require": "./dist/index.js"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist",
     "src",
+    "!src/stories",
     "assets",
-    "rollup.config.js",
-    "tsconfig.json",
     "README.md"
   ],
   "scripts": {

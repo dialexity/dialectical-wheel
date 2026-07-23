@@ -8,7 +8,8 @@ export default {
   input: 'src/index.ts',
   output: [
     {
-      file: 'dist/index.js',
+      // .cjs so Node treats it as CommonJS despite package.json "type":"module"
+      file: 'dist/index.cjs',
       format: 'cjs',
       exports: 'named',
       sourcemap: true,

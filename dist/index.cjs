@@ -2942,4 +2942,4 @@ exports.default = Wheel;
 exports.downloadBlob = downloadBlob;
 exports.exportWheelPNG = exportWheelPNG;
 exports.exportWheelSVG = exportWheelSVG;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=index.cjs.map
