@@ -17,6 +17,7 @@
   "files": [
     "dist",
     "src",
+    "assets",
     "rollup.config.js",
     "tsconfig.json",
     "README.md"

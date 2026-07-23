@@ -8,6 +8,10 @@ Part of [Dialexity](https://dialexity.com). The underlying model and reasoning
 engine live in the
 [dialectical-framework](https://github.com/dialexity/dialectical-framework) repo.
 
+<p align="center">
+  <img src="assets/wheel-preview.png" alt="Dialectical wheel with four perspectives" width="480">
+</p>
+
 ## Installation
 
 ```bash
