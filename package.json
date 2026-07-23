@@ -43,11 +43,18 @@
     "antithesis",
     "component"
   ],
-  "author": "Justin Tan",
+  "author": "Evaldas Taroza <evaldas@dialexity.com>",
+  "contributors": [
+    "Justin Tan"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dialexity/dialectical-wheel.git"
+    "url": "git+https://github.com/dialexity/dialectical-wheel.git"
+  },
+  "homepage": "https://github.com/dialexity/dialectical-wheel#readme",
+  "bugs": {
+    "url": "https://github.com/dialexity/dialectical-wheel/issues"
   },
   "peerDependencies": {
     "react": ">=16.8.0",
