@@ -5,6 +5,9 @@
 - `npx tsc --noEmit` — type check without emitting (faster than full build for iteration)
 - Storybook: user usually manages it on port 6006 (don't auto-launch); if it's down and you need it, launch with explicit OK. It resolves TS source directly (HMR, no build needed) via package.json `exports.source`
 - No test suite (`jest` → "No tests found"); verify visually via headless Chrome screenshots of `http://localhost:6006/iframe.html?id=components-wheel--<story-kebab>&viewMode=story`
+- Headless Chrome at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`; MUST pass `--virtual-time-budget=4000` (e.g. `--headless --disable-gpu --virtual-time-budget=4000 --screenshot=out.png <iframe-url>`) or the shot captures a blank pre-render frame
+- To verify font sizes/layout precisely, `--dump-dom` and grep `<text ... font-size="N">` per ring — deterministic, beats eyeballing screenshots
+- Launch Storybook as a detached background task, NOT `&` + curl-poll in one Bash call: startup (+ any preceding build) exceeds the 2-min Bash timeout and the shell kill takes Storybook with it. `curl -s localhost:6006/index.json` confirms new stories are served
 - `dist/` is checked into git; the `dev` script (`rollup -c -w`) auto-recompiles it — commit dist alongside src changes
 - Font-sizing/geometry changes: validate numerically by porting textLayout.ts to a standalone node script (advance-width table) before eyeballing — the fit algorithm is deterministic
 - Zero runtime dependencies; React is peer dep only
@@ -14,6 +17,11 @@
 - Text rendering uses SVG `<text>` + `<tspan>` with per-line variable chord widths (trapezoid fill)
 - Clip paths on each arc cell prevent text bleeding — IDs must be deterministic (no useId() colons)
 - `computeUniformFontSize` in textLayout.ts ensures all cells in a ring share one font size
+- `sizingMode` prop: `'balance'` (default) | `'shrink'`. Shrink = legacy per-ring independent font (a long cell renders smaller → false importance hierarchy). Balance = ONE shared font across body rings + flexed ring bands so the text-heavy ring grows and fonts come out equal/near-equal
+- `computeBalancedLayout` (textLayout.ts): largest common font that fits ALL balanced rings, then partitions the fixed radial budget (core..outerEnd) greedy inner→outer (each ring minimal outward extent = wider wedge = optimal for outer rings), growth-clamped per ring to `MAX_BALANCE_GROWTH` (1.5) × default band so the wheel never balloons lopsided; when clamp binds, fonts land near-equal not exactly equal. Generalized to N rings — returns internal boundaries (length ringCount−1)
+- Balance overrides the fixed `RADII_BY_COUNT` lookup by feeding computed `[innerEnd, middleEnd]` to the now-exported `buildRadii`; returns null (→ fixed radii + shrink fallback) when no font ≥3px fits
+- Header mode (`neutralOutside='header'`) balances ONLY positive+negative across `[core, middleEnd]`; the merged neutral+cycle ring self-sizes and gets no `forcedFontSize`
+- Ring's `forcedFontSize` prop bypasses its per-ring `computeUniformFontSize` search (balance mode feeds the globally-solved font)
 - Canvas measureText (with 1.05x factor) used for font size search and word-wrap decisions
 - `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer — all share ONE `chordAt` geometry; rings differ via `RingConfig` (`chordCap` + `stable`)
 - Ring 3 (outer) font is capped via `maxFontSize` to `max(positive, middle)` ring font — NOT the middle ring alone (a long statement in the middle ring would otherwise drag the short-text outer summary down to statement size); skipped in `neutralOutside='header'`/`stitched` mode where ring 3 sizes independently

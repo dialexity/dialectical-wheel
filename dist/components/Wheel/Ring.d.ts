@@ -23,6 +23,7 @@ interface RingProps {
     showText?: boolean;
     headerBehavior?: boolean;
     maxFontSize?: number;
+    forcedFontSize?: number;
 }
 export declare function computeTextBias(ringName: RingName, perspectiveCount: number): number;
 export declare const Ring: React.FC<RingProps>;

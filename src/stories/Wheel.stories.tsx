@@ -157,6 +157,69 @@ export const LongText: Story = {
   },
 };
 
+// A single perspective whose neutral STATEMENT is a long sentence while the
+// ±summaries are short — the case where per-ring shrink makes the statement
+// render tiny (and thus read as "less important") next to the big summaries.
+const lopsidedPerspective = [
+  {
+    "t_minus": { "alias": "T1-", "statement": "Rigid preplanning starving cash flow", "explanation": "" },
+    "t": { "alias": "T1", "statement": "Preplanning creates structural stability — denser groups, less teacher search stress, packaged courses with committed slots — and deserves to be the primary sales mode", "explanation": "" },
+    "t_plus": { "alias": "T1+", "statement": "Preplanned backbone with generated fill", "explanation": "" },
+    "a_plus": { "alias": "A1+", "statement": "Generated courses bounded by density rules", "explanation": "" },
+    "a": { "alias": "A1", "statement": "Generated courses create immediate conversion and cash flow — there's always something available to sell, people book and pay now — and the business can't survive without this responsiveness", "explanation": "" },
+    "a_minus": { "alias": "A1-", "statement": "Endless generation depleting focus and density", "explanation": "" }
+  }
+];
+
+// Per-ring shrink (opt-out): the long neutral statement collapses to a tiny
+// font while the short ±summaries stay large.
+export const SizingShrink: Story = {
+  args: {
+    perspectives: lopsidedPerspective,
+    styles: defaultStyles,
+    header: 'cycle',
+    sizingMode: 'shrink',
+  },
+};
+
+// Balance (default): one shared font across body rings, bands flex (clamped) so
+// the text-heavy neutral ring grows and fonts come out near-equal.
+export const SizingBalance: Story = {
+  args: {
+    perspectives: lopsidedPerspective,
+    styles: defaultStyles,
+    header: 'cycle',
+  },
+};
+
+// Balance across multiple perspectives with uniformly long text.
+export const SizingBalanceFourLong: Story = {
+  args: {
+    ...Default.args,
+    perspectives: longTextPerspectives,
+  },
+};
+
+// Header mode + balance: the merged neutral+cycle ring sizes itself, but the
+// positive and negative rings still balance to one shared font between them.
+export const SizingBalanceHeader: Story = {
+  args: {
+    perspectives: lopsidedPerspective,
+    styles: defaultStyles,
+    neutralOutside: 'header',
+  },
+};
+
+// Same header layout, shrink mode — positive/negative size independently.
+export const SizingShrinkHeader: Story = {
+  args: {
+    perspectives: lopsidedPerspective,
+    styles: defaultStyles,
+    neutralOutside: 'header',
+    sizingMode: 'shrink',
+  },
+};
+
 export const Export: Story = {
   render: (args) => {
     const ref = useRef<SVGSVGElement>(null);

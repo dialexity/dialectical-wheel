@@ -404,6 +404,119 @@ function computeUniformFontSize(texts, params) {
   }
   return 3;
 }
+/**
+ * Smallest outer radius (stepping 0.5u from `innerR`, capped at `hardCap`) at
+ * which every text in the ring fits at `fontSize`. Null if none fits by hardCap.
+ * Ring fit improves as the band moves OUTWARD (wider wedge), so the minimal
+ * outward extent leaves the most room for the rings beyond it — greedy-optimal
+ * for the inner→outer partition below.
+ */
+function minOuterForFont(texts, fontSize, ring, textBias, innerR, hardCap, cellAngle, padding, measure) {
+  var floor = innerR + Math.max(4, fontSize * 1.3 + 1);
+  var _loop2 = function _loop2() {
+      var params = {
+        innerR: innerR,
+        outerR: outerR,
+        cellAngle: cellAngle,
+        padding: padding,
+        measure: measure,
+        textBias: textBias,
+        ring: ring
+      };
+      if (texts.every(function (t) {
+        return tryFitUniform(t, fontSize, params);
+      })) return {
+        v: outerR
+      };
+    },
+    _ret2;
+  for (var outerR = floor; outerR <= hardCap + 1e-6; outerR += 0.5) {
+    _ret2 = _loop2();
+    if (_ret2) return _ret2.v;
+  }
+  return null;
+}
+/**
+ * BALANCE sizing: find the largest single font that fits EVERY balanced ring,
+ * then partition the fixed radial budget (core..outerEnd) so each ring gets the
+ * band it needs at that font — the text-heavy ring grows, the short ones give
+ * space back. A per-ring growth clamp (`maxGrowth` × the default band) keeps the
+ * wheel from ballooning into a lopsided shape when one cell's text is far longer
+ * than the rest; when the clamp binds, the largest common font can't grow
+ * further so fonts come out near-equal rather than exactly equal. Each ring
+ * keeps at least a one-line floor. Rings are ordered inner→outer.
+ *
+ * Works for any ring count: the default wheel balances 3 rings across the full
+ * body budget; header mode balances only positive+negative (2 rings) across the
+ * budget below the self-sizing merged neutral+cycle ring. `rings`,
+ * `defaultBands`, and the returned `bounds` (internal boundaries, length =
+ * rings.length − 1) all share that ordering and length.
+ *
+ * Returns null when no font ≥3px fits within the clamped budget — caller then
+ * falls back to fixed radii + per-ring shrink.
+ */
+function computeBalancedLayout(rings, core, outerEnd, defaultBands, cellAngle, baseFontSize, padding, maxGrowth, measure) {
+  var n = rings.length;
+  if (n === 0 || defaultBands.length !== n) return null;
+  var budget = outerEnd - core;
+  var cap = defaultBands.map(function (b) {
+    return b * maxGrowth;
+  });
+  for (var fs = baseFontSize; fs >= 3; fs -= 0.5) {
+    // Greedy inner→outer: minimal outward extent per ring within its cap.
+    var inner = core;
+    var min = [];
+    var feasible = true;
+    for (var i = 0; i < n; i++) {
+      var hi = Math.min(inner + cap[i], outerEnd);
+      var outerR = minOuterForFont(rings[i].texts, fs, rings[i].ring, rings[i].textBias, inner, hi, cellAngle, padding, measure);
+      if (outerR == null) {
+        feasible = false;
+        break;
+      }
+      min.push(outerR - inner);
+      inner = outerR;
+    }
+    if (!feasible) continue;
+    var used = min.reduce(function (a, b) {
+      return a + b;
+    }, 0);
+    if (used > budget + 1e-6) continue;
+    // Distribute the remaining budget toward the DEFAULT proportions so the
+    // wheel keeps its familiar shape; never push a band past its cap.
+    var band = min.slice();
+    var slack = budget - used;
+    for (var iter = 0; iter < 8 && slack > 1e-6; iter++) {
+      var room = band.map(function (b, i) {
+        return cap[i] - b;
+      });
+      var openWeight = room.reduce(function (a, r, i) {
+        return a + (r > 1e-6 ? defaultBands[i] : 0);
+      }, 0);
+      if (openWeight <= 1e-6) break;
+      var placed = 0;
+      for (var _i = 0; _i < n; _i++) {
+        if (room[_i] <= 1e-6) continue;
+        var give = Math.min(room[_i], slack * defaultBands[_i] / openWeight);
+        band[_i] += give;
+        placed += give;
+      }
+      slack -= placed;
+    }
+    // Cumulative internal boundaries (drop the last, which is outerEnd).
+    var bounds = [];
+    var acc = core;
+    for (var _i2 = 0; _i2 < n - 1; _i2++) {
+      acc += band[_i2];
+      bounds.push(Math.round(acc));
+    }
+    return {
+      fontSize: fs,
+      bounds: bounds
+    };
+  }
+  return null;
+}
 function clampCenter(n, lineHeight, topR, botR, midR) {
   if (n <= 1) return midR;
   var blockH = n * lineHeight;
@@ -823,7 +936,8 @@ var Ring = function Ring(_ref) {
     _ref$showText = _ref.showText,
     showText = _ref$showText === void 0 ? true : _ref$showText,
     headerBehavior = _ref.headerBehavior,
-    maxFontSize = _ref.maxFontSize;
+    maxFontSize = _ref.maxFontSize,
+    forcedFontSize = _ref.forcedFontSize;
   var cellRadialHeight = outerR - innerR;
   var cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
   var resolvedStyles = useMemo(function () {
@@ -853,6 +967,7 @@ var Ring = function Ring(_ref) {
   var textOuterR = headerBehavior ? innerR + (outerR - innerR) * 0.65 : outerR;
   var textWidthArcR = headerBehavior ? innerR + (outerR - innerR) * 0.85 : outerR;
   var uniformFontSize = useMemo(function () {
+    if (forcedFontSize != null) return forcedFontSize;
     if (segments.length === 0) return baseFontSize;
     var texts = segments.map(function (s) {
       return s.fullText;
@@ -871,7 +986,7 @@ var Ring = function Ring(_ref) {
       textBias: textBias,
       ring: ringNumber
     });
-  }, [segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
+  }, [forcedFontSize, segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
@@ -2274,6 +2389,8 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
     header = _ref$header === void 0 ? 'wheel' : _ref$header,
     _ref$direction = _ref.direction,
     direction = _ref$direction === void 0 ? 'right' : _ref$direction,
+    _ref$sizingMode = _ref.sizingMode,
+    sizingMode = _ref$sizingMode === void 0 ? 'balance' : _ref$sizingMode,
     _ref$showArrows = _ref.showArrows,
     showArrows = _ref$showArrows === void 0 ? true : _ref$showArrows,
     _ref$showInwardSpiral = _ref.showInwardSpiral,
@@ -2303,9 +2420,6 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var styles = useMemo(function () {
     return mergeStyles(userStyles);
   }, [userStyles]);
-  var radii = useMemo(function () {
-    return getRadii(perspectives.length);
-  }, [perspectives.length]);
   var measure = useTextMeasure();
   var ringData = useMemo(function () {
     return transformPerspectives(perspectives);
@@ -2363,6 +2477,84 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
   var stitched = neutralOutsideProp === 'header';
   var outerRing = neutralOutside ? 'neutral' : 'negative';
   var middleRing = neutralOutside ? 'negative' : 'neutral';
+  // Balance sizing: solve one shared font + flexed ring bands so no cell reads
+  // as "more important" just for being shorter. Clamp band growth to 1.5x the
+  // default so the wheel stays proportional; when the clamp binds on very
+  // lopsided text the fonts land near-equal rather than exactly equal. In header
+  // mode the merged neutral+cycle ring sizes itself (excluded), but positive +
+  // negative still balance against each other within their combined band below
+  // it. Null → fall back to fixed radii + per-ring shrink.
+  var MAX_BALANCE_GROWTH = 1.5;
+  var balanced = useMemo(function () {
+    if (sizingMode !== 'balance') return null;
+    var posSegs = ringData.positive;
+    var cellAngle = posSegs.length > 0 ? posSegs[0].endAngle - posSegs[0].startAngle : 0;
+    if (cellAngle === 0) return null;
+    var textsOf = function textsOf(segs) {
+      return segs.map(function (s) {
+        return s.fullText;
+      }).filter(Boolean);
+    };
+    var def = getRadii(perspectives.length);
+    var core = def.innerStart;
+    var ctx = {
+      rowGroup: 'tbody',
+      ring: 'positive',
+      colType: posSegs[0].colType,
+      perspectiveIndex: posSegs[0].perspectiveIndex
+    };
+    // Rings to balance, inner→outer, with the ringNumber they render as. Header
+    // mode balances only positive(1) + negative(2); the merged neutral ring is
+    // held at its default inner boundary (middleEnd) and sizes independently.
+    var specs = stitched ? [{
+      name: 'positive',
+      ring: 1
+    }, {
+      name: 'negative',
+      ring: 2
+    }] : [{
+      name: 'positive',
+      ring: 1
+    }, {
+      name: middleRing,
+      ring: 2
+    }, {
+      name: outerRing,
+      ring: 3
+    }];
+    var outerEnd = stitched ? def.middleEnd : def.outerEnd;
+    var rings = [];
+    for (var _i = 0, _specs = specs; _i < _specs.length; _i++) {
+      var spec = _specs[_i];
+      var texts = textsOf(ringData[spec.name]);
+      if (texts.length === 0) return null;
+      rings.push({
+        texts: texts,
+        ring: spec.ring,
+        textBias: computeTextBias(spec.name, perspectives.length)
+      });
+    }
+    // Default band per balanced ring, inner→outer (matches `specs`).
+    var boundaries = stitched ? [core, def.innerEnd, def.middleEnd] : [core, def.innerEnd, def.middleEnd, def.outerEnd];
+    var defaultBands = specs.map(function (_, i) {
+      return boundaries[i + 1] - boundaries[i];
+    });
+    var baseFontSize = resolveStyle(styles, ctx, defaultBands[0]).fontSize;
+    var result = computeBalancedLayout(rings, core, outerEnd, defaultBands, cellAngle, baseFontSize, 0.06, MAX_BALANCE_GROWTH, measure);
+    if (!result) return null;
+    // Reconstruct the full [innerEnd, middleEnd] pair buildRadii needs. Header
+    // mode solved only innerEnd; middleEnd stays at its default.
+    var innerEnd = result.bounds[0];
+    var middleEnd = stitched ? def.middleEnd : result.bounds[1];
+    return {
+      fontSize: result.fontSize,
+      innerEnd: innerEnd,
+      middleEnd: middleEnd
+    };
+  }, [sizingMode, stitched, ringData, middleRing, outerRing, perspectives.length, styles, measure]);
+  var radii = useMemo(function () {
+    return balanced ? buildRadii(balanced.innerEnd, balanced.middleEnd) : getRadii(perspectives.length);
+  }, [balanced, perspectives.length]);
   var callouts = useMemo(function () {
     var result = [];
     Children.forEach(children, function (child) {
@@ -2654,6 +2846,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           focusAnimatingIdx: focusAnimatingIdx,
           headerBehavior: stitched,
           maxFontSize: stitched ? undefined : outerFontCap,
+          forcedFontSize: stitched ? undefined : balanced === null || balanced === void 0 ? void 0 : balanced.fontSize,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -2672,6 +2865,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
+          forcedFontSize: balanced === null || balanced === void 0 ? void 0 : balanced.fontSize,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
@@ -2690,6 +2884,7 @@ var Wheel = /*#__PURE__*/forwardRef(function Wheel(_ref, ref) {
           hoveredPerspectiveIdx: hoveredPerspectiveIdx,
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
+          forcedFontSize: balanced === null || balanced === void 0 ? void 0 : balanced.fontSize,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave

@@ -46,7 +46,7 @@ export interface Radii {
 // would be the smallest. Its share therefore GROWS with the count — the
 // positive/neutral boundary moves outward from 105 (1-2 PP) to 130 (4 PP).
 // Values are tuned so green ≥ the other two rings at every count (spread ≤ 1px).
-function buildRadii(innerEnd: number, middleEnd: number): Radii {
+export function buildRadii(innerEnd: number, middleEnd: number): Radii {
   return {
     synthesis: 30,
     innerStart: 30,

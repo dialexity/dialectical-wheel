@@ -12,6 +12,7 @@ export interface Radii {
     cycleStart: number;
     cycleEnd: number;
 }
+export declare function buildRadii(innerEnd: number, middleEnd: number): Radii;
 export declare function getRadii(perspectiveCount: number): Radii;
 export declare const RADII: Radii;
 //# sourceMappingURL=geometry.d.ts.map

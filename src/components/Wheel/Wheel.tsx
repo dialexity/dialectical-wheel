@@ -10,10 +10,11 @@ import type { CalloutProps } from './Callout';
 import { useTextMeasure } from './hooks/useTextMeasure';
 import { useRotation } from './hooks/useRotation';
 import { transformPerspectives } from './utils/dataTransform';
-import { computeUniformFontSize } from './utils/textLayout';
+import { computeUniformFontSize, computeBalancedLayout } from './utils/textLayout';
+import type { BalanceRingInput } from './utils/textLayout';
 import { DEFAULT_STYLES, resolveStyle } from './utils/styles';
-import { getRadii, polarToCartesian } from './utils/geometry';
-import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, ArrowEvent, RowScope } from '../../types';
+import { getRadii, buildRadii, polarToCartesian } from './utils/geometry';
+import type { WheelProps, Styles, CSSValue, CellEvent, SegmentEvent, PerspectiveEvent, ArrowEvent, RowScope, SegmentData } from '../../types';
 
 function mergeRowScope(defaults?: RowScope, user?: RowScope): RowScope | undefined {
   if (!defaults && !user) return undefined;
@@ -47,6 +48,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   perspectives,
   header = 'wheel',
   direction = 'right',
+  sizingMode = 'balance',
   showArrows = true,
   showInwardSpiral = false,
   interactive = false,
@@ -71,7 +73,6 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   children,
 }, ref) {
   const styles = useMemo(() => mergeStyles(userStyles), [userStyles]);
-  const radii = useMemo(() => getRadii(perspectives.length), [perspectives.length]);
 
   const measure = useTextMeasure();
   const ringData = useMemo(
@@ -119,6 +120,60 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const stitched = neutralOutsideProp === 'header';
   const outerRing: 'neutral' | 'negative' = neutralOutside ? 'neutral' : 'negative';
   const middleRing: 'neutral' | 'negative' = neutralOutside ? 'negative' : 'neutral';
+
+  // Balance sizing: solve one shared font + flexed ring bands so no cell reads
+  // as "more important" just for being shorter. Clamp band growth to 1.5x the
+  // default so the wheel stays proportional; when the clamp binds on very
+  // lopsided text the fonts land near-equal rather than exactly equal. In header
+  // mode the merged neutral+cycle ring sizes itself (excluded), but positive +
+  // negative still balance against each other within their combined band below
+  // it. Null → fall back to fixed radii + per-ring shrink.
+  const MAX_BALANCE_GROWTH = 1.5;
+  const balanced = useMemo(() => {
+    if (sizingMode !== 'balance') return null;
+    const posSegs = ringData.positive;
+    const cellAngle = posSegs.length > 0 ? posSegs[0].endAngle - posSegs[0].startAngle : 0;
+    if (cellAngle === 0) return null;
+
+    const textsOf = (segs: SegmentData[]) => segs.map(s => s.fullText).filter(Boolean);
+    const def = getRadii(perspectives.length);
+    const core = def.innerStart;
+    const ctx = { rowGroup: 'tbody' as const, ring: 'positive' as const, colType: posSegs[0].colType, perspectiveIndex: posSegs[0].perspectiveIndex };
+
+    // Rings to balance, inner→outer, with the ringNumber they render as. Header
+    // mode balances only positive(1) + negative(2); the merged neutral ring is
+    // held at its default inner boundary (middleEnd) and sizes independently.
+    const specs: { name: 'positive' | 'negative' | 'neutral'; ring: 1 | 2 | 3 }[] = stitched
+      ? [{ name: 'positive', ring: 1 }, { name: 'negative', ring: 2 }]
+      : [{ name: 'positive', ring: 1 }, { name: middleRing, ring: 2 }, { name: outerRing, ring: 3 }];
+    const outerEnd = stitched ? def.middleEnd : def.outerEnd;
+
+    const rings: BalanceRingInput[] = [];
+    for (const spec of specs) {
+      const texts = textsOf(ringData[spec.name]);
+      if (texts.length === 0) return null;
+      rings.push({ texts, ring: spec.ring, textBias: computeTextBias(spec.name, perspectives.length) });
+    }
+
+    // Default band per balanced ring, inner→outer (matches `specs`).
+    const boundaries = stitched ? [core, def.innerEnd, def.middleEnd] : [core, def.innerEnd, def.middleEnd, def.outerEnd];
+    const defaultBands = specs.map((_, i) => boundaries[i + 1] - boundaries[i]);
+
+    const baseFontSize = resolveStyle(styles, ctx, defaultBands[0]).fontSize;
+    const result = computeBalancedLayout(rings, core, outerEnd, defaultBands, cellAngle, baseFontSize, 0.06, MAX_BALANCE_GROWTH, measure);
+    if (!result) return null;
+
+    // Reconstruct the full [innerEnd, middleEnd] pair buildRadii needs. Header
+    // mode solved only innerEnd; middleEnd stays at its default.
+    const innerEnd = result.bounds[0];
+    const middleEnd = stitched ? def.middleEnd : result.bounds[1];
+    return { fontSize: result.fontSize, innerEnd, middleEnd };
+  }, [sizingMode, stitched, ringData, middleRing, outerRing, perspectives.length, styles, measure]);
+
+  const radii = useMemo(
+    () => (balanced ? buildRadii(balanced.innerEnd, balanced.middleEnd) : getRadii(perspectives.length)),
+    [balanced, perspectives.length]
+  );
 
   const callouts = useMemo(() => {
     const result: CalloutProps[] = [];
@@ -391,6 +446,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             focusAnimatingIdx={focusAnimatingIdx}
             headerBehavior={stitched}
             maxFontSize={stitched ? undefined : outerFontCap}
+            forcedFontSize={stitched ? undefined : balanced?.fontSize}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -410,6 +466,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
+            forcedFontSize={balanced?.fontSize}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}
@@ -429,6 +486,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             hoveredPerspectiveIdx={hoveredPerspectiveIdx}
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
+            forcedFontSize={balanced?.fontSize}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}

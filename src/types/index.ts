@@ -126,11 +126,24 @@ export interface ResolvedCellStyle {
 
 export type HeaderRing = 'wheel' | 'cycle' | 'none';
 export type WheelDirection = 'left' | 'right';
+/**
+ * How font size relates to the ring geometry.
+ * - `'balance'` (default): one font is shared by every body-ring cell and the
+ *   ring bands flex (within a growth clamp) so the text-heavy ring gets more
+ *   radial room. Fonts come out equal — or near-equal when one cell's text is
+ *   far longer than the rest and the clamp binds — instead of the short cells
+ *   reading as "more important" simply because they fit a bigger size.
+ * - `'shrink'`: ring bands are fixed; each ring's font shrinks independently to
+ *   fit its text, so a long cell renders smaller than a short one in another
+ *   ring.
+ */
+export type WheelSizingMode = 'balance' | 'shrink';
 
 export interface WheelProps {
   perspectives: Perspective[];
   header?: HeaderRing;
   direction?: WheelDirection;
+  sizingMode?: WheelSizingMode;
   showArrows?: boolean;
   showInwardSpiral?: boolean;
   interactive?: boolean;

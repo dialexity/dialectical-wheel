@@ -28,6 +28,10 @@ interface RingProps {
   showText?: boolean;
   headerBehavior?: boolean;
   maxFontSize?: number;
+  // Balance sizing: a single font is solved globally across body rings and
+  // forced here, bypassing this ring's own fit search. The bands were sized so
+  // this font fits, so no per-ring shrink is needed.
+  forcedFontSize?: number;
 }
 
 // Text sitting at a band's true radial midpoint reads as shifted OUTWARD,
@@ -49,7 +53,7 @@ export function computeTextBias(ringName: RingName, perspectiveCount: number): n
 }
 
 export const Ring: React.FC<RingProps> = ({
-  segments, innerR, outerR, ringName, ringNumber, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior, maxFontSize
+  segments, innerR, outerR, ringName, ringNumber, rowGroup, styles, rotationRad, measure, perspectiveCount, hoveredSegmentId, hoveredPerspectiveIdx, selectedPerspectiveIdx, focusAnimatingIdx, onClick, onPointerEnter, onPointerLeave, showText = true, headerBehavior, maxFontSize, forcedFontSize
 }) => {
   const cellRadialHeight = outerR - innerR;
   const cellAngle = segments.length > 0 ? segments[0].endAngle - segments[0].startAngle : 0;
@@ -84,12 +88,13 @@ export const Ring: React.FC<RingProps> = ({
   const textWidthArcR = headerBehavior ? innerR + (outerR - innerR) * 0.85 : outerR;
 
   const uniformFontSize = useMemo(() => {
+    if (forcedFontSize != null) return forcedFontSize;
     if (segments.length === 0) return baseFontSize;
     const texts = segments.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
     const startFs = maxFontSize != null ? Math.min(baseFontSize, maxFontSize) : baseFontSize;
     return computeUniformFontSize(texts, { innerR, outerR, placementOuterR: textOuterR, widthArcR: textWidthArcR, cellAngle, baseFontSize: startFs, padding: basePadding, measure, textBias, ring: ringNumber });
-  }, [segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
+  }, [forcedFontSize, segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 

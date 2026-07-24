@@ -262,6 +262,133 @@ export function computeUniformFontSize(
   return 3;
 }
 
+/** One body ring's inputs to the balanced-layout solver. */
+export interface BalanceRingInput {
+  texts: string[];
+  ring: RingNumber;
+  /** Optical/fit bias for this ring (from computeTextBias). */
+  textBias: number;
+}
+
+export interface BalanceLayoutResult {
+  /** Single font size shared by every balanced body-ring cell. */
+  fontSize: number;
+  /**
+   * The internal radial boundaries between consecutive balanced rings, absolute
+   * from the core (length = rings.length − 1). For the default 3-ring wheel this
+   * is [innerEnd, middleEnd]; in header mode only positive+negative balance, so
+   * it is [innerEnd].
+   */
+  bounds: number[];
+}
+
+/**
+ * Smallest outer radius (stepping 0.5u from `innerR`, capped at `hardCap`) at
+ * which every text in the ring fits at `fontSize`. Null if none fits by hardCap.
+ * Ring fit improves as the band moves OUTWARD (wider wedge), so the minimal
+ * outward extent leaves the most room for the rings beyond it — greedy-optimal
+ * for the inner→outer partition below.
+ */
+function minOuterForFont(
+  texts: string[],
+  fontSize: number,
+  ring: RingNumber,
+  textBias: number,
+  innerR: number,
+  hardCap: number,
+  cellAngle: number,
+  padding: number,
+  measure: (text: string, fontSize: number) => number
+): number | null {
+  const floor = innerR + Math.max(4, fontSize * 1.3 + 1);
+  for (let outerR = floor; outerR <= hardCap + 1e-6; outerR += 0.5) {
+    const params: LayoutParams = { innerR, outerR, cellAngle, baseFontSize: fontSize, padding, measure, textBias, ring };
+    if (texts.every(t => tryFitUniform(t, fontSize, params))) return outerR;
+  }
+  return null;
+}
+
+/**
+ * BALANCE sizing: find the largest single font that fits EVERY balanced ring,
+ * then partition the fixed radial budget (core..outerEnd) so each ring gets the
+ * band it needs at that font — the text-heavy ring grows, the short ones give
+ * space back. A per-ring growth clamp (`maxGrowth` × the default band) keeps the
+ * wheel from ballooning into a lopsided shape when one cell's text is far longer
+ * than the rest; when the clamp binds, the largest common font can't grow
+ * further so fonts come out near-equal rather than exactly equal. Each ring
+ * keeps at least a one-line floor. Rings are ordered inner→outer.
+ *
+ * Works for any ring count: the default wheel balances 3 rings across the full
+ * body budget; header mode balances only positive+negative (2 rings) across the
+ * budget below the self-sizing merged neutral+cycle ring. `rings`,
+ * `defaultBands`, and the returned `bounds` (internal boundaries, length =
+ * rings.length − 1) all share that ordering and length.
+ *
+ * Returns null when no font ≥3px fits within the clamped budget — caller then
+ * falls back to fixed radii + per-ring shrink.
+ */
+export function computeBalancedLayout(
+  rings: BalanceRingInput[],
+  core: number,
+  outerEnd: number,
+  defaultBands: number[],
+  cellAngle: number,
+  baseFontSize: number,
+  padding: number,
+  maxGrowth: number,
+  measure: (text: string, fontSize: number) => number
+): BalanceLayoutResult | null {
+  const n = rings.length;
+  if (n === 0 || defaultBands.length !== n) return null;
+  const budget = outerEnd - core;
+  const cap = defaultBands.map(b => b * maxGrowth);
+
+  for (let fs = baseFontSize; fs >= 3; fs -= 0.5) {
+    // Greedy inner→outer: minimal outward extent per ring within its cap.
+    let inner = core;
+    const min: number[] = [];
+    let feasible = true;
+    for (let i = 0; i < n; i++) {
+      const hi = Math.min(inner + cap[i], outerEnd);
+      const outerR = minOuterForFont(rings[i].texts, fs, rings[i].ring, rings[i].textBias, inner, hi, cellAngle, padding, measure);
+      if (outerR == null) { feasible = false; break; }
+      min.push(outerR - inner);
+      inner = outerR;
+    }
+    if (!feasible) continue;
+    const used = min.reduce((a, b) => a + b, 0);
+    if (used > budget + 1e-6) continue;
+
+    // Distribute the remaining budget toward the DEFAULT proportions so the
+    // wheel keeps its familiar shape; never push a band past its cap.
+    const band = min.slice();
+    let slack = budget - used;
+    for (let iter = 0; iter < 8 && slack > 1e-6; iter++) {
+      const room = band.map((b, i) => cap[i] - b);
+      const openWeight = room.reduce((a, r, i) => a + (r > 1e-6 ? defaultBands[i] : 0), 0);
+      if (openWeight <= 1e-6) break;
+      let placed = 0;
+      for (let i = 0; i < n; i++) {
+        if (room[i] <= 1e-6) continue;
+        const give = Math.min(room[i], slack * defaultBands[i] / openWeight);
+        band[i] += give;
+        placed += give;
+      }
+      slack -= placed;
+    }
+
+    // Cumulative internal boundaries (drop the last, which is outerEnd).
+    const bounds: number[] = [];
+    let acc = core;
+    for (let i = 0; i < n - 1; i++) {
+      acc += band[i];
+      bounds.push(Math.round(acc));
+    }
+    return { fontSize: fs, bounds };
+  }
+  return null;
+}
+
 function clampCenter(n: number, lineHeight: number, topR: number, botR: number, midR: number): number {
   if (n <= 1) return midR;
   const blockH = n * lineHeight;
