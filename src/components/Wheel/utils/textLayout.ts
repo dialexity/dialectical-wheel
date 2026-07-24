@@ -9,7 +9,22 @@ export type RingNumber = 1 | 2 | 3;
 
 export interface LayoutParams {
   innerR: number;
+  // The true outer arc of the cell. Drives the cell HEIGHT and the PADDING
+  // basis. In non-header rings it is also the vertical band cap and the width
+  // arc (the two params below default to it).
   outerR: number;
+  // Caps ONLY the vertical text band (its top radius); defaults to outerR.
+  // In header mode the merged neutral+cycle cell reaches outerR (the cycle
+  // arc), but text must sit below the cycle label, so placementOuterR < outerR.
+  placementOuterR?: number;
+  // The arc radius used as the outer-corner WIDTH limit in chordAt; defaults to
+  // outerR. In header mode this is capped BELOW outerR (but above
+  // placementOuterR) so wide top lines don't fan their corners out into the
+  // direction arrows sitting at the cell's outer corners — while still letting
+  // the font breathe into the angular gap between the centered label and the
+  // arrows. Feeding placementOuterR here instead (the old bug) clamped top-line
+  // widths toward zero and starved the font.
+  widthArcR?: number;
   cellAngle: number;
   baseFontSize: number;
   padding: number;
@@ -211,13 +226,13 @@ function fitsOrientation(
 }
 
 function tryFitUniform(text: string, fontSize: number, params: LayoutParams): boolean {
-  const { innerR, outerR, cellAngle, padding: paddingFrac, measure, textBias, ring } = params;
+  const { innerR, outerR, placementOuterR = outerR, widthArcR = outerR, cellAngle, padding: paddingFrac, measure, textBias, ring } = params;
   const config = getRingConfig(ring);
   const lineHeight = fontSize * 1.3;
   const halfAngle = cellAngle / 2;
   const cellHeight = outerR - innerR;
   const pad = cellHeight * paddingFrac;
-  const topR = outerR - pad;
+  const topR = placementOuterR - pad;
   const botR = innerR + pad;
   const usableHeight = topR - botR;
   const maxLines = Math.floor(usableHeight / lineHeight);
@@ -228,12 +243,12 @@ function tryFitUniform(text: string, fontSize: number, params: LayoutParams): bo
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
 
-  const fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, false, measure);
+  const fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, widthArcR, topR, botR, midR, maxLines, false, measure);
   if (config.stable) return fitsNormal;
   // Trapezoid rings re-wrap when rotated past vertical, so both orientations
   // must fit independently or text would overflow at some rotation angle.
   if (!fitsNormal) return false;
-  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, true, measure);
+  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, widthArcR, topR, botR, midR, maxLines, true, measure);
 }
 
 export function computeUniformFontSize(
@@ -263,13 +278,13 @@ export function layoutTextVariable(
   params: LayoutParams,
   flipped: boolean
 ): TextLayoutResult {
-  const { innerR, outerR, cellAngle, padding: paddingFrac, measure, textBias, ring } = params;
+  const { innerR, outerR, placementOuterR = outerR, widthArcR = outerR, cellAngle, padding: paddingFrac, measure, textBias, ring } = params;
   const config = getRingConfig(ring);
   const lineHeight = fontSize * 1.3;
   const halfAngle = cellAngle / 2;
   const cellHeight = outerR - innerR;
   const pad = cellHeight * paddingFrac;
-  const topR = outerR - pad;
+  const topR = placementOuterR - pad;
   const botR = innerR + pad;
   const usableHeight = topR - botR;
   const maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
@@ -283,7 +298,7 @@ export function layoutTextVariable(
 
   for (let n = 1; n <= maxLines; n++) {
     const cR = clampCenter(n, lineHeight, topR, botR, midR);
-    const widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+    const widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, widthArcR, flipped);
     const result = tryWrap(words, widths, fontSize, measure);
     if (result && result.length <= n) {
       return { lines: result, fontSize, lineHeight, centerR: cR };
@@ -291,7 +306,7 @@ export function layoutTextVariable(
   }
 
   const cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
-  const widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+  const widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, widthArcR, flipped);
   const lenient = wrapLenient(words, widths, fontSize, measure);
   return { lines: lenient, fontSize, lineHeight, centerR: cR };
 }

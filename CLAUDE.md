@@ -16,12 +16,13 @@
 - `computeUniformFontSize` in textLayout.ts ensures all cells in a ring share one font size
 - Canvas measureText (with 1.05x factor) used for font size search and word-wrap decisions
 - `RingNumber` (1|2|3) parameterizes text layout: ring 1=positive (innermost), ring 2=middle, ring 3=outer — all share ONE `chordAt` geometry; rings differ via `RingConfig` (`chordCap` + `stable`)
-- Ring 3 font size is capped to ring 2's computed font size (`maxFontSize` prop on Ring) — except in `neutralOutside='header'` mode where ring 3 sizes independently
+- Ring 3 (outer) font is capped via `maxFontSize` to `max(positive, middle)` ring font — NOT the middle ring alone (a long statement in the middle ring would otherwise drag the short-text outer summary down to statement size); skipped in `neutralOutside='header'`/`stitched` mode where ring 3 sizes independently
 - `chordAt` models a text line as a STRAIGHT rectangle (width × lineHeight) on the mid-radial, bounded by exactly two walls: radial wedge edges → `(lineR − lineHeight/2)·tan(halfAngle)` (inner corners closest), and the outer arc → `√(outerR² − (lineR + lineHeight/2)²)` (OUTER corners closest — must use the outer-corner radius, not lineR, or the top line bows past the arc). The inner arc is NEVER a constraint (a straight chord's min radius is its midpoint, always ≥ innerR) — do not re-add an inner arc-limit term
 - Uses `tan(halfAngle)`, NOT `sin` — the line is straight/radial-centered, not an arc chord; `sin` under-measures wide cells (1-PP/2-PP) by ~30%
 - `RingConfig.stable` selects the width profile: rings 2/3 use `stableWidths` = element-wise `min(normalW, flippedW)` → symmetric top-to-bottom, so wrapped text is identical in both orientations and never reflows as the wheel rotates (long text, where reflow would be jarring). Ring 1 sets `stable:false` → true trapezoid widths (wide at outer edge) so long words land on wide lines = bigger font; it's a small central cell where reflow-on-rotate is negligible
 - Trapezoid (non-stable) rings must fit in BOTH orientations independently (`tryFitUniform` checks flipped too) or text overflows at some rotation angle; stable rings only need to check one orientation (both are equal by construction)
 - Default cell padding is `cellRadialHeight * 0.06` (styles.ts) — rings 2/3 are width-limited so this adds radial breathing room without shrinking their font; 0.07+ costs ring 1 a font step
+- `LayoutParams` (textLayout.ts) separate three outer radii, all defaulting to `outerR`: `outerR` = true cell (drives height, padding basis, default arc + band); `placementOuterR` = caps vertical text band only; `widthArcR` = caps outer-corner width limit only. Only header mode sets them apart. Feeding `placementOuterR` as the arc/width limit (old bug) clamps top-line widths toward zero and starves the font
 - Ring radii are COUNT-DEPENDENT (geometry.ts `getRadii`/`RADII_BY_COUNT`, outer fixed at 200 by cycle ring). The positive/neutral boundary grows with perspective count: [innerEnd, middleEnd] = 1-2 PP `[105,152]`, 3 PP `[118,159]`, 4+ PP `[130,164]`. The inner/positive (green) ring always gets the biggest band because its text sits at the narrow tip of the wedge, AND its font degrades faster than the others as the wedge narrows with more perspectives — so it needs a progressively larger share to stay balanced. A single fixed split can't work: it would make green dominate at 1-2 PP and be the smallest at 4 PP. Values are tuned so green ≥ neutral/negative at every count (spread ≤ 1px)
 - Radius is zero-sum: growing green's band steals from neutral/negative; shrinking the synthesis/yellow core does NOT help (it pushes green text to an even narrower radius). Absolute units are irrelevant (SVG scales to `width:100%`) — only proportions matter
 - Bubbling event model: Cell → Segment → Perspective (like td → tr → table)
@@ -29,7 +30,7 @@
 - Header ring: `header` prop toggles 'wheel' (all segments), 'cycle' (thesis-only), 'none'
 - WheelRing = all segment labels (T1,A1..); CycleRing = thesis-only labels (T1,T2..)
 - `neutralOutside` accepts `false | true | 'header'` — 'header' merges neutral ring with cycle ring into one taller cell (outerR extends to cycleEnd), no borders by default (only on hover), labels overlay transparently controlled by `header`
-- `headerBehavior` on Ring: text layout uses `textOuterR = innerR + height*0.65` (lower 65% of merged cell) so text centers between CycleRing label and negative ring border, not crowding the label
+- `headerBehavior` on Ring: text layout separates three radii — vertical band `textOuterR = innerR + height*0.65` (lower 65%, clears the CycleRing label above) and width limit `textWidthArcR = innerR + height*0.85` (keeps wide top lines' corners clear of the corner direction arrows); the true `outerR` still drives cell height + padding basis
 - Hover highlights full perspective (both thesis+antithesis segments) across all rings
 - SVG z-order: hovered cells render last (separate pass) so borders paint on top of neighbors
 - SynthesisRing has no events
@@ -53,6 +54,7 @@
 - Hover is suppressed during rotation — `hoverSuppressedRef` clears only on real `pointerMove`, not on cells sliding under the cursor
 - `isRotationPaused` suppresses CSS transition on `<g>` during fade-out so rotation doesn't animate early
 - `focusAnimatingIdx` drives opacity on non-focused perspective cells across all rings
+- `clearTimers` in useRotation also resets `focusAnimatingIdx`/`isRotationPaused` (not just timers) — an imperative rotation interrupting a phased focus animation (double-click refocus, arrow nav) clears the pending fade-in timer, which would otherwise strand other perspectives at opacity 0; the focus effect re-sets both synchronously so phased animation is unaffected
 - Wheel uses `forwardRef<SVGSVGElement>` — internal svgRef merged with forwarded ref via callback ref
 - `src/export.ts` provides `exportWheelSVG`, `exportWheelPNG`, `downloadBlob` — tree-shakeable utils, not methods on the component
 - Styling follows CSS table model: thead (header), tbody (body rings), tfoot (synthesis) × thesis/antithesis columns

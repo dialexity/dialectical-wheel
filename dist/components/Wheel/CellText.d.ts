@@ -3,6 +3,8 @@ import type { RingNumber } from './utils/textLayout';
 interface CellTextProps {
     innerR: number;
     outerR: number;
+    placementOuterR?: number;
+    widthArcR?: number;
     startAngle: number;
     endAngle: number;
     text: string;

@@ -30,10 +30,22 @@ interface RingProps {
   maxFontSize?: number;
 }
 
-function computeTextBias(ringName: RingName, perspectiveCount: number): number {
-  if (ringName === 'positive' && perspectiveCount === 3) return 0.10;
-  if (ringName === 'positive' && perspectiveCount >= 4) return 0.15;
-  return 0;
+// Text sitting at a band's true radial midpoint reads as shifted OUTWARD,
+// because each cell is an arc-bounded wedge: the sharper inner arc opens a
+// larger empty void toward the core than the outer arc does toward the rim, so
+// the eye balances against more inner-side emptiness. A small inward nudge
+// (negative bias moves `midR` toward the core) optically re-centers it.
+const OPTICAL_INWARD_BIAS = -0.04;
+
+export function computeTextBias(ringName: RingName, perspectiveCount: number): number {
+  let bias = OPTICAL_INWARD_BIAS;
+  // The positive (inner) ring sits at the narrowest radius; at higher
+  // perspective counts its wedge tapers so hard that text must be pushed
+  // OUTWARD to land on the wider lines and keep its font. That fit-driven
+  // outward term composes with (partially cancels) the optical inward nudge.
+  if (ringName === 'positive' && perspectiveCount === 3) bias += 0.10;
+  if (ringName === 'positive' && perspectiveCount >= 4) bias += 0.15;
+  return bias;
 }
 
 export const Ring: React.FC<RingProps> = ({
@@ -62,15 +74,22 @@ export const Ring: React.FC<RingProps> = ({
 
   const textBias = computeTextBias(ringName, perspectiveCount);
 
+  // Header mode: text sits in the lower 65% of the merged neutral+cycle cell
+  // (clears the centered cycle label above). Its width, though, may reach out
+  // toward the true arc — but not all the way, or wide top lines fan their
+  // corners into the direction arrows at the cell's outer corners. Cap the
+  // width arc at 85% of cell height: enough to grow the font into the angular
+  // gap between label and arrows, short of the arrows themselves.
   const textOuterR = headerBehavior ? innerR + (outerR - innerR) * 0.65 : outerR;
+  const textWidthArcR = headerBehavior ? innerR + (outerR - innerR) * 0.85 : outerR;
 
   const uniformFontSize = useMemo(() => {
     if (segments.length === 0) return baseFontSize;
     const texts = segments.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return baseFontSize;
     const startFs = maxFontSize != null ? Math.min(baseFontSize, maxFontSize) : baseFontSize;
-    return computeUniformFontSize(texts, { innerR, outerR: textOuterR, cellAngle, baseFontSize: startFs, padding: basePadding, measure, textBias, ring: ringNumber });
-  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
+    return computeUniformFontSize(texts, { innerR, outerR, placementOuterR: textOuterR, widthArcR: textWidthArcR, cellAngle, baseFontSize: startFs, padding: basePadding, measure, textBias, ring: ringNumber });
+  }, [segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
 
   const isSpacer = (segment: SegmentData) => segment.perspectiveIndex === -1;
 
@@ -101,6 +120,7 @@ export const Ring: React.FC<RingProps> = ({
               innerR={innerR}
               outerR={outerR}
               textOuterR={headerBehavior ? textOuterR : undefined}
+              textWidthArcR={headerBehavior ? textWidthArcR : undefined}
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}
@@ -128,6 +148,7 @@ export const Ring: React.FC<RingProps> = ({
               innerR={innerR}
               outerR={outerR}
               textOuterR={headerBehavior ? textOuterR : undefined}
+              textWidthArcR={headerBehavior ? textWidthArcR : undefined}
               style={resolvedStyles[i]}
               rotationRad={rotationRad}
               fontSize={uniformFontSize}

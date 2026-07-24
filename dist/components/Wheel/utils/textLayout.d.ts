@@ -8,6 +8,8 @@ export type RingNumber = 1 | 2 | 3;
 export interface LayoutParams {
     innerR: number;
     outerR: number;
+    placementOuterR?: number;
+    widthArcR?: number;
     cellAngle: number;
     baseFontSize: number;
     padding: number;

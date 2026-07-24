@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef, useState, useEffect, forwardRef, Children, isValidElement } from 'react';
-import { Ring } from './Ring';
+import { Ring, computeTextBias } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { InwardSpiralArrows } from './InwardSpiralArrows';
 import { WheelRing } from './WheelRing';
@@ -319,19 +319,40 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     setHoveredArrowId(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
 
-  const ring2FontSize = useMemo(() => {
-    const segs = ringData[middleRing];
+  // Font size a body ring would choose on its own, given its band + text.
+  const bodyRingFontSize = useCallback((
+    ringName: 'positive' | 'negative' | 'neutral',
+    innerR: number,
+    outerR: number,
+    ringNumber: 1 | 2 | 3,
+  ): number | undefined => {
+    const segs = ringData[ringName];
     if (segs.length === 0) return undefined;
     const texts = segs.map(s => s.fullText).filter(Boolean);
     if (texts.length === 0) return undefined;
     const cellAngle = segs[0].endAngle - segs[0].startAngle;
-    const cellHeight = radii.middleEnd - radii.middleStart;
-    const ctx = { rowGroup: 'tbody' as const, ring: middleRing, colType: segs[0].colType, perspectiveIndex: segs[0].perspectiveIndex };
+    const cellHeight = outerR - innerR;
+    const ctx = { rowGroup: 'tbody' as const, ring: ringName, colType: segs[0].colType, perspectiveIndex: segs[0].perspectiveIndex };
     const s = resolveStyle(styles, ctx, cellHeight);
-    const baseFontSize = s.fontSize;
     const padding = s.padding / cellHeight;
-    return computeUniformFontSize(texts, { innerR: radii.middleStart, outerR: radii.middleEnd, cellAngle, baseFontSize, padding, measure, textBias: 0, ring: 2 });
-  }, [ringData, middleRing, radii, styles, measure]);
+    const textBias = computeTextBias(ringName, perspectives.length);
+    return computeUniformFontSize(texts, { innerR, outerR, cellAngle, baseFontSize: s.fontSize, padding, measure, textBias, ring: ringNumber });
+  }, [ringData, styles, measure, perspectives.length]);
+
+  // Cap for the outer ring (ring 3): it must not read larger than the INNER
+  // rings, but the cap should track the larger of the two — using the middle
+  // ring alone lets a long statement (which legitimately shrinks to fit its
+  // narrow band) drag the short-text outer summary down with it. In default
+  // mode the middle ring is the long neutral statement while the outer is a
+  // short negative summary; capping to max(positive, middle) keeps the two
+  // summary rings balanced instead of both collapsing to statement size.
+  const outerFontCap = useMemo(() => {
+    const mid = bodyRingFontSize(middleRing, radii.middleStart, radii.middleEnd, 2);
+    const pos = bodyRingFontSize('positive', radii.innerStart, radii.innerEnd, 1);
+    const candidates = [mid, pos].filter((v): v is number => v != null);
+    if (candidates.length === 0) return undefined;
+    return Math.max(...candidates);
+  }, [bodyRingFontSize, middleRing, radii]);
 
   return (
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
@@ -369,7 +390,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
             selectedPerspectiveIdx={selectedPerspective}
             focusAnimatingIdx={focusAnimatingIdx}
             headerBehavior={stitched}
-            maxFontSize={stitched ? undefined : ring2FontSize}
+            maxFontSize={stitched ? undefined : outerFontCap}
             onClick={handleCellClick}
             onPointerEnter={handlePointerEnter}
             onPointerLeave={handlePointerLeave}

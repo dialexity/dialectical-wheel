@@ -6,6 +6,8 @@ import type { RingNumber } from './utils/textLayout';
 interface CellTextProps {
   innerR: number;
   outerR: number;
+  placementOuterR?: number;
+  widthArcR?: number;
   startAngle: number;
   endAngle: number;
   text: string;
@@ -19,7 +21,7 @@ interface CellTextProps {
 }
 
 export const CellText: React.FC<CellTextProps> = ({
-  innerR, outerR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, textBias, ringNumber, measure
+  innerR, outerR, placementOuterR, widthArcR, startAngle, endAngle, text, color, rotationRad, fontSize, padding, textBias, ringNumber, measure
 }) => {
   const midAngle = (startAngle + endAngle) / 2;
   const cellHeight = outerR - innerR;
@@ -31,7 +33,7 @@ export const CellText: React.FC<CellTextProps> = ({
   const textRotDeg = (midAngle * 180) / Math.PI + (needsFlip ? 180 : 0);
 
   const layout = layoutTextVariable(text, fontSize, {
-    innerR, outerR, cellAngle, baseFontSize: fontSize, padding: paddingFrac, measure, textBias, ring: ringNumber
+    innerR, outerR, placementOuterR, widthArcR, cellAngle, baseFontSize: fontSize, padding: paddingFrac, measure, textBias, ring: ringNumber
   }, needsFlip);
 
   if (layout.lines.length === 0) return null;

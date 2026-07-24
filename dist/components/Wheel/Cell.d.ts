@@ -6,6 +6,7 @@ interface CellProps {
     innerR: number;
     outerR: number;
     textOuterR?: number;
+    textWidthArcR?: number;
     style: ResolvedCellStyle;
     rotationRad: number;
     fontSize: number;

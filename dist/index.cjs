@@ -363,6 +363,10 @@ function fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR,
 function tryFitUniform(text, fontSize, params) {
   var innerR = params.innerR,
     outerR = params.outerR,
+    _params$placementOute = params.placementOuterR,
+    placementOuterR = _params$placementOute === void 0 ? outerR : _params$placementOute,
+    _params$widthArcR = params.widthArcR,
+    widthArcR = _params$widthArcR === void 0 ? outerR : _params$widthArcR,
     cellAngle = params.cellAngle,
     paddingFrac = params.padding,
     measure = params.measure,
@@ -373,7 +377,7 @@ function tryFitUniform(text, fontSize, params) {
   var halfAngle = cellAngle / 2;
   var cellHeight = outerR - innerR;
   var pad = cellHeight * paddingFrac;
-  var topR = outerR - pad;
+  var topR = placementOuterR - pad;
   var botR = innerR + pad;
   var usableHeight = topR - botR;
   var maxLines = Math.floor(usableHeight / lineHeight);
@@ -381,12 +385,12 @@ function tryFitUniform(text, fontSize, params) {
   var midR = (topR + botR) / 2 + textBias * cellHeight;
   var words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return true;
-  var fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, false, measure);
+  var fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, widthArcR, topR, botR, midR, maxLines, false, measure);
   if (config.stable) return fitsNormal;
   // Trapezoid rings re-wrap when rotated past vertical, so both orientations
   // must fit independently or text would overflow at some rotation angle.
   if (!fitsNormal) return false;
-  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR, topR, botR, midR, maxLines, true, measure);
+  return fitsOrientation(words, fontSize, halfAngle, cellHeight, config, widthArcR, topR, botR, midR, maxLines, true, measure);
 }
 function computeUniformFontSize(texts, params) {
   var baseFontSize = params.baseFontSize;
@@ -416,6 +420,10 @@ function clampCenter(n, lineHeight, topR, botR, midR) {
 function layoutTextVariable(text, fontSize, params, flipped) {
   var innerR = params.innerR,
     outerR = params.outerR,
+    _params$placementOute2 = params.placementOuterR,
+    placementOuterR = _params$placementOute2 === void 0 ? outerR : _params$placementOute2,
+    _params$widthArcR2 = params.widthArcR,
+    widthArcR = _params$widthArcR2 === void 0 ? outerR : _params$widthArcR2,
     cellAngle = params.cellAngle,
     paddingFrac = params.padding,
     measure = params.measure,
@@ -426,7 +434,7 @@ function layoutTextVariable(text, fontSize, params, flipped) {
   var halfAngle = cellAngle / 2;
   var cellHeight = outerR - innerR;
   var pad = cellHeight * paddingFrac;
-  var topR = outerR - pad;
+  var topR = placementOuterR - pad;
   var botR = innerR + pad;
   var usableHeight = topR - botR;
   var maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
@@ -442,7 +450,7 @@ function layoutTextVariable(text, fontSize, params, flipped) {
   }
   for (var n = 1; n <= maxLines; n++) {
     var _cR = clampCenter(n, lineHeight, topR, botR, midR);
-    var _widths = widthsForOrientation(n, fontSize, _cR, halfAngle, cellHeight, config, outerR, flipped);
+    var _widths = widthsForOrientation(n, fontSize, _cR, halfAngle, cellHeight, config, widthArcR, flipped);
     var result = tryWrap(words, _widths, fontSize, measure);
     if (result && result.length <= n) {
       return {
@@ -454,7 +462,7 @@ function layoutTextVariable(text, fontSize, params, flipped) {
     }
   }
   var cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
-  var widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
+  var widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, widthArcR, flipped);
   var lenient = wrapLenient(words, widths, fontSize, measure);
   return {
     lines: lenient,
@@ -499,6 +507,8 @@ function wrapLenient(words, widths, fontSize, measure) {
 var CellText = function CellText(_ref) {
   var innerR = _ref.innerR,
     outerR = _ref.outerR,
+    placementOuterR = _ref.placementOuterR,
+    widthArcR = _ref.widthArcR,
     startAngle = _ref.startAngle,
     endAngle = _ref.endAngle,
     text = _ref.text,
@@ -519,6 +529,8 @@ var CellText = function CellText(_ref) {
   var layout = layoutTextVariable(text, fontSize, {
     innerR: innerR,
     outerR: outerR,
+    placementOuterR: placementOuterR,
+    widthArcR: widthArcR,
     cellAngle: cellAngle,
     padding: paddingFrac,
     measure: measure,
@@ -560,6 +572,7 @@ var Cell = function Cell(_ref) {
     innerR = _ref.innerR,
     outerR = _ref.outerR,
     textOuterR = _ref.textOuterR,
+    textWidthArcR = _ref.textWidthArcR,
     style = _ref.style,
     rotationRad = _ref.rotationRad,
     fontSize = _ref.fontSize,
@@ -618,7 +631,9 @@ var Cell = function Cell(_ref) {
       clipPath: "url(#".concat(clipId, ")"),
       children: jsxRuntime.jsx(CellText, {
         innerR: innerR,
-        outerR: textOuterR !== null && textOuterR !== void 0 ? textOuterR : outerR,
+        outerR: outerR,
+        placementOuterR: textOuterR,
+        widthArcR: textWidthArcR,
         startAngle: segment.startAngle,
         endAngle: segment.endAngle,
         text: segment.fullText,
@@ -774,10 +789,21 @@ var DEFAULT_STYLES = {
   }
 };
 
+// Text sitting at a band's true radial midpoint reads as shifted OUTWARD,
+// because each cell is an arc-bounded wedge: the sharper inner arc opens a
+// larger empty void toward the core than the outer arc does toward the rim, so
+// the eye balances against more inner-side emptiness. A small inward nudge
+// (negative bias moves `midR` toward the core) optically re-centers it.
+var OPTICAL_INWARD_BIAS = -0.04;
 function computeTextBias(ringName, perspectiveCount) {
-  if (ringName === 'positive' && perspectiveCount === 3) return 0.10;
-  if (ringName === 'positive' && perspectiveCount >= 4) return 0.15;
-  return 0;
+  var bias = OPTICAL_INWARD_BIAS;
+  // The positive (inner) ring sits at the narrowest radius; at higher
+  // perspective counts its wedge tapers so hard that text must be pushed
+  // OUTWARD to land on the wider lines and keep its font. That fit-driven
+  // outward term composes with (partially cancels) the optical inward nudge.
+  if (ringName === 'positive' && perspectiveCount === 3) bias += 0.10;
+  if (ringName === 'positive' && perspectiveCount >= 4) bias += 0.15;
+  return bias;
 }
 var Ring = function Ring(_ref) {
   var _styles$dimUnfocused;
@@ -822,7 +848,14 @@ var Ring = function Ring(_ref) {
   var baseFontSize = resolvedStyles.length > 0 ? resolvedStyles[0].fontSize : 12;
   var basePadding = resolvedStyles.length > 0 ? resolvedStyles[0].padding / cellRadialHeight : 0.05;
   var textBias = computeTextBias(ringName, perspectiveCount);
+  // Header mode: text sits in the lower 65% of the merged neutral+cycle cell
+  // (clears the centered cycle label above). Its width, though, may reach out
+  // toward the true arc — but not all the way, or wide top lines fan their
+  // corners into the direction arrows at the cell's outer corners. Cap the
+  // width arc at 85% of cell height: enough to grow the font into the angular
+  // gap between label and arrows, short of the arrows themselves.
   var textOuterR = headerBehavior ? innerR + (outerR - innerR) * 0.65 : outerR;
+  var textWidthArcR = headerBehavior ? innerR + (outerR - innerR) * 0.85 : outerR;
   var uniformFontSize = react.useMemo(function () {
     if (segments.length === 0) return baseFontSize;
     var texts = segments.map(function (s) {
@@ -832,7 +865,9 @@ var Ring = function Ring(_ref) {
     var startFs = maxFontSize != null ? Math.min(baseFontSize, maxFontSize) : baseFontSize;
     return computeUniformFontSize(texts, {
       innerR: innerR,
-      outerR: textOuterR,
+      outerR: outerR,
+      placementOuterR: textOuterR,
+      widthArcR: textWidthArcR,
       cellAngle: cellAngle,
       baseFontSize: startFs,
       padding: basePadding,
@@ -840,7 +875,7 @@ var Ring = function Ring(_ref) {
       textBias: textBias,
       ring: ringNumber
     });
-  }, [segments, innerR, textOuterR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
+  }, [segments, innerR, outerR, textOuterR, textWidthArcR, cellAngle, baseFontSize, basePadding, measure, textBias, ringNumber, maxFontSize]);
   var isSpacer = function isSpacer(segment) {
     return segment.perspectiveIndex === -1;
   };
@@ -865,6 +900,7 @@ var Ring = function Ring(_ref) {
           innerR: innerR,
           outerR: outerR,
           textOuterR: headerBehavior ? textOuterR : undefined,
+          textWidthArcR: headerBehavior ? textWidthArcR : undefined,
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
@@ -889,6 +925,7 @@ var Ring = function Ring(_ref) {
           innerR: innerR,
           outerR: outerR,
           textOuterR: headerBehavior ? textOuterR : undefined,
+          textWidthArcR: headerBehavior ? textWidthArcR : undefined,
           style: resolvedStyles[i],
           rotationRad: rotationRad,
           fontSize: uniformFontSize,
@@ -2532,35 +2569,52 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     setHoveredPerspectiveIdx(null);
     setHoveredArrowId(null);
   }, [onSegmentOut, onPerspectiveOut, deriveSegmentEvent, derivePerspectiveEvent]);
-  var ring2FontSize = react.useMemo(function () {
-    var segs = ringData[middleRing];
+  // Font size a body ring would choose on its own, given its band + text.
+  var bodyRingFontSize = react.useCallback(function (ringName, innerR, outerR, ringNumber) {
+    var segs = ringData[ringName];
     if (segs.length === 0) return undefined;
     var texts = segs.map(function (s) {
       return s.fullText;
     }).filter(Boolean);
     if (texts.length === 0) return undefined;
     var cellAngle = segs[0].endAngle - segs[0].startAngle;
-    var cellHeight = radii.middleEnd - radii.middleStart;
+    var cellHeight = outerR - innerR;
     var ctx = {
       rowGroup: 'tbody',
-      ring: middleRing,
+      ring: ringName,
       colType: segs[0].colType,
       perspectiveIndex: segs[0].perspectiveIndex
     };
     var s = resolveStyle(styles, ctx, cellHeight);
-    var baseFontSize = s.fontSize;
     var padding = s.padding / cellHeight;
+    var textBias = computeTextBias(ringName, perspectives.length);
     return computeUniformFontSize(texts, {
-      innerR: radii.middleStart,
-      outerR: radii.middleEnd,
+      innerR: innerR,
+      outerR: outerR,
       cellAngle: cellAngle,
-      baseFontSize: baseFontSize,
+      baseFontSize: s.fontSize,
       padding: padding,
       measure: measure,
-      textBias: 0,
-      ring: 2
+      textBias: textBias,
+      ring: ringNumber
     });
-  }, [ringData, middleRing, radii, styles, measure]);
+  }, [ringData, styles, measure, perspectives.length]);
+  // Cap for the outer ring (ring 3): it must not read larger than the INNER
+  // rings, but the cap should track the larger of the two — using the middle
+  // ring alone lets a long statement (which legitimately shrinks to fit its
+  // narrow band) drag the short-text outer summary down with it. In default
+  // mode the middle ring is the long neutral statement while the outer is a
+  // short negative summary; capping to max(positive, middle) keeps the two
+  // summary rings balanced instead of both collapsing to statement size.
+  var outerFontCap = react.useMemo(function () {
+    var mid = bodyRingFontSize(middleRing, radii.middleStart, radii.middleEnd, 2);
+    var pos = bodyRingFontSize('positive', radii.innerStart, radii.innerEnd, 1);
+    var candidates = [mid, pos].filter(function (v) {
+      return v != null;
+    });
+    if (candidates.length === 0) return undefined;
+    return Math.max.apply(Math, _toConsumableArray(candidates));
+  }, [bodyRingFontSize, middleRing, radii]);
   return jsxRuntime.jsx("div", {
     style: _objectSpread2({
       background: 'white',
@@ -2603,7 +2657,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
           selectedPerspectiveIdx: selectedPerspective,
           focusAnimatingIdx: focusAnimatingIdx,
           headerBehavior: stitched,
-          maxFontSize: stitched ? undefined : ring2FontSize,
+          maxFontSize: stitched ? undefined : outerFontCap,
           onClick: handleCellClick,
           onPointerEnter: handlePointerEnter,
           onPointerLeave: handlePointerLeave
