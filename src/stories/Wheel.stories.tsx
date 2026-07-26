@@ -306,6 +306,36 @@ export const FourPerspectivesLong: Story = {
   args: { perspectives: [longPerspective(1), longPerspective(2), longPerspective(3), longPerspective(4)], styles: defaultStyles },
 };
 
+// Soft-hyphen demo. `shy()` turns readable `|` markers into U+00AD (invisible
+// soft hyphens): consumer-provided break opportunities inside the long words
+// that otherwise set the font floor on the narrow inner (green) ring. Compare
+// against ThreePerspectivesLong / FourPerspectivesLong (same text, no hyphens)
+// — the positive-ring font should step UP because "meta|cognitive",
+// "inter|dependent", etc. can now break instead of dictating the shared font.
+const shy = (s: string) => s.replace(/\|/g, '\u00AD');
+const hyphenatedPerspective = () => ({
+  t_minus: shy('Forced iso|lated learning with no know|ledge transfer or collab|orative growth oppor|tunity'),
+  t: shy('Indi|vidual work builds self-reliance and inde|pendent thinking cap|acity'),
+  t_plus: shy('Auto|nomous mastery with reflec|tive meta|cognitive aware|ness and deep exper|tise'),
+  a_plus: shy('Inter|dependent learning net|works with shared account|ability and mutual sup|port'),
+  a: shy('Collab|orative projects develop social and commun|ication skills effec|tively'),
+  a_minus: shy('Forced group|think without indi|vidual voice recog|nition or per|sonal achieve|ment'),
+});
+
+export const SoftHyphenationThree: Story = {
+  args: {
+    perspectives: [hyphenatedPerspective(), hyphenatedPerspective(), hyphenatedPerspective()],
+    styles: defaultStyles,
+  },
+};
+
+export const SoftHyphenationFour: Story = {
+  args: {
+    perspectives: [hyphenatedPerspective(), hyphenatedPerspective(), hyphenatedPerspective(), hyphenatedPerspective()],
+    styles: defaultStyles,
+  },
+};
+
 export const FocusedSegment: Story = {
   render: (args) => {
     const [focused, setFocused] = useState<string | null>(null);

@@ -297,27 +297,100 @@ function stableWidths(n, fontSize, centerR, halfAngle, cellHeight, config, outer
     return Math.min(w, flippedW[i]);
   });
 }
-function tryWrap(words, widths, fontSize, measure) {
-  if (widths.length === 0) return null;
+var SOFT_HYPHEN = "\xAD";
+/**
+ * Split text into words, each word carried as its soft-hyphen-delimited
+ * segments. A word with no U+00AD is a single-segment array (wraps exactly as
+ * the old word-only path). Joining a word's segments with '' reconstructs it
+ * WITHOUT the invisible U+00AD, so an un-broken word never renders the shy
+ * character; a break after segment k renders `segs.slice(0,k).join('') + '-'`,
+ * placing a visible hyphen only on the line where the break lands.
+ */
+function tokenize(text) {
+  return text.split(/\s+/).filter(Boolean).map(function (w) {
+    return w.split(SOFT_HYPHEN).filter(function (s) {
+      return s.length > 0;
+    });
+  }).filter(function (segs) {
+    return segs.length > 0;
+  });
+}
+/**
+ * Greedy line packer shared by the strict fit search and the lenient overflow
+ * fallback. Words arrive pre-split into soft-hyphen segments (see `tokenize`).
+ *
+ * A soft hyphen is honored ONLY as a last resort: a word is broken solely when
+ * it does not fit on a line BY ITSELF (a fresh slot). It is never broken merely
+ * to top up the trailing gap of a partial line — that produced ugly, needless
+ * splits like "reflec-tive"/"exper-tise", where the whole word would have sat
+ * happily on the next line. This matches how TeX/browsers hyphenate: only
+ * genuinely over-long words (e.g. "metacognitive" in a narrow inner cell)
+ * split; everything else wraps whole. With no U+00AD every word is a single
+ * segment and this reduces exactly to the previous word-only wrap.
+ *
+ *  - strict=true  → returns null when the text cannot fit within `widths`
+ *                   (too many lines, or a line still overflows its slot).
+ *  - strict=false → never returns null; clamps to the last slot width and
+ *                   accepts overflow (the former `wrapLenient` behavior).
+ */
+function packLines(words, widths, fontSize, measure, strict) {
+  if (widths.length === 0) return strict ? null : [''];
   if (words.length === 0) return [''];
   var lines = [];
   var currentLine = '';
   var slotIdx = 0;
+  var slotWidth = function slotWidth() {
+    return slotIdx < widths.length ? widths[slotIdx] : widths[widths.length - 1];
+  };
   var _iterator = _createForOfIteratorHelper(words),
     _step;
   try {
     for (_iterator.s(); !(_step = _iterator.n()).done;) {
-      var word = _step.value;
-      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-      if (measure(candidate, fontSize) <= widths[slotIdx]) {
-        currentLine = candidate;
-      } else if (currentLine) {
+      var segs = _step.value;
+      var whole = segs.join('');
+      // 1. Append the whole word to the current (partial) line if it fits.
+      if (currentLine) {
+        var cand = "".concat(currentLine, " ").concat(whole);
+        if (measure(cand, fontSize) <= slotWidth()) {
+          currentLine = cand;
+          continue;
+        }
+        // Doesn't fit the partial line — flush it and start the word fresh.
         lines.push(currentLine);
+        currentLine = '';
         slotIdx++;
-        if (slotIdx >= widths.length) return null;
-        currentLine = word;
-      } else {
-        currentLine = word;
+      }
+      // 2. On a fresh slot: place the word whole if it fits. Only if it is too
+      //    long for a line by itself do we break it at soft-hyphen boundaries,
+      //    emitting a trailing '-' on each broken piece and carrying the rest.
+      var start = 0;
+      while (start < segs.length) {
+        if (strict && slotIdx >= widths.length) return null;
+        var w = slotWidth();
+        var remaining = segs.slice(start).join('');
+        if (measure(remaining, fontSize) <= w) {
+          currentLine = remaining;
+          break;
+        }
+        // Break the widest prefix that fits this slot; `k` (exclusive end) stays
+        // > start so at least one segment carries to the next slot.
+        var placed = false;
+        for (var k = segs.length - 1; k > start; k--) {
+          var piece = segs.slice(start, k).join('') + '-';
+          if (measure(piece, fontSize) <= w) {
+            lines.push(piece);
+            slotIdx++;
+            start = k;
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          // Even the first segment overflows a fresh slot: place the remainder
+          // as-is and stop (strict validation rejects → caller steps font down).
+          currentLine = remaining;
+          break;
+        }
       }
     }
   } catch (err) {
@@ -328,9 +401,11 @@ function tryWrap(words, widths, fontSize, measure) {
   if (currentLine) {
     lines.push(currentLine);
   }
-  if (lines.length > widths.length) return null;
-  for (var i = 0; i < lines.length; i++) {
-    if (measure(lines[i], fontSize) > widths[i]) return null;
+  if (strict) {
+    if (lines.length > widths.length) return null;
+    for (var i = 0; i < lines.length; i++) {
+      if (measure(lines[i], fontSize) > widths[i]) return null;
+    }
   }
   return lines;
 }
@@ -351,7 +426,7 @@ function fitsOrientation(words, fontSize, halfAngle, cellHeight, config, outerR,
   for (var n = 1; n <= maxLines; n++) {
     var cR = clampCenter(n, lineHeight, topR, botR, midR);
     var widths = widthsForOrientation(n, fontSize, cR, halfAngle, cellHeight, config, outerR, flipped);
-    var result = tryWrap(words, widths, fontSize, measure);
+    var result = packLines(words, widths, fontSize, measure, true);
     if (result && result.length <= n) return true;
   }
   return false;
@@ -379,7 +454,7 @@ function tryFitUniform(text, fontSize, params) {
   var maxLines = Math.floor(usableHeight / lineHeight);
   if (maxLines < 1) return false;
   var midR = (topR + botR) / 2 + textBias * cellHeight;
-  var words = text.split(/\s+/).filter(Boolean);
+  var words = tokenize(text);
   if (words.length === 0) return true;
   var fitsNormal = fitsOrientation(words, fontSize, halfAngle, cellHeight, config, widthArcR, topR, botR, midR, maxLines, false, measure);
   if (config.stable) return fitsNormal;
@@ -527,6 +602,7 @@ function clampCenter(n, lineHeight, topR, botR, midR) {
   return Math.max(minC, Math.min(midR, maxC));
 }
 function layoutTextVariable(text, fontSize, params, flipped) {
+  var _packLines;
   var innerR = params.innerR,
     outerR = params.outerR,
     _params$placementOute2 = params.placementOuterR,
@@ -548,7 +624,7 @@ function layoutTextVariable(text, fontSize, params, flipped) {
   var usableHeight = topR - botR;
   var maxLines = Math.max(1, Math.floor(usableHeight / lineHeight));
   var midR = (topR + botR) / 2 + textBias * cellHeight;
-  var words = text.split(/\s+/).filter(Boolean);
+  var words = tokenize(text);
   if (words.length === 0) {
     return {
       lines: [''],
@@ -560,7 +636,7 @@ function layoutTextVariable(text, fontSize, params, flipped) {
   for (var n = 1; n <= maxLines; n++) {
     var _cR = clampCenter(n, lineHeight, topR, botR, midR);
     var _widths = widthsForOrientation(n, fontSize, _cR, halfAngle, cellHeight, config, widthArcR, flipped);
-    var result = tryWrap(words, _widths, fontSize, measure);
+    var result = packLines(words, _widths, fontSize, measure, true);
     if (result && result.length <= n) {
       return {
         lines: result,
@@ -572,45 +648,13 @@ function layoutTextVariable(text, fontSize, params, flipped) {
   }
   var cR = clampCenter(maxLines, lineHeight, topR, botR, midR);
   var widths = widthsForOrientation(maxLines, fontSize, cR, halfAngle, cellHeight, config, widthArcR, flipped);
-  var lenient = wrapLenient(words, widths, fontSize, measure);
+  var lenient = (_packLines = packLines(words, widths, fontSize, measure, false)) !== null && _packLines !== void 0 ? _packLines : [''];
   return {
     lines: lenient,
     fontSize: fontSize,
     lineHeight: lineHeight,
     centerR: cR
   };
-}
-function wrapLenient(words, widths, fontSize, measure) {
-  if (widths.length === 0 || words.length === 0) return [''];
-  var lines = [];
-  var currentLine = '';
-  var slotIdx = 0;
-  var _iterator2 = _createForOfIteratorHelper(words),
-    _step2;
-  try {
-    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
-      var word = _step2.value;
-      var w = slotIdx < widths.length ? widths[slotIdx] : widths[widths.length - 1];
-      var candidate = currentLine ? "".concat(currentLine, " ").concat(word) : word;
-      if (measure(candidate, fontSize) <= w) {
-        currentLine = candidate;
-      } else if (currentLine) {
-        lines.push(currentLine);
-        slotIdx++;
-        currentLine = word;
-      } else {
-        currentLine = word;
-      }
-    }
-  } catch (err) {
-    _iterator2.e(err);
-  } finally {
-    _iterator2.f();
-  }
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  return lines;
 }
 
 var CellText = function CellText(_ref) {
