@@ -2432,6 +2432,7 @@ function mergeStyles(user) {
   });
 }
 var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
+  var _ref2;
   var perspectives = _ref.perspectives,
     _ref$header = _ref.header,
     header = _ref$header === void 0 ? 'wheel' : _ref$header,
@@ -2451,6 +2452,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     neutralOutsideProp = _ref$neutralOutside === void 0 ? false : _ref$neutralOutside,
     userStyles = _ref.styles,
     css = _ref.css,
+    viewBoxProp = _ref.viewBox,
     onFocusChanged = _ref.onFocusChanged,
     onCellOver = _ref.onCellOver,
     onCellOut = _ref.onCellOut,
@@ -2521,6 +2523,70 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     svgRef.current = el;
     if (typeof ref === 'function') ref(el);else if (ref) ref.current = el;
   }, [ref, svgRef]);
+  // viewBox="fit": after every layout, measure what is actually on screen and
+  // tighten the viewBox to it. Screen rects are mapped back through the SVG's
+  // current transform, so the result is in user units whatever the viewBox was
+  // when measured; rounding keeps it stable, so a re-measure after the change
+  // lands on the same value and nothing loops.
+  var _useState5 = react.useState(null),
+    _useState6 = _slicedToArray(_useState5, 2),
+    fitBox = _useState6[0],
+    setFitBox = _useState6[1];
+  react.useLayoutEffect(function () {
+    if (viewBoxProp !== 'fit') {
+      setFitBox(null);
+      return;
+    }
+    var svg = svgRef.current;
+    var ctm = svg === null || svg === void 0 ? void 0 : svg.getScreenCTM();
+    if (!svg || !ctm) return;
+    var inverse = ctm.inverse();
+    var pt = svg.createSVGPoint();
+    var minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    // Only what can be seen counts: a cell whose background and border are both
+    // transparent (a header cell on a transparent wheel, say) has geometry but
+    // no ink, and must not hold the viewBox open.
+    var unpainted = function unpainted(v) {
+      return v === 'none' || v === 'transparent' || /^rgba\(\d+, \d+, \d+, 0\)$/.test(v);
+    };
+    var invisible = function invisible(el) {
+      var cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') return true;
+      return el instanceof SVGGraphicsElement && !(el instanceof SVGTextElement) && unpainted(cs.fill) && unpainted(cs.stroke);
+    };
+    var include = function include(el) {
+      if (invisible(el)) return;
+      var r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      for (var _i = 0, _arr = [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]]; _i < _arr.length; _i++) {
+        var _arr$_i = _slicedToArray(_arr[_i], 2),
+          x = _arr$_i[0],
+          y = _arr$_i[1];
+        pt.x = x;
+        pt.y = y;
+        var p = pt.matrixTransform(inverse);
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+    };
+    svg.querySelectorAll('path, text, line, circle, ellipse, polygon, polyline, rect').forEach(include);
+    // A callout's box is the HTML inside its foreignObject; the foreignObject
+    // itself is an oversized frame the box is positioned within.
+    svg.querySelectorAll('foreignObject > div > div').forEach(include);
+    if (!Number.isFinite(minX)) return;
+    var pad = 8;
+    var next = [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad].map(function (v) {
+      return Math.round(v);
+    }).join(' ');
+    setFitBox(function (prev) {
+      return prev === next ? prev : next;
+    });
+  });
   var neutralOutside = !!neutralOutsideProp;
   var stitched = neutralOutsideProp === 'header';
   var outerRing = neutralOutside ? 'neutral' : 'negative';
@@ -2572,8 +2638,8 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     }];
     var outerEnd = stitched ? def.middleEnd : def.outerEnd;
     var rings = [];
-    for (var _i = 0, _specs = specs; _i < _specs.length; _i++) {
-      var spec = _specs[_i];
+    for (var _i2 = 0, _specs = specs; _i2 < _specs.length; _i2++) {
+      var spec = _specs[_i2];
       var texts = textsOf(ringData[spec.name]);
       if (texts.length === 0) return null;
       rings.push({
@@ -2635,18 +2701,18 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var lastCellEventRef = react.useRef(null);
   var hoverSuppressedRef = react.useRef(false);
   var suppressPointerPos = react.useRef(null);
-  var _useState5 = react.useState(null),
-    _useState6 = _slicedToArray(_useState5, 2),
-    hoveredSegmentId = _useState6[0],
-    setHoveredSegmentId = _useState6[1];
   var _useState7 = react.useState(null),
     _useState8 = _slicedToArray(_useState7, 2),
-    hoveredPerspectiveIdx = _useState8[0],
-    setHoveredPerspectiveIdx = _useState8[1];
+    hoveredSegmentId = _useState8[0],
+    setHoveredSegmentId = _useState8[1];
   var _useState9 = react.useState(null),
     _useState0 = _slicedToArray(_useState9, 2),
-    hoveredArrowId = _useState0[0],
-    setHoveredArrowId = _useState0[1];
+    hoveredPerspectiveIdx = _useState0[0],
+    setHoveredPerspectiveIdx = _useState0[1];
+  var _useState1 = react.useState(null),
+    _useState10 = _slicedToArray(_useState1, 2),
+    hoveredArrowId = _useState10[0],
+    setHoveredArrowId = _useState10[1];
   react.useEffect(function () {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
@@ -2858,7 +2924,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     }, css),
     children: jsxRuntime.jsx("svg", _objectSpread2(_objectSpread2({
       ref: setSvgRef,
-      viewBox: callouts.length > 0 ? "-420 -420 840 840" : "-250 -250 500 500",
+      viewBox: (_ref2 = viewBoxProp === 'fit' ? fitBox : viewBoxProp) !== null && _ref2 !== void 0 ? _ref2 : callouts.length > 0 ? "-420 -420 840 840" : "-250 -250 500 500",
       style: {
         width: '100%',
         height: 'auto',
@@ -2998,7 +3064,7 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
           styles: styles,
           radii: radii
         }), callouts.map(function (callout, ci) {
-          var _ref2, _callout$border$width, _callout$border, _styles$border, _ref3, _callout$border$color, _callout$border2, _styles$border2, _callout$tail;
+          var _ref3, _callout$border$width, _callout$border, _styles$border, _ref4, _callout$border$color, _callout$border2, _styles$border2, _callout$tail;
           var segId = callout.segment || callout.rightEdge;
           var seg = ringData.negative.find(function (s) {
             return s.segmentId === segId;
@@ -3152,8 +3218,8 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
             tipAngle = seg.endAngle;
           }
           var resolvedBorder = {
-            width: Number((_ref2 = (_callout$border$width = (_callout$border = callout.border) === null || _callout$border === void 0 ? void 0 : _callout$border.width) !== null && _callout$border$width !== void 0 ? _callout$border$width : (_styles$border = styles.border) === null || _styles$border === void 0 ? void 0 : _styles$border.width) !== null && _ref2 !== void 0 ? _ref2 : 0.5),
-            color: (_ref3 = (_callout$border$color = (_callout$border2 = callout.border) === null || _callout$border2 === void 0 ? void 0 : _callout$border2.color) !== null && _callout$border$color !== void 0 ? _callout$border$color : (_styles$border2 = styles.border) === null || _styles$border2 === void 0 ? void 0 : _styles$border2.color) !== null && _ref3 !== void 0 ? _ref3 : '#ccc'
+            width: Number((_ref3 = (_callout$border$width = (_callout$border = callout.border) === null || _callout$border === void 0 ? void 0 : _callout$border.width) !== null && _callout$border$width !== void 0 ? _callout$border$width : (_styles$border = styles.border) === null || _styles$border === void 0 ? void 0 : _styles$border.width) !== null && _ref3 !== void 0 ? _ref3 : 0.5),
+            color: (_ref4 = (_callout$border$color = (_callout$border2 = callout.border) === null || _callout$border2 === void 0 ? void 0 : _callout$border2.color) !== null && _callout$border$color !== void 0 ? _callout$border$color : (_styles$border2 = styles.border) === null || _styles$border2 === void 0 ? void 0 : _styles$border2.color) !== null && _ref4 !== void 0 ? _ref4 : '#ccc'
           };
           var tailShape = callout.header ? 'line' : (_callout$tail = callout.tail) !== null && _callout$tail !== void 0 ? _callout$tail : 'triangle';
           var pIdx = seg.perspectiveIndex;

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `viewBox` prop: `'fit'` measures the drawn content (rings, text, arrows, callout
+  boxes) after layout and tightens the SVG viewBox to it, removing the empty bands
+  the fixed square leaves around a wheel with side callouts; any other string is
+  used as the viewBox verbatim. Default unchanged.
+
 ### Changed
 - **BREAKING**: Updated color property names from positional to semantic naming:
   - `userRingColors.outer` → `userRingColors.negative` (red ring)

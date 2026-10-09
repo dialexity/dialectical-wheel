@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, useEffect, forwardRef, Children, isValidElement } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect, useLayoutEffect, forwardRef, Children, isValidElement } from 'react';
 import { Ring, computeTextBias } from './Ring';
 import { SynthesisRing } from './SynthesisRing';
 import { InwardSpiralArrows } from './InwardSpiralArrows';
@@ -57,6 +57,7 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   neutralOutside: neutralOutsideProp = false,
   styles: userStyles,
   css,
+  viewBox: viewBoxProp,
   onFocusChanged,
   onCellOver,
   onCellOut,
@@ -115,6 +116,58 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     if (typeof ref === 'function') ref(el);
     else if (ref) ref.current = el;
   }, [ref, svgRef]);
+
+  // viewBox="fit": after every layout, measure what is actually on screen and
+  // tighten the viewBox to it. Screen rects are mapped back through the SVG's
+  // current transform, so the result is in user units whatever the viewBox was
+  // when measured; rounding keeps it stable, so a re-measure after the change
+  // lands on the same value and nothing loops.
+  const [fitBox, setFitBox] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (viewBoxProp !== 'fit') {
+      setFitBox(null);
+      return;
+    }
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!svg || !ctm) return;
+    const inverse = ctm.inverse();
+    const pt = svg.createSVGPoint();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    // Only what can be seen counts: a cell whose background and border are both
+    // transparent (a header cell on a transparent wheel, say) has geometry but
+    // no ink, and must not hold the viewBox open.
+    const unpainted = (v: string) => v === 'none' || v === 'transparent' || /^rgba\(\d+, \d+, \d+, 0\)$/.test(v);
+    const invisible = (el: Element) => {
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') return true;
+      return el instanceof SVGGraphicsElement && !(el instanceof SVGTextElement) && unpainted(cs.fill) && unpainted(cs.stroke);
+    };
+    const include = (el: Element) => {
+      if (invisible(el)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 && r.height === 0) return;
+      for (const [x, y] of [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]]) {
+        pt.x = x;
+        pt.y = y;
+        const p = pt.matrixTransform(inverse);
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+    };
+    svg.querySelectorAll('path, text, line, circle, ellipse, polygon, polyline, rect').forEach(include);
+    // A callout's box is the HTML inside its foreignObject; the foreignObject
+    // itself is an oversized frame the box is positioned within.
+    svg.querySelectorAll('foreignObject > div > div').forEach(include);
+    if (!Number.isFinite(minX)) return;
+    const pad = 8;
+    const next = [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad]
+      .map(v => Math.round(v))
+      .join(' ');
+    setFitBox(prev => (prev === next ? prev : next));
+  });
 
   const neutralOutside = !!neutralOutsideProp;
   const stitched = neutralOutsideProp === 'header';
@@ -413,7 +466,10 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     <div style={{ background: 'white', borderRadius: 8, ...css }}>
       <svg
         ref={setSvgRef}
-        viewBox={callouts.length > 0 ? "-420 -420 840 840" : "-250 -250 500 500"}
+        viewBox={
+          (viewBoxProp === 'fit' ? fitBox : viewBoxProp)
+            ?? (callouts.length > 0 ? "-420 -420 840 840" : "-250 -250 500 500")
+        }
         style={{
           width: '100%',
           height: 'auto',

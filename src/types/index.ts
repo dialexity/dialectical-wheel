@@ -152,6 +152,14 @@ export interface WheelProps {
   neutralOutside?: boolean | 'header';
   styles?: Partial<Styles>;
   css?: React.CSSProperties;
+  /**
+   * The SVG viewBox. Default: a square around the wheel, widened to make room
+   * for callouts when there are any — which leaves empty bands above and below
+   * a wheel whose callouts sit to its sides. `'fit'` measures what was drawn
+   * (rings, text, arrows, callout boxes) after layout and tightens the viewBox
+   * to it with a small margin; any other string is used as given.
+   */
+  viewBox?: string | 'fit';
   children?: React.ReactNode;
   onFocusChanged?: (topSegment: string) => void;
 
