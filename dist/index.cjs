@@ -2523,22 +2523,38 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     svgRef.current = el;
     if (typeof ref === 'function') ref(el);else if (ref) ref.current = el;
   }, [ref, svgRef]);
+  var _useState5 = react.useState(null),
+    _useState6 = _slicedToArray(_useState5, 2),
+    hoveredSegmentId = _useState6[0],
+    setHoveredSegmentId = _useState6[1];
+  var _useState7 = react.useState(null),
+    _useState8 = _slicedToArray(_useState7, 2),
+    hoveredPerspectiveIdx = _useState8[0],
+    setHoveredPerspectiveIdx = _useState8[1];
+  var _useState9 = react.useState(null),
+    _useState0 = _slicedToArray(_useState9, 2),
+    hoveredArrowId = _useState0[0],
+    setHoveredArrowId = _useState0[1];
   // viewBox="fit": once the wheel's inputs are laid out, measure what is
   // actually on screen and tighten the viewBox to it. Screen rects are mapped
   // back through the SVG's current transform, so the result is in user units
   // whatever the viewBox was when measured; rounding keeps it stable, so a
   // re-measure after the change lands on the same value and nothing loops.
-  // Keyed on the inputs, not on every render: a hover paints a cell's border,
-  // and re-fitting to that would nudge the whole wheel under the pointer.
-  var _useState5 = react.useState(null),
-    _useState6 = _slicedToArray(_useState5, 2),
-    fitBox = _useState6[0],
-    setFitBox = _useState6[1];
+  // Never measured while something is hovered or dragged: a hover paints a
+  // cell's border, and fitting to that would nudge the whole wheel under the
+  // pointer (a host re-rendering on scroll re-runs this with fresh props).
+  // The measurement waits for the pointer to leave.
+  var _useState1 = react.useState(null),
+    _useState10 = _slicedToArray(_useState1, 2),
+    fitBox = _useState10[0],
+    setFitBox = _useState10[1];
+  var pointerBusy = hoveredSegmentId != null || hoveredPerspectiveIdx != null || hoveredArrowId != null || isDragging;
   react.useLayoutEffect(function () {
     if (viewBoxProp !== 'fit') {
       setFitBox(null);
       return;
     }
+    if (pointerBusy) return;
     var svg = svgRef.current;
     var ctm = svg === null || svg === void 0 ? void 0 : svg.getScreenCTM();
     if (!svg || !ctm) return;
@@ -2588,8 +2604,9 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     setFitBox(function (prev) {
       return prev === next ? prev : next;
     });
-    // The inputs that change what is drawn; hover and drag state deliberately left out.
-  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css]);
+    // The inputs that change what is drawn, plus the pointer state so a fit
+    // deferred by a hover runs once the pointer leaves.
+  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css, pointerBusy]);
   var neutralOutside = !!neutralOutsideProp;
   var stitched = neutralOutsideProp === 'header';
   var outerRing = neutralOutside ? 'neutral' : 'negative';
@@ -2704,18 +2721,6 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
   var lastCellEventRef = react.useRef(null);
   var hoverSuppressedRef = react.useRef(false);
   var suppressPointerPos = react.useRef(null);
-  var _useState7 = react.useState(null),
-    _useState8 = _slicedToArray(_useState7, 2),
-    hoveredSegmentId = _useState8[0],
-    setHoveredSegmentId = _useState8[1];
-  var _useState9 = react.useState(null),
-    _useState0 = _slicedToArray(_useState9, 2),
-    hoveredPerspectiveIdx = _useState0[0],
-    setHoveredPerspectiveIdx = _useState0[1];
-  var _useState1 = react.useState(null),
-    _useState10 = _slicedToArray(_useState1, 2),
-    hoveredArrowId = _useState10[0],
-    setHoveredArrowId = _useState10[1];
   react.useEffect(function () {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;

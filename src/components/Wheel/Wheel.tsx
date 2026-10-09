@@ -117,19 +117,27 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     else if (ref) ref.current = el;
   }, [ref, svgRef]);
 
+  const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
+  const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
+  const [hoveredArrowId, setHoveredArrowId] = useState<string | null>(null);
+
   // viewBox="fit": once the wheel's inputs are laid out, measure what is
   // actually on screen and tighten the viewBox to it. Screen rects are mapped
   // back through the SVG's current transform, so the result is in user units
   // whatever the viewBox was when measured; rounding keeps it stable, so a
   // re-measure after the change lands on the same value and nothing loops.
-  // Keyed on the inputs, not on every render: a hover paints a cell's border,
-  // and re-fitting to that would nudge the whole wheel under the pointer.
+  // Never measured while something is hovered or dragged: a hover paints a
+  // cell's border, and fitting to that would nudge the whole wheel under the
+  // pointer (a host re-rendering on scroll re-runs this with fresh props).
+  // The measurement waits for the pointer to leave.
   const [fitBox, setFitBox] = useState<string | null>(null);
+  const pointerBusy = hoveredSegmentId != null || hoveredPerspectiveIdx != null || hoveredArrowId != null || isDragging;
   useLayoutEffect(() => {
     if (viewBoxProp !== 'fit') {
       setFitBox(null);
       return;
     }
+    if (pointerBusy) return;
     const svg = svgRef.current;
     const ctm = svg?.getScreenCTM();
     if (!svg || !ctm) return;
@@ -169,8 +177,9 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
       .map(v => Math.round(v))
       .join(' ');
     setFitBox(prev => (prev === next ? prev : next));
-    // The inputs that change what is drawn; hover and drag state deliberately left out.
-  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css]);
+    // The inputs that change what is drawn, plus the pointer state so a fit
+    // deferred by a hover runs once the pointer leaves.
+  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css, pointerBusy]);
 
   const neutralOutside = !!neutralOutsideProp;
   const stitched = neutralOutsideProp === 'header';
@@ -260,10 +269,6 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
   const lastCellEventRef = useRef<CellEvent | null>(null);
   const hoverSuppressedRef = useRef(false);
   const suppressPointerPos = useRef<{ x: number; y: number } | null>(null);
-  const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
-  const [hoveredPerspectiveIdx, setHoveredPerspectiveIdx] = useState<number | null>(null);
-  const [hoveredArrowId, setHoveredArrowId] = useState<string | null>(null);
-
   useEffect(() => {
     if (focusAnimatingIdx != null) {
       hoverSuppressedRef.current = true;
