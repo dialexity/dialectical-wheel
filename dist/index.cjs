@@ -2523,11 +2523,13 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     svgRef.current = el;
     if (typeof ref === 'function') ref(el);else if (ref) ref.current = el;
   }, [ref, svgRef]);
-  // viewBox="fit": after every layout, measure what is actually on screen and
-  // tighten the viewBox to it. Screen rects are mapped back through the SVG's
-  // current transform, so the result is in user units whatever the viewBox was
-  // when measured; rounding keeps it stable, so a re-measure after the change
-  // lands on the same value and nothing loops.
+  // viewBox="fit": once the wheel's inputs are laid out, measure what is
+  // actually on screen and tighten the viewBox to it. Screen rects are mapped
+  // back through the SVG's current transform, so the result is in user units
+  // whatever the viewBox was when measured; rounding keeps it stable, so a
+  // re-measure after the change lands on the same value and nothing loops.
+  // Keyed on the inputs, not on every render: a hover paints a cell's border,
+  // and re-fitting to that would nudge the whole wheel under the pointer.
   var _useState5 = react.useState(null),
     _useState6 = _slicedToArray(_useState5, 2),
     fitBox = _useState6[0],
@@ -2586,7 +2588,8 @@ var Wheel = /*#__PURE__*/react.forwardRef(function Wheel(_ref, ref) {
     setFitBox(function (prev) {
       return prev === next ? prev : next;
     });
-  });
+    // The inputs that change what is drawn; hover and drag state deliberately left out.
+  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css]);
   var neutralOutside = !!neutralOutsideProp;
   var stitched = neutralOutsideProp === 'header';
   var outerRing = neutralOutside ? 'neutral' : 'negative';

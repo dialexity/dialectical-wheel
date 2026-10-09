@@ -117,11 +117,13 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
     else if (ref) ref.current = el;
   }, [ref, svgRef]);
 
-  // viewBox="fit": after every layout, measure what is actually on screen and
-  // tighten the viewBox to it. Screen rects are mapped back through the SVG's
-  // current transform, so the result is in user units whatever the viewBox was
-  // when measured; rounding keeps it stable, so a re-measure after the change
-  // lands on the same value and nothing loops.
+  // viewBox="fit": once the wheel's inputs are laid out, measure what is
+  // actually on screen and tighten the viewBox to it. Screen rects are mapped
+  // back through the SVG's current transform, so the result is in user units
+  // whatever the viewBox was when measured; rounding keeps it stable, so a
+  // re-measure after the change lands on the same value and nothing loops.
+  // Keyed on the inputs, not on every render: a hover paints a cell's border,
+  // and re-fitting to that would nudge the whole wheel under the pointer.
   const [fitBox, setFitBox] = useState<string | null>(null);
   useLayoutEffect(() => {
     if (viewBoxProp !== 'fit') {
@@ -167,7 +169,8 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
       .map(v => Math.round(v))
       .join(' ');
     setFitBox(prev => (prev === next ? prev : next));
-  });
+    // The inputs that change what is drawn; hover and drag state deliberately left out.
+  }, [viewBoxProp, perspectives, children, userStyles, header, direction, sizingMode, showArrows, showInwardSpiral, neutralOutsideProp, css]);
 
   const neutralOutside = !!neutralOutsideProp;
   const stitched = neutralOutsideProp === 'header';
