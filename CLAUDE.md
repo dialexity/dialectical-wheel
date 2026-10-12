@@ -90,9 +90,10 @@
 - Callout `tail`: `'triangle'` (default) or `'line'`; `header` prop forces `'line'`
 - Callout `header`: ReactNode rendered above the box (outside the border)
 - Callout box background defaults to `border.color`; consumers override with inner HTML background
-- Callout foreignObject uses oversized container (400×400) centered on endpoint; box uses `width: fit-content` + `maxWidth: 180`
+- Callout foreignObject uses oversized container (400×400) placed around the endpoint (see push-away); box uses `width: fit-content` + `maxWidth: 180`
 - Callout counter-rotates content (`rotate(-rotationDeg)`) so text stays horizontal while tail rotates with wheel
-- Callout push-away: `translate(50% * norm/maxAbs)` on both axes ensures box inner edge/corner stays at endpoint regardless of content size
+- Callout push-away: endpoint sits `k = 0.5 − 0.5·norm/maxAbs` of the way across the box on each axis — done by LAYOUT (foreignObject origin at `end − FO_SIZE·k`, grid tracks `k fr | auto | (1−k) fr`), never CSS `transform: translate(%)`
+- NOTHING inside a callout's foreignObject may create its own layer (CSS `transform`, `position`, `will-change`...): WebKit composites it outside the SVG, ignoring the viewBox scale and group rotation — Safari drew the box at page scale, unrotated, off its anchor. Verify Safari with Playwright WebKit (`npx playwright install webkit` in a scratch dir), not by guessing
 - Callout tail overshoots 20 units past endpoint into box area — box renders on top, hiding overlap; ensures connection at all rotation angles
 - Callout foreignObject needs `style={{ pointerEvents: 'none' }}` on the element itself (not just inner div) to avoid blocking wheel interaction
 - 1-PP callout `rightEdge`: tip at bezier-radial intersection (where arrow crosses the midAngle line toward box), box at tipR+25

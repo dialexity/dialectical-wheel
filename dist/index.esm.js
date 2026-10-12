@@ -1896,9 +1896,10 @@ function CalloutInternal(_ref) {
   var normX = Math.sin(effectiveAngle);
   var normY = -Math.cos(effectiveAngle);
   var maxAbs = Math.max(Math.abs(normX), Math.abs(normY), 0.001);
-  // 50% = half the box's own size along each axis, placing inner edge exactly at the endpoint
-  var tx = 50 * normX / maxAbs;
-  var ty = 50 * normY / maxAbs;
+  // Fraction of the box's own size that sits on the wheel side of the
+  // endpoint along each axis: 0.5 = centred on it, 0 = inner edge at it
+  var kx = 0.5 - 0.5 * normX / maxAbs;
+  var ky = 0.5 - 0.5 * normY / maxAbs;
   var tailElement;
   if (tail === 'triangle') {
     var tailWidth = 8;
@@ -1923,24 +1924,18 @@ function CalloutInternal(_ref) {
       strokeWidth: borderWidth * 2
     });
   }
-  // Safari does not place a foreignObject by its own x/y the way Chrome and
-  // Firefox do — inside a rotated group it laid the box out nowhere near its
-  // anchor (reported 2026-10-12: one callout outside the host's reading
-  // column, another above the wheel). The position goes in the group's
-  // transform instead, and the foreignObject sits at the origin of it, which
-  // every engine agrees on and which draws identically where it already
-  // worked.
-  //
-  // NOT fixed, and the reason callouts are still unusable in Safari: placed
-  // correctly, the box then draws at roughly page scale over a wheel drawn at
-  // a fraction of it, because Safari does not scale a foreignObject's HTML by
-  // the SVG's viewBox. A fix means counter-scaling the box where the engine
-  // needs it, or drawing callouts as SVG text rather than HTML — which loses
-  // arbitrary children, so it is a decision, not a patch. Until then a host
-  // that supports Safari needs its own fallback (alsotrue reads the callout
-  // text under the wheel instead).
-  var originX = endX - FO_SIZE / 2;
-  var originY = endY - FO_SIZE / 2;
+  // No CSS transform (or anything else that gives the HTML its own layer)
+  // may sit inside the foreignObject: WebKit composites such an element
+  // outside the SVG, so it ignores the viewBox scale and the rotated group —
+  // in Safari the box drew at page scale, unrotated, away from its anchor.
+  // So the push-away is done by layout, not translate(%): the foreignObject
+  // is placed so the endpoint sits kx/ky of the way across it, and grid
+  // fractions split the space around the box in the same kx/ky ratio, which
+  // puts the endpoint kx/ky of the way across the box whatever its size.
+  // The position likewise goes in the group's transform, not the
+  // foreignObject's own x/y, which Safari also misplaced inside the rotation.
+  var originX = endX - FO_SIZE * kx;
+  var originY = endY - FO_SIZE * ky;
   return jsxs("g", {
     children: [tailElement, jsx("g", {
       transform: "rotate(".concat(-rotationDeg, ", ").concat(endX, ", ").concat(endY, ") translate(").concat(originX, ", ").concat(originY, ")"),
@@ -1955,9 +1950,9 @@ function CalloutInternal(_ref) {
         },
         children: jsx("div", {
           style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: 'grid',
+            gridTemplateColumns: "".concat(kx, "fr auto ").concat(1 - kx, "fr"),
+            gridTemplateRows: "".concat(ky, "fr auto ").concat(1 - ky, "fr"),
             width: '100%',
             height: '100%',
             pointerEvents: 'none'
@@ -1971,7 +1966,8 @@ function CalloutInternal(_ref) {
               alignItems: 'center',
               maxWidth: 180,
               width: 'fit-content',
-              transform: "translate(".concat(tx, "%, ").concat(ty, "%)")
+              gridColumn: 2,
+              gridRow: 2
             },
             children: [header && jsx("div", {
               style: {
