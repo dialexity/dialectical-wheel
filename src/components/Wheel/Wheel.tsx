@@ -154,6 +154,11 @@ const Wheel = forwardRef<SVGSVGElement, WheelProps>(function Wheel({
       return el instanceof SVGGraphicsElement && !(el instanceof SVGTextElement) && unpainted(cs.fill) && unpainted(cs.stroke);
     };
     const include = (el: Element) => {
+      // A cell's clip path is geometry that is never drawn. Chrome gives its
+      // shape an empty rect; Safari 26 gives it the full wedge, which held the
+      // fitted viewBox open to the header cell's corners (a deep empty band
+      // above and below the wheel).
+      if (el.closest('defs, clipPath')) return;
       if (invisible(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) return;

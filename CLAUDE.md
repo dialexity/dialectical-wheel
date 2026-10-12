@@ -93,6 +93,7 @@
 - Callout foreignObject uses oversized container (400×400) placed around the endpoint (see push-away); box uses `width: fit-content` + `maxWidth: 180`
 - Callout counter-rotates content (`rotate(-rotationDeg)`) so text stays horizontal while tail rotates with wheel
 - Callout push-away: endpoint sits `k = 0.5 − 0.5·norm/maxAbs` of the way across the box on each axis — done by LAYOUT (foreignObject origin at `end − FO_SIZE·k`, grid tracks `k fr | auto | (1−k) fr`), never CSS `transform: translate(%)`
+- viewBox="fit" must skip `defs`/`clipPath` descendants: Safari 26 gives a clip path's shape its full getBoundingClientRect (Chrome and Playwright WebKit give 0×0), which held the fit open to the header wedge corners. Playwright WebKit is NOT real Safari — when it can't reproduce, run a probe script in the user's Safari
 - NOTHING inside a callout's foreignObject may create its own layer (CSS `transform`, `position`, `will-change`...): WebKit composites it outside the SVG, ignoring the viewBox scale and group rotation — Safari drew the box at page scale, unrotated, off its anchor. Verify Safari with Playwright WebKit (`npx playwright install webkit` in a scratch dir), not by guessing
 - Callout tail overshoots 20 units past endpoint into box area — box renders on top, hiding overlap; ensures connection at all rotation angles
 - Callout foreignObject needs `style={{ pointerEvents: 'none' }}` on the element itself (not just inner div) to avoid blocking wheel interaction
