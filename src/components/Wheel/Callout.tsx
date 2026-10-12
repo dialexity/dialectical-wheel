@@ -88,13 +88,32 @@ export function CalloutInternal({
     );
   }
 
+  // Safari does not place a foreignObject by its own x/y the way Chrome and
+  // Firefox do — inside a rotated group it laid the box out nowhere near its
+  // anchor (reported 2026-10-12: one callout outside the host's reading
+  // column, another above the wheel). The position goes in the group's
+  // transform instead, and the foreignObject sits at the origin of it, which
+  // every engine agrees on and which draws identically where it already
+  // worked.
+  //
+  // NOT fixed, and the reason callouts are still unusable in Safari: placed
+  // correctly, the box then draws at roughly page scale over a wheel drawn at
+  // a fraction of it, because Safari does not scale a foreignObject's HTML by
+  // the SVG's viewBox. A fix means counter-scaling the box where the engine
+  // needs it, or drawing callouts as SVG text rather than HTML — which loses
+  // arbitrary children, so it is a decision, not a patch. Until then a host
+  // that supports Safari needs its own fallback (alsotrue reads the callout
+  // text under the wheel instead).
+  const originX = endX - FO_SIZE / 2;
+  const originY = endY - FO_SIZE / 2;
+
   return (
     <g>
       {tailElement}
-      <g transform={`rotate(${-rotationDeg}, ${endX}, ${endY})`}>
+      <g transform={`rotate(${-rotationDeg}, ${endX}, ${endY}) translate(${originX}, ${originY})`}>
         <foreignObject
-          x={endX - FO_SIZE / 2}
-          y={endY - FO_SIZE / 2}
+          x={0}
+          y={0}
           width={FO_SIZE}
           height={FO_SIZE}
           overflow="visible"
